@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Escala de Voo ACPM</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--bg:#E8EDF1;--pn:#F8FAFB;--ink:#12263A;--mu:#5B6B7A;--ln:#C5CFD8;--ac:#1F5FA8;--acT:#fff;--ye:#F2B705;--er:#B3261E;--wa:#9A6700;--ok:#1B7F4B;--hd:#12263A;--hdT:#EAF0F5;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F1822;--pn:#17232F;--ink:#E6EDF3;--mu:#93A3B2;--ln:#2B3B4A;--ac:#6AA8F0;--acT:#0F1822;--er:#FF8A80;--wa:#F2C94C;--ok:#5FD39A;--hd:#0A1119;--hdT:#E6EDF3}}
+:root[data-theme="dark"]{--bg:#0F1822;--pn:#17232F;--ink:#E6EDF3;--mu:#93A3B2;--ln:#2B3B4A;--ac:#6AA8F0;--acT:#0F1822;--er:#FF8A80;--wa:#F2C94C;--ok:#5FD39A;--hd:#0A1119;--hdT:#E6EDF3}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Barlow,system-ui,sans-serif}
+header{background:var(--hd);color:var(--hdT);padding:14px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+h1{margin:0;font:600 24px 'Barlow Semi Condensed',sans-serif;letter-spacing:.2px}
+header small{color:var(--hdT);opacity:.7;display:block}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+nav button{background:transparent;color:var(--hdT);border:1px solid transparent;padding:7px 14px;border-radius:4px;font:600 15px 'Barlow Semi Condensed',sans-serif;cursor:pointer}
+nav button.on{background:var(--ye);color:#12263A}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+main{max-width:1200px;margin:0 auto;padding:18px 16px 60px}
+section{display:none}section.on{display:block}
+h2{font:600 20px 'Barlow Semi Condensed',sans-serif;margin:22px 0 8px}
+.pn{background:var(--pn);border:1px solid var(--ln);border-radius:6px;padding:14px 16px;margin-bottom:14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:flex;align-items:center;gap:6px;border:1px solid var(--ln);border-radius:4px;padding:5px 9px;background:var(--bg);font-weight:500;cursor:pointer}
+.chip.off{opacity:.55;text-decoration:line-through}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
+.ic{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--ln);border-radius:4px;padding:6px 10px;background:var(--pn)}
+.ic.off{opacity:.55}.ic label{display:flex;gap:6px;align-items:center;flex:1}
+select{font:inherit;background:var(--pn);color:var(--ink);border:1px solid var(--ln);border-radius:4px;padding:4px 6px;max-width:100%}
+.btn{background:var(--ac);color:var(--acT);border:0;border-radius:4px;padding:9px 18px;font:600 16px 'Barlow Semi Condensed',sans-serif;cursor:pointer}
+.btn.sec{background:transparent;color:var(--ink);border:1px solid var(--ln)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+.tw{overflow-x:auto;border:1px solid var(--ln);border-radius:6px;background:var(--pn)}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th{font:600 14px 'Barlow Semi Condensed',sans-serif;text-align:left;background:var(--hd);color:var(--hdT);padding:8px 10px;position:sticky;top:0}
+td{padding:5px 10px;border-top:1px solid var(--ln);vertical-align:middle}
+tr.off td{opacity:.5}
+tr.on td:first-child{border-left:5px solid var(--ln);font-weight:600}
+tr.p5 td:first-child{border-left-color:var(--ye)}tr.p4 td:first-child{border-left-color:#E48A1B}
+tr.p3 td:first-child{border-left-color:var(--ac)}tr.p2 td:first-child{border-left-color:#7C93A8}
+.win td{background:var(--bg);font:600 17px 'Barlow Semi Condensed',sans-serif;border-top:2px solid var(--ink)}
+.tag{font-size:13px;border:1px solid var(--ln);border-radius:3px;padding:1px 6px;color:var(--mu)}
+.tag.fb{color:var(--wa);border-color:var(--wa)}
+.al{border-left:5px solid;border-radius:4px;padding:8px 12px;margin:6px 0;background:var(--pn);border-top:1px solid var(--ln);border-right:1px solid var(--ln);border-bottom:1px solid var(--ln)}
+.al.err{border-left-color:var(--er)}.al.warn{border-left-color:var(--wa)}
+.al b{margin-right:6px}
+.st{display:flex;gap:18px;flex-wrap:wrap;margin:6px 0}
+.st div{font:600 14px 'Barlow Semi Condensed',sans-serif;color:var(--mu)}
+.st strong{font-size:26px;color:var(--ink);display:block}
+textarea{width:100%;height:140px;font:13px monospace;background:var(--pn);color:var(--ink);border:1px solid var(--ln)}
+p.h{color:var(--mu);margin:4px 0 10px}
+@media print{header,.bar,nav,section:not(#s-esc),textarea{display:none!important}section#s-esc{display:block}body{background:#fff;color:#000}}
+.g2{grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}
+input:not([type=checkbox]){font:inherit;background:var(--pn);color:var(--ink);border:1px solid var(--ln);border-radius:4px;padding:4px 6px;max-width:100%}
+input[type=number]{width:96px}.nm{flex:1;min-width:0;font-weight:600}
+.cd{background:var(--pn);border:1px solid var(--ln);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:8px}.cd.off{opacity:.55}
+.r1,.r2,.bl,.ws{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.x{background:transparent;border:1px solid var(--ln);color:var(--mu);border-radius:4px;cursor:pointer;padding:3px 8px;font:inherit}.x.arm{background:var(--er);color:#fff;border-color:var(--er)}
+.w{border:1px solid var(--ln);border-radius:4px;padding:2px 6px;font-size:13px;cursor:pointer;display:flex;gap:4px;align-items:center}.w input{margin:0}.w.on{background:var(--ac);color:var(--acT);border-color:var(--ac)}
+.tg{display:inline-flex;gap:4px;align-items:center;background:var(--bg);border:1px solid var(--er);border-radius:12px;padding:1px 4px 1px 9px;font-size:13px}.tg button{border:0;background:transparent;color:var(--er);cursor:pointer}
+[hidden]{display:none!important}.only tr.off{display:none}.sm{font-size:13px;color:var(--mu);white-space:nowrap}details.pn summary{cursor:pointer;font:600 17px 'Barlow Semi Condensed',sans-serif}details ol{margin:8px 0 0;padding-left:20px}details li{margin:3px 0}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+<header>
+  <div><h1>Escala de Voo — ACPM</h1><small>Alocação automática de instrutores, aeronaves e simuladores</small></div>
+  <nav id="nav">
+    <button data-t="rec" class="on">1 · Recursos</button>
+    <button data-t="ins">2 · Instrutores</button>
+    <button data-t="alu">3 · Alunos</button>
+    <button data-t="dem">4 · Demanda</button>
+    <button data-t="esc">5 · Escala</button>
+  </nav>
+</header>
+<main>
+  <section id="s-rec" class="on">
+    <details class="pn" open>
+      <summary>Como usar: rotina diária em 5 passos</summary>
+      <ol>
+        <li><b>Recursos:</b> desmarque aviões, simuladores ou horários indisponíveis (manutenção).</li>
+        <li><b>Instrutores:</b> marque quem voa no dia e em quais horários (altere só o que mudou).</li>
+        <li><b>Alunos:</b> cadastre nome, peso e instrutores bloqueados (só quando houver mudança).</li>
+        <li><b>Demanda:</b> marque “Vai voar?” e preencha o pedido de cada aluno.</li>
+        <li><b>Escala:</b> clique em “Gerar escala”, confira os alertas e use “Emitir PDF”.</li>
+      </ol>
+    </details>
+    <h2>Janelas de operação</h2>
+    <div class="pn">
+      <div class="chips" id="wins"></div>
+      <p class="h" style="margin:8px 0 0">As janelas são os horários de início dos voos. A das 17:30 (9º tempo) é exclusiva para voo noturno; voos diurnos precisam terminar até as 17:30. Desmarque uma janela para impedir início de voo nela.</p>
+    </div>
+    <div id="eqs"></div>
+    <div class="bar"><button class="btn" data-go="ins">Próximo: Instrutores →</button></div>
+  </section>
+
+  <section id="s-ins">
+    <h2>Instrutores</h2>
+    <p class="h">Nome, peso, nível (cumulativo: A04 faz de A01 a A04) e horários em que pode voar. Use a disponibilidade rápida ou marque as janelas uma a uma. Cada janela vale do seu início até o início da próxima; em voos longos o instrutor precisa estar disponível durante todo o voo. O sistema usa primeiro o instrutor de menor nível que atende à missão.</p>
+    <div class="bar">
+      <button class="btn" data-act="addi">+ Novo instrutor</button>
+      <input type="search" data-flt="inst" placeholder="Buscar instrutor…" aria-label="Buscar instrutor">
+    </div>
+    <div class="grid g2" id="inst"></div>
+    <div class="bar"><button class="btn" data-go="alu">Próximo: Alunos →</button></div>
+  </section>
+
+  <section id="s-alu">
+    <h2>Alunos</h2>
+    <p class="h">Nome e peso do aluno. Se o aluno não quiser voar com certo instrutor, bloqueie-o aqui: a escala nunca os coloca juntos.</p>
+    <div class="bar">
+      <button class="btn" data-act="adds">+ Novo aluno</button>
+      <input type="search" data-flt="alu" placeholder="Buscar aluno…" aria-label="Buscar aluno">
+    </div>
+    <div class="grid g2" id="alu"></div>
+    <div class="bar"><button class="btn" data-go="dem">Próximo: Demanda →</button></div>
+  </section>
+
+  <section id="s-dem">
+    <h2>Demanda do dia seguinte</h2>
+    <div class="bar">
+      <button class="btn" id="gen">Gerar escala</button>
+      <button class="btn sec" id="demo">Preencher exemplo</button>
+      <button class="btn sec" id="clr">Limpar demanda</button>
+      <label class="chip"><input type="checkbox" id="onlyfly"> Mostrar só quem vai voar</label>
+      <span id="cnt" class="h"></span>
+    </div>
+    <p class="h">Cada sessão é um voo contínuo a partir do horário de início (ex.: 3 h às 08:20 = 08:20–11:20), com o mesmo avião e instrutor do início ao fim. Ao dividir em 2 ou 3 sessões (ex.: 6 h = 3 h + 3 h), a pref. 1 é o início da 1ª sessão e a pref. 2 o da 2ª, e o sistema tenta variar avião e instrutor entre as sessões. A coluna “Resumo” mostra como o pedido será lido.</p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Aluno</th><th>Vai voar?</th><th>Fase / missão</th><th>Equipamento</th><th>Início pref. 1</th><th>Início pref. 2</th><th>Horas de voo</th><th>Sessões</th><th>Prioridade</th><th>Resumo do pedido</th></tr></thead>
+        <tbody id="dem"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="s-esc">
+    <h2>Escala gerada</h2>
+    <div class="bar">
+      <button class="btn" id="gen2">Gerar escala</button>
+      <button class="btn sec" id="exp">Exportar para Excel / CSV</button>
+      <button class="btn sec" id="pdf">Emitir PDF</button>
+      <label class="chip">Data da escala <input type="date" id="dt"></label>
+      <span id="msg" class="h" role="status"></span>
+    </div>
+    <div id="out">
+      <p class="h">Ainda não há escala. Vá em 4 · Demanda, marque quem vai voar e clique em “Gerar escala”. Depois use “Emitir PDF”.</p>
+    </div>
+    <div id="csvbox" hidden>
+      <p class="h">O download direto não está disponível aqui. Copie o texto abaixo e cole numa planilha, ou salve como .csv.</p>
+      <textarea id="csv" readonly></textarea>
+    </div>
+  </section>
+</main>
+
+<script>
+// ==========================================
+// 1. CONSTANTES E DADOS GERAIS
+// ==========================================
+const WIN = ['06:30','08:20','10:10','11:30','12:40','13:40','14:30','16:20','17:30'];
+const NI = 8, DAY = [0,1,2,3,4,5,6,7], NIGHT_OK = [NI];
+const T = WIN.map(w => w.split(':')[0]*60 + +w.split(':')[1]);
+const hm = m => String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
+
+const EQ = {
+  'Sim. Mono': ['SIM-MONO-1','SIM-MONO-2'],
+  'Sim. Multi': ['SIM-MULTI-1','SIM-MULTI-2'],
+  'C152': 'PP-LJV PR-BTB PR-IGU PR-JPL PR-MLB PR-TBT PR-THI PR-VOB PR-VOC PR-VOI PR-VOP PR-VOW PR-VOZ'.split(' '),
+  'C172': 'PP-ABP PP-AJS PR-BUL PR-CPL PR-HAR PR-VOY'.split(' '),
+  'PA-34': ['PR-VOM','PT-JOB','PT-KIW']
+};
+
+const EQT = {
+  'Sim. Mono': 'Simuladores monomotor',
+  'Sim. Multi': 'Simuladores multimotor',
+  'C152': 'Frota C152 (instrução diurna PP)',
+  'C172': 'Frota C172 (IFR / noturno / pacotes)',
+  'PA-34': 'Frota PA-34-200 Sêneca (multimotor)'
+};
+
+const MIS = {
+  'Simulador': {lv:1, eq:['Sim. Mono','Sim. Multi']},
+  'PP Local': {lv:2, eq:['C152']},
+  'PP Navegação (>27nm)': {lv:3, eq:['C152']},
+  'PC Visual': {lv:4, eq:['C172']},
+  'Noturno': {lv:5, eq:['C172']},
+  'IFR': {lv:6, eq:['C172']},
+  'Multi': {lv:7, eq:['PA-34']}
+};
+
+const INS = 'Adriano Luiz,Alan Carvalho,Alessandro Amorim,Ana Reolon,Antônio Paiva,Caio Monteiro,Daniel Barbosa,Davi Guerra,Eder Gonçalves,Eduardo Cougo,Felipe Cardoso,Felipe Ferreira,Flávia Giardini,Frederico Basus,Gabriel Ferreira,Guilherme Oliveira,Gustavo Zucconi,Henrique Pereira,Herbert Levy,Italo Camargos,Juan Alvarenga,Leandro Rangel,Lucas Brabo,Lucas Braga,Luiz Dantas,Luiz Eduardo,Marcelo Ribeiro,Maria Lissandra,Mateus Teixeira,Natalia Grossi,Renato Binder,Rogério Werneck,Rywerthon Junior,Santiago Lopes,Tomas Silveira,Tulio Nogueira,Vander Josafat,Victor Brabo'.split(',');
+
+const $ = s => document.querySelector(s);
+const pad = i => 'Aluno ' + String(i+1).padStart(2,'0');
+const A = n => 'A0' + n;
+const blank = () => ({fly:false, mis:'PP Local', eq:'C152', p1:1, p2:2, nb:1, ss:1, pr:3});
+
+const PRE = {
+  'Dia inteiro': [0,1,2,3,4,5,6,7],
+  'Manhã': [0,1,2,3],
+  'Tarde': [4,5,6,7],
+  'Noturno': [8],
+  'Dia + noturno': [0,1,2,3,4,5,6,7,8]
+};
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// ==========================================
+// 2. ESTADO E PERSISTÊNCIA
+// ==========================================
+const fresh = () => ({
+  win: WIN.map(()=>true),
+  av: {},
+  lim: {'C152':172,'C172':0,'PA-34':0},
+  nid: 1000,
+  ins: INS.map((nm,i) => ({id:i+1, nm, on:true, lv:i%7+1, kg:0, aw:WIN.map(()=>true)})),
+  stu: Array.from({length:50}, (_,i) => ({id:i+1, nm:pad(i), kg:0, bl:[], ...blank()}))
+});
+
+let S = fresh(), RES = null;
+Object.values(EQ).flat().forEach(r => S.av[r] = true);
+
+try {
+  let x = JSON.parse(localStorage.getItem('acpm3'));
+  if (!x) {
+    const o = JSON.parse(localStorage.getItem('acpm2')), OLD = [0,1,2,2,3,3,4,5,6], NEW = [0,1,2,4,6,7,8];
+    if (o && o.stu && o.ins && o.lim) {
+      o.win = OLD.map(k => o.win[k]);
+      o.ins.forEach(i => i.aw = OLD.map(k => i.aw[k]));
+      o.stu.forEach(d => { d.p1 = d.p1<0 ? -1 : NEW[d.p1]; d.p2 = d.p2<0 ? -1 : NEW[d.p2]; d.ss = 1; });
+      x = o;
+    }
+  }
+  if (x && x.stu && x.ins && x.lim) S = x;
+} catch(e) {}
+
+const save = () => { try { localStorage.setItem('acpm3', JSON.stringify(S)); } catch(e) {} };
+
+// ==========================================
+// 3. UTILITÁRIOS E RENDERIZADORES DE CADA ABA
+// ==========================================
+const insBy = id => S.ins.find(x => x.id === id);
+const stuBy = id => S.stu.find(x => x.id === id);
+const msg = t => { $('#msg').textContent = t; };
+
+const opts = (a, sel) => a.map(([v,l]) => `<option value="${v}"${String(v)===String(sel)?' selected':''}>${l}</option>`).join('');
+const wopt = (sel, none) => opts([...(none?[[-1,'—']]:[]), ...WIN.map((w,i)=>[i, w+(i==NI?' (noturno)':'')])], sel);
+const LV = [1,2,3,4,5,6,7].map(n => [n, A(n)]);
+
+function rRec() {
+  $('#wins').innerHTML = WIN.map((w,i) => `<label class="chip${S.win[i]?'':' off'}"><input type="checkbox" data-a="win" data-i="${i}"${S.win[i]?' checked':''}>${i+1}º · ${w}${i==NI?' (noturno)':''}</label>`).join('');
+  $('#eqs').innerHTML = Object.keys(EQ).map(k => `<h2>${EQT[k]}</h2><div class="pn">${S.lim[k]!==undefined?`<p class="h">Peso máximo da tripulação (aluno + instrutor): <input type="number" min="0" data-a="lim" data-eq="${k}" value="${S.lim[k]}"> kg (0 = não verificar)</p>`:''}<div class="chips">${EQ[k].map(r => `<label class="chip${S.av[r]?'':' off'}"><input type="checkbox" data-a="av" data-id="${r}"${S.av[r]?' checked':''}>${r}</label>`).join('')}</div></div>`).join('');
+}
+
+const insHTML = x => `<div class="cd${x.on?'':' off'}" data-k="i" data-id="${x.id}"><div class="r1"><input type="checkbox" data-f="on"${x.on?' checked':''} title="Disponível no dia" aria-label="Disponível"><input class="nm" data-f="nm" value="${esc(x.nm)}" aria-label="Nome"><button class="x" data-act="deli" aria-label="Excluir">✕</button></div>
+<div class="r2"><input type="number" min="0" max="200" data-f="kg" value="${x.kg||''}" placeholder="Peso kg" aria-label="Peso em kg"><select data-f="lv" aria-label="Nível">${opts(LV,x.lv)}</select><select data-f="pre" aria-label="Disponibilidade rápida"><option value="">Disponibilidade rápida…</option>${Object.keys(PRE).map(k=>`<option>${k}</option>`).join('')}</select></div>
+<div class="ws">${WIN.map((w,i) => `<label class="w${x.aw[i]?' on':''}"><input type="checkbox" data-f="aw" data-w="${i}"${x.aw[i]?' checked':''}>${w}</label>`).join('')}</div></div>`;
+
+const stuHTML = s => `<div class="cd" data-k="s" data-id="${s.id}"><div class="r1"><input class="nm" data-f="nm" value="${esc(s.nm)}" aria-label="Nome"><input type="number" min="0" max="200" data-f="kg" value="${s.kg||''}" placeholder="Peso kg" aria-label="Peso em kg"><button class="x" data-act="dels" aria-label="Excluir">✕</button></div>
+<div class="bl">${s.bl.map(b => insBy(b) ? `<span class="tg">${esc(insBy(b).nm)}<button data-act="unbl" data-b="${b}" aria-label="Remover bloqueio">✕</button></span>` : '').join('')}<select data-f="bl"><option value="">+ Bloquear instrutor…</option>${S.ins.filter(x=>!s.bl.includes(x.id)).map(x=>`<option value="${x.id}">${esc(x.nm)}</option>`).join('')}</select></div></div>`;
+
+const sum = d => {
+  if (!d.fly) return '';
+  const H = d.nb, K = Math.min(d.ss||1, H), L = Array.from({length:K}, (_,j) => Math.floor(H/K) + (j<H%K?1:0)), nt = d.mis === 'Noturno';
+  if (K > 1) return `${H} h em ${K} sessões: ${L.join(' h + ')} h`;
+  if (d.p1 < 0) return `${H} h, sem horário preferido`;
+  const s = T[d.p1], e = s + H*60;
+  return `${hm(s)}–${hm(e)}` + ((nt !== (d.p1==NI) || e > (nt ? 1440 : T[NI])) ? ' ⚠ fora do horário permitido' : '');
+};
+
+const rowHTML = d => `<tr data-k="d" data-id="${d.id}" class="${d.fly?'on p'+d.pr:'off'}"><td>${esc(d.nm)}</td><td><input type="checkbox" data-f="fly"${d.fly?' checked':''} aria-label="Vai voar"></td>
+<td><select data-f="mis">${opts(Object.keys(MIS).map(m=>[m,m]),d.mis)}</select></td><td><select data-f="eq">${opts(Object.keys(EQ).map(m=>[m,m]),d.eq)}</select></td>
+<td><select data-f="p1">${wopt(d.p1,1)}</select></td><td><select data-f="p2">${wopt(d.p2,1)}</select></td>
+<td><select data-f="nb">${opts(Array.from({length:11},(_,i)=>[i+1,(i+1)+' h']),d.nb)}</select></td><td><select data-f="ss">${opts([[1,'1 (contínuo)'],[2,'2 (manhã + tarde)'],[3,'3']].filter(o=>o[0]<=d.nb),Math.min(d.ss||1,d.nb))}</select></td><td><select data-f="pr">${opts([1,2,3,4,5].map(n=>[n,n+(n==5?' (máx.)':'')]),d.pr)}</select></td><td class="sm">${sum(d)}</td></tr>`;
+
+const rIns = () => { $('#inst').innerHTML = S.ins.map(insHTML).join(''); };
+const rAlu = () => { $('#alu').innerHTML = S.stu.map(stuHTML).join(''); };
+const cnt = () => { $('#cnt').textContent = S.stu.filter(d=>d.fly).length + ' de ' + S.stu.length + ' alunos vão voar'; };
+const rDem = () => { $('#dem').innerHTML = S.stu.map(rowHTML).join(''); cnt(); };
+
+// ==========================================
+// 4. MOTOR DE ALOCAÇÃO
+// ==========================================
+const WLB = i => `${WIN[i]} · ${i+1}º tempo` + (i==NI ? ' (noturno)' : '');
+
+function gen() {
+  const used = {}, busy = {}, load = {}, eu = {}, out = [], al = [];
+  const act = S.stu.filter(d => d.fly).sort((a,b) => b.pr - a.pr || S.stu.indexOf(a) - S.stu.indexOf(b));
+  
+  const free = (mp, id, s, e) => !(mp[id]||[]).some(([a,b]) => s < b && e > a);
+  const cover = (aw, s, e) => T.every((c,k) => !(s < (k<NI ? T[k+1] : 1440) && e > c) || aw[k]);
+  
+  for (const d of act) {
+    const m = MIS[d.mis], nm = d.nm, lim = S.lim[d.eq] || 0, H = Math.max(1, +d.nb||1), K = Math.min(Math.max(+d.ss||1, 1), H), night = d.mis === 'Noturno';
+    if (!m.eq.includes(d.eq)) { al.push({t:'err', s:nm, m:`Rejeitado: o equipamento “${d.eq}” é incompatível com a missão “${d.mis}” (esperado: ${m.eq.join(' ou ')}).`}); continue; }
+    
+    const starts = (night ? NIGHT_OK : DAY).filter(w => S.win[w]), endMax = night ? 1440 : T[NI], pf = [+d.p1, +d.p2];
+    const len = Array.from({length:K}, (_,j) => (Math.floor(H/K) + (j<H%K ? 1 : 0)) * 60), plans = [];
+    
+    (function rec(j, from, pl) {
+      if (j === K) { plans.push(pl); return; }
+      const c = [...new Set([...(j<2 ? [pf[j]] : []), ...(j==0 ? [pf[1]] : []), ...starts])].filter(w => starts.includes(w) && T[w] >= from && T[w] + len[j] <= endMax);
+      for (const w of c) rec(j+1, T[w] + len[j], [...pl, {w, a:T[w], b:T[w]+len[j]}]);
+    })(0, 0, []);
+    
+    const fc = {eq:0, disp:0, busy:0, bloq:0, peso:0}; let ch = null;
+    
+    for (const pl of plans) {
+      const pick = []; let prev = null, bad = null;
+      for (const p of pl) {
+        const eqs = EQ[d.eq].filter(r => S.av[r] && free(used, r, p.a, p.b)); if (!eqs.length) { bad = 'eq'; break; }
+        const q = S.ins.filter(x => x.on && x.lv >= m.lv && cover(x.aw, p.a, p.b)); if (!q.length) { bad = 'disp'; break; }
+        const f1 = q.filter(x => free(busy, x.id, p.a, p.b)); if (!f1.length) { bad = 'busy'; break; }
+        const f2 = f1.filter(x => !d.bl.includes(x.id)); if (!f2.length) { bad = 'bloq'; break; }
+        const ins = f2.filter(x => !lim || !d.kg || !x.kg || d.kg + x.kg <= lim); if (!ins.length) { bad = 'peso'; break; }
+        
+        eqs.sort((a,b) => (prev && (a === prev.r) - (b === prev.r)) || (eu[a]||0) - (eu[b]||0));
+        ins.sort((a,b) => (prev && (a.id === prev.x.id) - (b.id === prev.x.id)) || a.lv - b.lv || (load[a.id]||0) - (load[b.id]||0));
+        
+        prev = {r: eqs[0], x: ins[0]}; pick.push(prev);
+      }
+      if (bad) { fc[bad]++; continue; }
+      ch = {pl, pick}; break;
+    }
+    
+    if (ch) {
+      const {pl, pick} = ch; let warned = false;
+      pl.forEach((p, j) => {
+        const {r, x} = pick[j], hh = len[j]/60;
+        (used[r] = used[r] || []).push([p.a, p.b]); (busy[x.id] = busy[x.id] || []).push([p.a, p.b]);
+        out.push({w:p.w, a:p.a, b:p.b, o:S.stu.indexOf(d), s:nm, mis:d.mis, h:hh, ss:`${j+1}/${K}`, r, ins:x.nm, lv:x.lv, kg:d.kg && x.kg ? d.kg+x.kg : 0, tag:p.w==d.p1 ? 'Pref. 1' : p.w==d.p2 ? 'Pref. 2' : 'Próximo livre'});
+        eu[r] = (eu[r]||0) + hh; load[x.id] = (load[x.id]||0) + hh;
+        if (lim && !warned && (!d.kg || !x.kg)) { warned = true; al.push({t:'warn', s:nm, m:`Peso não cadastrado (aluno ou instrutor): verificação de peso e balanceamento no ${d.eq} não realizada.`}); }
+      });
+    } else {
+      let why;
+      if (!EQ[d.eq].some(r => S.av[r])) why = `nenhum equipamento ${d.eq} disponível (manutenção/indisponível)`;
+      else if (!S.ins.some(x => x.on && x.lv >= m.lv)) why = `nenhum instrutor ativo com nível ${A(m.lv)} ou superior`;
+      else if (!plans.length) why = `não há como encaixar ${H} h${K>1 ? ' em '+K+' sessões' : ' contínuas'} ${night ? 'a partir da janela noturna' : 'dentro do horário diurno (término até '+hm(T[NI])+')'} com as janelas habilitadas`;
+      else {
+        const key = Object.keys(fc).sort((a,b) => fc[b] - fc[a])[0];
+        why = {eq:`falta de ${d.eq} livre nos horários testados (ocupado por alunos de maior prioridade)`, disp:`nenhum instrutor ${A(m.lv)}+ disponível durante todo o voo nos horários testados`, busy:`instrutores ${A(m.lv)}+ já ocupados em algum trecho do voo (conflito de horário)`, bloq:'os instrutores qualificados livres estão bloqueados por este aluno', peso:`peso aluno + instrutor acima do limite de ${lim} kg do ${d.eq}`}[key];
+      }
+      al.push({t:'err', s:nm, m:`Rejeitado: ${why}.`});
+    }
+  }
+  
+  out.sort((a,b) => a.a - b.a || a.o - b.o);
+  RES = {out, al, tot:act.length};
+  rOut();
+}
+
+// ==========================================
+// 5. RENDERIZADOR DA ABA ESCALA (SAÍDA)
+// ==========================================
+const HT = o => o.h + ' h' + (o.ss !== '1/1' ? ` (sessão ${o.ss})` : '');
+
+function rOut() {
+  const {out, al, tot} = RES, rej = al.filter(a => a.t === 'err').length;
+  let h = `<div class="st"><div><strong>${tot}</strong>alunos na demanda</div><div><strong>${tot-rej}</strong>alunos atendidos</div><div><strong>${out.reduce((n,o)=>n+o.h,0)}</strong>horas de voo escaladas</div><div><strong style="color:${al.length?'var(--er)':'var(--ok)'}">${al.length}</strong>alertas</div></div>`;
+  h += al.map(a => `<div class="al ${a.t}"><b>${esc(a.s)}</b>${a.m}</div>`).join('');
+  if (!out.length) h += `<p class="h">${tot ? 'Nenhum voo alocado.' : 'Nenhum aluno está marcado como “Vai voar?”. Marque os alunos em 4 · Demanda.'}</p>`;
+  else {
+    h += '<div class="tw" style="margin-top:12px"><table><thead><tr><th>Horário</th><th>Aluno</th><th>Missão</th><th>Equipamento</th><th>Instrutor</th><th>Duração</th><th>Peso</th><th>Encaixe</th></tr></thead><tbody>';
+    let cw = -1;
+    for (const o of out) {
+      if (o.w !== cw) { cw = o.w; h += `<tr class="win"><td colspan="8">${WLB(o.w)} · ${out.filter(x=>x.w===o.w).length} voo(s) iniciando</td></tr>`; }
+      h += `<tr><td>${hm(o.a)}–${hm(o.b)}</td><td>${esc(o.s)}</td><td>${o.mis}</td><td>${o.r}</td><td>${esc(o.ins)}</td><td>${HT(o)}</td><td>${o.kg ? o.kg+' kg' : '—'}</td><td><span class="tag${o.tag[0]=='P'?'':' fb'}">${o.tag}</span></td></tr>`;
+    }
+    h += '</tbody></table></div>';
+  }
+  $('#out').innerHTML = h; show('esc');
+}
+
+// ==========================================
+// 6. EXPORTAÇÃO CSV E PDF
+// ==========================================
+async function sv(fn, data) {
+  let dl = null; try { dl = window.claude ? await claude.use('downloads') : null; } catch(e) {}
+  if (dl) { try { await dl.save({filename:fn, data}); return true; } catch(e) { return !!(e && e.code === 'declined'); } }
+  if (window.claude) return false;
+  try {
+    const u = URL.createObjectURL(data instanceof Blob ? data : new Blob([data], {type:'text/csv;charset=utf-8'})), l = document.createElement('a');
+    l.href = u; l.download = fn; document.body.appendChild(l); l.click(); l.remove();
+    setTimeout(() => URL.revokeObjectURL(u), 2000); return true;
+  } catch(e) { return false; }
+}
+
+async function exp() {
+  if (!RES) { msg('Gere a escala antes de exportar.'); return; }
+  const q = v => '"' + String(v).replace(/"/g,'""') + '"', L = [['Início','Fim','Tempo de instrução','Aluno','Missão','Duração (h)','Sessão','Equipamento','Instrutor','Peso tripulação (kg)','Encaixe'].map(q).join(';')];
+  RES.out.forEach(o => L.push([hm(o.a), hm(o.b), `${o.w+1}º`, o.s, o.mis, o.h, o.ss, o.r, o.ins, o.kg||'', o.tag].map(q).join(';')));
+  if (RES.al.length) { L.push(''); L.push(['Alertas','Aluno','Mensagem'].map(q).join(';')); RES.al.forEach(a => L.push([a.t === 'err' ? 'Rejeitado' : 'Aviso', a.s, a.m].map(q).join(';'))); }
+  const c = '\uFEFF' + L.join('\r\n');
+  if (await sv('escala-acpm.csv', c)) { msg(''); return; }
+  $('#csv').value = c; $('#csvbox').hidden = false;
+}
+
+async function pdf() {
+  if (!RES) { msg('Gere a escala antes de emitir o PDF.'); return; }
+  if (!window.jspdf) { msg('A biblioteca de PDF não carregou. Verifique a conexão e recarregue a página.'); return; }
+  const doc = new window.jspdf.jsPDF({orientation:'landscape', unit:'mm', format:'a4'}), {out, al, tot} = RES, rej = al.filter(a => a.t === 'err').length;
+  const dt = ($('#dt').value||'').split('-').reverse().join('/'), H = {fillColor:[18,38,58]}, Y = () => doc.lastAutoTable.finalY + 8, hrs = a => a.reduce((n,o) => n+o.h, 0);
+  doc.setFontSize(18); doc.text('Escala de Voo - ACPM', 14, 15); doc.setFontSize(11);
+  doc.text(`Data da escala: ${dt}     Emitida em: ${new Date().toLocaleString('pt-BR')}`, 14, 22);
+  doc.text(`Alunos na demanda: ${tot}     Atendidos: ${tot-rej}     Horas de voo escaladas: ${hrs(out)}     Alertas: ${al.length}`, 14, 28);
+  
+  const body = []; let cw = -1;
+  out.forEach(o => {
+    if (o.w !== cw) { cw = o.w; body.push([{content:`${WLB(o.w)}  -  ${out.filter(x=>x.w===o.w).length} voo(s) iniciando`, colSpan:8, styles:{fillColor:[222,230,238], fontStyle:'bold'}}]); }
+    body.push([`${hm(o.a)}-${hm(o.b)}`, o.s, o.mis, o.r, `${o.ins} (${A(o.lv)})`, HT(o), o.kg ? o.kg+' kg' : '-', o.tag]);
+  });
+  doc.autoTable({startY:33, head:[['Horário','Aluno','Missão','Equipamento','Instrutor','Duração','Peso tripulação','Encaixe']], body, styles:{fontSize:9}, headStyles:H});
+  
+  const grp = k => { const g = {}; out.forEach(o => (g[o[k]] = g[o[k]]||[]).push(o)); return Object.entries(g).sort((a,b) => a[0].localeCompare(b[0])); }, lst = a => a.map(o => `${hm(o.a)}-${hm(o.b)} ${o.s}`).join('; ');
+  const tb = (t, head, rows) => { let y = Y(); if (y > 165) { doc.addPage(); y = 15; } doc.setFontSize(13); doc.text(t, 14, y); doc.autoTable({startY:y+3, head:[head], body:rows, styles:{fontSize:9}, headStyles:H}); };
+  
+  tb('Quadro por instrutor', ['Instrutor','Nível','Horas de voo','Horários e alunos'], grp('ins').map(([n,a]) => [n, A(a[0].lv), hrs(a), lst(a)]));
+  tb('Quadro por equipamento', ['Equipamento','Horas de voo','Horários e alunos'], grp('r').map(([n,a]) => [n, hrs(a), lst(a)]));
+  if (al.length) tb('Alertas e pendências', ['Situação','Aluno','Detalhe'], al.map(a => [a.t === 'err' ? 'Rejeitado' : 'Aviso', a.s, a.m]));
+  
+  let y = Y(); if (y > 185) { doc.addPage(); y = 20; } doc.setFontSize(10);
+  doc.text('Responsável pela escala: ______________________________      Visto do Chefe de Operações: ______________________________', 14, y+8);
+  
+  const n = doc.getNumberOfPages(), pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
+  for (let i=1; i<=n; i++) { doc.setPage(i); doc.setFontSize(8); doc.text(`ACPM - Escala de ${dt} - Página ${i} de ${n}`, pw-14, ph-6, {align:'right'}); }
+  
+  if (await sv(`escala-acpm-${dt.split('/').reverse().join('-')}.pdf`, doc.output('blob'))) msg('');
+  else msg('O download direto não está disponível neste modo de visualização.');
+}
+
+// ==========================================
+// 7. MANIPULADORES DE EVENTOS E UI
+// ==========================================
+function show(t) {
+  document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === 's-'+t));
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+}
+const focusLast = sel => { const e = [...document.querySelectorAll(sel)].pop(); if (e) { e.scrollIntoView({block:'center'}); e.focus(); e.select(); } };
+
+document.addEventListener('click', e => { const g = e.target.closest('[data-t],[data-go]'); if (g) { show(g.dataset.t||g.dataset.go); try { window.scrollTo(0,0); } catch(x) {} } });
+document.addEventListener('input', e => { const f = e.target.dataset.flt; if (!f) return; const q = e.target.value.toLowerCase(); document.querySelectorAll('#'+f+' .cd').forEach(c => c.hidden = !c.querySelector('.nm').value.toLowerCase().includes(q)); });
+
+const armed = (id, txt, fn) => { $(id).onclick = e => { const b = e.target, o = b.dataset.o || (b.dataset.o = b.textContent); if (!b.dataset.arm) { b.dataset.arm = 1; b.textContent = txt; setTimeout(() => { b.dataset.arm = ''; b.textContent = o; }, 3500); return; } b.dataset.arm = ''; b.textContent = o; fn(); }; };
+
+$('#gen').onclick = $('#gen2').onclick = gen;
+$('#exp').onclick = exp;
+$('#pdf').onclick = pdf;
+
+const demo = () => {
+  let s = 7; const r = () => (s = (s*16807)%2147483647)/2147483647, pick = a => a[Math.floor(r()*a.length)], ms = Object.keys(MIS), wt = [0,0,1,1,1,2,2,3,4,4,5,6,6,7];
+  S.stu.forEach(d => {
+    if (r() > .82) { Object.assign(d, blank()); return; }
+    const mis = pick([...ms,'Simulador','PP Local','PP Local','PC Visual']), nt = mis === 'Noturno', nb = nt ? 1+Math.floor(r()*3) : 1+Math.floor(r()*r()*6);
+    Object.assign(d, {fly:true, mis, eq:mis==='Simulador' ? pick(['Sim. Mono','Sim. Multi']) : MIS[mis].eq[0], p1:nt ? NI : pick(wt), p2:nt ? NI : pick(wt), nb, ss:nb>=4&&r()>.5 ? 2 : 1, pr:1+Math.floor(r()*5)});
+  });
+  save(); rDem();
+};
+
+armed('#demo', 'Confirmar: substituir os pedidos por exemplo', demo);
+armed('#clr', 'Confirmar: apagar todos os pedidos', () => { S.stu.forEach(d => Object.assign(d, blank())); save(); rDem(); });
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const a = b.dataset.act, c = b.closest('[data-k]'), id = c ? +c.dataset.id : 0;
+  if (a === 'addi') { S.ins.push({id:S.nid++, nm:'Novo instrutor', on:true, lv:1, kg:0, aw:WIN.map((_,i) => i<6)}); save(); rIns(); rAlu(); focusLast('#inst .nm'); }
+  else if (a === 'adds') { S.stu.push({id:S.nid++, nm:'Novo aluno', kg:0, bl:[], ...blank()}); save(); rAlu(); rDem(); focusLast('#alu .nm'); }
+  else if (a === 'unbl') { const s = stuBy(id); s.bl = s.bl.filter(v => v !== +b.dataset.b); save(); c.outerHTML = stuHTML(s); }
+  else if (a === 'deli' || a === 'dels') {
+    if (!b.dataset.arm) { b.dataset.arm = 1; b.textContent = 'Confirmar'; b.classList.add('arm'); setTimeout(() => { b.dataset.arm = ''; b.textContent = '✕'; b.classList.remove('arm'); }, 3000); return; }
+    if (a === 'deli') { S.ins = S.ins.filter(x => x.id !== id); S.stu.forEach(s => s.bl = s.bl.filter(v => v !== id)); } else S.stu = S.stu.filter(x => x.id !== id);
+    save(); rIns(); rAlu(); rDem();
+  }
+});
+
+document.addEventListener('change', e => {
+  const t = e.target, f = t.dataset.f, a = t.dataset.a;
+  if (t.id === 'onlyfly') { $('#dem').classList.toggle('only', t.checked); return; }
+  if (a) { if (a === 'win') S.win[+t.dataset.i] = t.checked; else if (a === 'av') S.av[t.dataset.id] = t.checked; else S.lim[t.dataset.eq] = +t.value||0; save(); rRec(); return; }
+  const c = t.closest('[data-k]'); if (!c || !f) return;
+  const k = c.dataset.k, id = +c.dataset.id;
+  if (k === 'i') {
+    const x = insBy(id);
+    if (f === 'on') x.on = t.checked; else if (f === 'nm') x.nm = t.value.trim() || x.nm; else if (f === 'kg') x.kg = +t.value||0; else if (f === 'lv') x.lv = +t.value;
+    else if (f === 'aw') x.aw[+t.dataset.w] = t.checked; else if (f === 'pre') { if (!t.value) return; x.aw = WIN.map((_,i) => PRE[t.value].includes(i)); }
+    save(); c.outerHTML = insHTML(x); if (f === 'nm') rAlu();
+  } else {
+    const s = stuBy(id);
+    if (k === 's') { if (f === 'nm') s.nm = t.value.trim() || s.nm; else if (f === 'kg') s.kg = +t.value||0; else if (f === 'bl' && t.value) s.bl.push(+t.value); save(); c.outerHTML = stuHTML(s); if (f === 'nm') rDem(); }
+    else {
+      s[f] = f === 'fly' ? t.checked : (f === 'mis' || f === 'eq') ? t.value : +t.value;
+      if (f === 'mis') s.eq = MIS[s.mis].eq[0]; if (f === 'nb') s.ss = Math.min(s.ss||1, s.nb);
+      save(); c.outerHTML = rowHTML(s); cnt();
+    }
+  }
+});
+
+rRec(); rIns(); rAlu(); rDem();
+{ const t = new Date(Date.now() + 864e5); $('#dt').value = new Date(t - t.getTimezoneOffset() * 6e4).toISOString().slice(0,10); }
+</script>
+</body>
+</html>
