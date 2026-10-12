@@ -216,7 +216,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 const fresh = () => ({
   win: WIN.map(()=>true),
   av: {},
-  lim: {'C152':172,'C172':0,'PA-34':0},
+  lim: {'C152':172,'C172':222,'PA-34':250},
   nid: 1000,
   ins: INS.map((nm,i) => ({id:i+1, nm, on:true, lv:i%7+1, kg:0, aw:WIN.map(()=>true)})),
   stu: Array.from({length:50}, (_,i) => ({id:i+1, nm:pad(i), kg:0, bl:[], ...blank()}))
