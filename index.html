@@ -48,7 +48,7 @@
 }
 
 /* ==========================================================================
-   2. LAYOUT BASE E BLOQUEIO ESTRITO DE EDIÇÃO NO PERFIL GESTOR
+   2. LAYOUT BASE E BLOQUEIO ESTRITO DE EDIÇÃO NO PERFIL GESTOR / LINK
    ========================================================================== */
 html { scroll-padding-top: env(safe-area-inset-top, 0px); }
 * { box-sizing: border-box; }
@@ -87,7 +87,7 @@ h1 { margin: 0; font: 600 22px 'Barlow Semi Condensed', sans-serif; letter-spaci
 }
 .hd-sel option { background: var(--hd); color: var(--hdT); }
 .hd-btn:hover:not(:disabled) { background: rgba(255,255,255,0.18); }
-.hd-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.hd-btn:disabled, .hd-sel:disabled { opacity: 0.65; cursor: not-allowed; }
 .badge-cnt {
   background: var(--ye);
   color: #12263A;
@@ -122,18 +122,27 @@ section.on { display: block; }
 h2 { font: 600 19px 'Barlow Semi Condensed', sans-serif; margin: 18px 0 8px; }
 h3 { font: 600 15px 'Barlow Semi Condensed', sans-serif; margin: 10px 0 6px; color: var(--ink); }
 
-/* Regras de Somente Visualização para o Perfil Gestor */
+/* Regras de Somente Visualização Estrita para o Perfil Gestor e Links Compartilhados */
 body[data-role="gestor"] .edit-only { display: none !important; }
 body[data-role="gestor"] #s-rec .chip,
 body[data-role="gestor"] #s-ins .w,
-body[data-role="gestor"] main input:not(.flt-ctrl):not(#onlyfly):not(#dt):not(#bi-dt),
+body[data-role="gestor"] #dt,
+body[data-role="gestor"] .st-sel,
+body[data-role="gestor"] main input:not(.flt-ctrl):not(#onlyfly):not(#bi-dt),
 body[data-role="gestor"] main select:not(.flt-ctrl) {
   pointer-events: none !important;
   cursor: default !important;
 }
-body[data-role="gestor"] main input:not(.flt-ctrl):not(#onlyfly):not(#dt):not(#bi-dt),
+body[data-role="gestor"] #dt,
+body[data-role="gestor"] .st-sel,
+body[data-role="gestor"] main input:not(.flt-ctrl):not(#onlyfly):not(#bi-dt),
 body[data-role="gestor"] main select:not(.flt-ctrl) {
-  opacity: 0.8;
+  opacity: 0.82;
+}
+body[data-shared="true"] #role-sel {
+  pointer-events: none !important;
+  cursor: default !important;
+  border-color: var(--ye);
 }
 
 /* ==========================================================================
@@ -160,6 +169,14 @@ body[data-role="gestor"] main select:not(.flt-ctrl) {
   user-select: none;
 }
 .chip.off { opacity: .55; text-decoration: line-through; }
+.chip-sub {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--wa);
+  border: 1px solid var(--wa);
+  border-radius: 3px;
+  padding: 0 4px;
+}
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; }
 .g2 { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
@@ -189,7 +206,7 @@ input[type=number] { width: 88px; }
 .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; }
 
 .tw { overflow-x: auto; border: 1px solid var(--ln); border-radius: 6px; background: var(--pn); }
-table { border-collapse: collapse; width: 100%; min-width: 800px; }
+table { border-collapse: collapse; width: 100%; min-width: 840px; }
 th {
   font: 600 14px 'Barlow Semi Condensed', sans-serif;
   text-align: left;
@@ -207,7 +224,26 @@ tr.p5 td:first-child { border-left-color: var(--ye); }
 tr.p4 td:first-child { border-left-color: #E48A1B; }
 tr.p3 td:first-child { border-left-color: var(--ac); }
 tr.p2 td:first-child { border-left-color: #7C93A8; }
+tr.extra-row td { background: rgba(31, 95, 168, 0.04); }
 tr.st-Cancelado td { opacity: 0.45; text-decoration: line-through; }
+
+.stu-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.btn-add-mis {
+  background: transparent;
+  border: 1px dashed var(--ac);
+  color: var(--ac);
+  border-radius: 4px;
+  padding: 2px 7px;
+  font: 600 12px 'Barlow Semi Condensed', sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-add-mis:hover { background: var(--ac); color: var(--acT); }
 
 .win td {
   background: var(--bg);
@@ -646,7 +682,7 @@ details.pn summary { cursor: pointer; font: 600 16px 'Barlow Semi Condensed', sa
     <button class="hd-btn" id="btn-open-log" title="Ver inclusões e histórico do dia">
       🕒 Histórico <span class="badge-cnt" id="log-cnt">0</span>
     </button>
-    <button class="hd-btn" id="btn-share-link" title="Copiar link compartilhável da escala">🔗 Compartilhar</button>
+    <button class="hd-btn" id="btn-share-link" title="Copiar link compartilhável da escala (abre bloqueado como Gestor)">🔗 Compartilhar</button>
     <button class="hd-btn" id="btn-theme" title="Alternar tema claro/escuro">◐ Tema</button>
   </div>
   <nav id="nav">
@@ -678,8 +714,15 @@ details.pn summary { cursor: pointer; font: 600 16px 'Barlow Semi Condensed', sa
       <input type="search" class="flt-ctrl" data-flt="inst" placeholder="Buscar instrutor…" aria-label="Buscar instrutor">
       <select id="flt-ins-lv" class="flt-ctrl" aria-label="Filtrar por nível">
         <option value="">Todos os níveis</option>
-        <option value="1">A01+</option><option value="2">A02+</option><option value="3">A03+</option>
-        <option value="4">A04+</option><option value="5">A05+</option><option value="6">A06+</option><option value="7">A07</option>
+        <option value="1">A01+ (Local C152)</option>
+        <option value="2">A02+ (Simulador)</option>
+        <option value="3">A03+ (TGL)</option>
+        <option value="4">A04+ (Navegação)</option>
+        <option value="5">A05+ (Voo Solo)</option>
+        <option value="6">A06+ (Parafuso)</option>
+        <option value="7">A07+ (C172 / Noturno)</option>
+        <option value="8">A08+ (IFR)</option>
+        <option value="9">A09 (PA-34 Sêneca)</option>
       </select>
     </div>
     <div class="grid g2" id="inst"></div>
@@ -709,12 +752,13 @@ details.pn summary { cursor: pointer; font: 600 16px 'Barlow Semi Condensed', sa
       <select id="flt-dem-mis" class="flt-ctrl" aria-label="Filtrar por missão">
         <option value="">Todas as missões</option>
         <option value="Simulador">Simulador</option>
-        <option value="PP Local">PP Local</option>
-        <option value="PP Navegação (>27nm)">PP Navegação (&gt;27nm)</option>
-        <option value="PC Visual">PC Visual</option>
-        <option value="Noturno">Noturno</option>
+        <option value="Voo Local">Voo Local</option>
+        <option value="Navegação">Navegação</option>
+        <option value="Voo Solo">Voo Solo</option>
+        <option value="Parafuso">Parafuso</option>
         <option value="IFR">IFR</option>
-        <option value="Multi">Multi</option>
+        <option value="Noturno">Noturno</option>
+        <option value="Multimotor">Multimotor</option>
       </select>
       <span id="cnt" class="h"></span>
     </div>
@@ -722,7 +766,7 @@ details.pn summary { cursor: pointer; font: 600 16px 'Barlow Semi Condensed', sa
       <table>
         <thead>
           <tr>
-            <th>Aluno</th>
+            <th>Aluno / Missões no Dia</th>
             <th>Vai voar?</th>
             <th>Fase / missão</th>
             <th>Equipamento</th>
@@ -803,15 +847,15 @@ details.pn summary { cursor: pointer; font: 600 16px 'Barlow Semi Condensed', sa
     <!-- MANUAL DO USUÁRIO E GUIA DE REGRAS OPERACIONAIS (RECOLHÍVEL) -->
     <details class="pn manual-panel">
       <summary>📘 Manual do Usuário e Regras de Alocação da Escala (Operador &amp; Gestor)</summary>
-      <p class="h" style="margin-top:8px">Guia de referência rápida com os parâmetros operacionais, critérios matemáticos do motor de escala e respostas para dúvidas frequentes.</p>
+      <p class="h" style="margin-top:8px">Guia de referência rápida com os parâmetros operacionais do CIAC/ACPM, matriz de instrutores A01–A09, regras de equipamentos e respostas para dúvidas frequentes.</p>
 
       <div class="manual-grid">
         <div class="manual-card">
-          <h4>1. Perfis de Uso e Rotina Diária</h4>
+          <h4>1. Perfis de Uso e Link Blindado (Gestor)</h4>
           <ul>
-            <li><b>Perfil Operador:</b> Permissão total para desmarcar aeronaves em manutenção, ajustar turnos de instrutores, lançar pedidos na aba <i>Demanda</i> e gerar a escala.</li>
-            <li><b>Perfil Gestor:</b> Modo estrito de <b>somente visualização</b>. Ideal para acompanhamento pela diretoria e chefia de operações sem risco de alterar dados acidentalmente.</li>
-            <li><b>Link Compartilhável (🔗):</b> Ao clicar em <i>Compartilhar</i> no topo, o sistema gera um link que abre automaticamente no perfil <b>Gestor</b> em qualquer celular ou computador com a escala exata do dia.</li>
+            <li><b>Perfil Operador:</b> Permissão total para desmarcar aeronaves em manutenção, ajustar turnos de instrutores, cadastrar alunos, lançar múltiplas missões por aluno na aba <i>Demanda</i> e gerar a escala.</li>
+            <li><b>Perfil Gestor:</b> Modo estrito de <b>somente leitura</b>. Bloqueia qualquer alteração na escala, datas, status de voo ou cadastros.</li>
+            <li><b>Link Compartilhável (🔗):</b> Ao clicar em <i>Compartilhar</i>, o sistema gera uma URL que abre <b>exclusivamente no perfil Gestor bloqueado</b>, impedindo que o destinatário altere dados da escala ou mude o seletor para o perfil Operador.</li>
           </ul>
         </div>
 
@@ -819,63 +863,67 @@ details.pn summary { cursor: pointer; font: 600 16px 'Barlow Semi Condensed', sa
           <h4>2. Janelas de Operação e Tempos de Voo</h4>
           <ul>
             <li><b>9 Horários de Início:</b> 1º (06:30), 2º (08:20), 3º (10:10), 4º (11:30), 5º (12:40), 6º (13:40), 7º (14:30), 8º (16:20) e 9º (17:30 — exclusivo Noturno).</li>
-            <li><b>Voo Contínuo:</b> Cada sessão ocupa o bloco contínuo a partir do início (ex.: 3 h iniciando às 08:20 vai das <b>08:20 às 11:20</b>, mantendo o mesmo avião e instrutor do início ao fim).</li>
+            <li><b>Voo Contínuo:</b> Cada sessão ocupa o bloco contínuo a partir do início (ex.: 3 h iniciando às 08:20 vai das <b>08:20 às 11:20</b>, mantendo o mesmo avião e instrutor na sessão).</li>
             <li><b>Teto Diurno (17:30):</b> Missões diurnas precisam terminar até as 17:30. Voos de missão <b>Noturno</b> iniciam exclusivamente às 17:30 (até 24:00).</li>
             <li><b>Emenda de Voos:</b> Não há intervalo mínimo obrigatório entre dois voos — uma aeronave ou instrutor que pousa às 11:30 já pode assumir outro voo às 11:30.</li>
           </ul>
         </div>
 
         <div class="manual-card">
-          <h4>3. Frota e Limites Implícitos de Peso</h4>
+          <h4>3. Frota, Equipamentos por Missão e PR-JPL</h4>
           <ul>
-            <li><b>Sim. Mono / Sim. Multi:</b> Simuladores monomotor e multimotor (sem restrição de peso).</li>
-            <li><b>Frota C152 (13 aeronaves):</b> Uso em PP Local e PP Navegação (&gt;27nm). Limite máximo implícito da tripulação (aluno + instrutor): <b>170 kg</b>.</li>
-            <li><b>Frota C172 (6 aeronaves):</b> Uso em PC Visual, Noturno e IFR. Limite máximo implícito da tripulação: <b>222 kg</b>.</li>
-            <li><b>Frota PA-34 Sêneca (3 aeronaves):</b> Uso em missão Multi. Limite máximo implícito da tripulação: <b>250 kg</b>.</li>
-            <li><b>Regra de Peso Zero:</b> Se o peso do aluno ou do instrutor estiver como <code>0</code> (não informado), o sistema aloca o voo normalmente e emite um <b>Aviso amarelo</b> lembrando de conferir o balanceamento.</li>
-          </ul>
-        </div>
-
-        <div class="manual-card">
-          <h4>4. Instrutores: Níveis (A01–A07) e Cobertura</h4>
-          <ul>
-            <li><b>Escala Cumulativa de Níveis:</b>
-              <br>• <b>A01:</b> Apenas Simulador
-              <br>• <b>A02:</b> A01 + PP Local (C152)
-              <br>• <b>A03:</b> A02 + PP Navegação &gt;27nm (C152)
-              <br>• <b>A04:</b> A03 + PC Visual (C172)
-              <br>• <b>A05:</b> A04 + Noturno (C172)
-              <br>• <b>A06:</b> A05 + IFR (C172)
-              <br>• <b>A07:</b> A06 + Multimotor PA-34 Sêneca
+            <li><b>Simulador:</b> Realizado exclusivamente em <b>Sim. Mono</b> ou <b>Sim. Multi</b> (sem restrição de peso). Missões de voo nunca utilizam simuladores.</li>
+            <li><b>Missões de Voo e Restrições de Equipamento:</b>
+              <br>• <b>Voo Local</b> (inclui TGL e INVA), <b>Navegação</b>, <b>Voo Solo</b> e <b>Parafuso</b>: Aeronaves <b>C152</b>, <b>C172</b> ou <b>PA-34</b>.
+              <br>• <b>IFR:</b> Exclusivo em <b>C172</b> ou <b>PA-34</b>.
+              <br>• <b>Noturno:</b> Exclusivo em <b>C172</b>.
+              <br>• <b>Multimotor:</b> Exclusivo em <b>PA-34</b>.
             </li>
-            <li><b>Otimização de Nível:</b> Para preservar instrutores A06/A07 para missões avançadas, o motor escolhe sempre o instrutor disponível de <b>menor nível</b> que atenda à missão pedida, desempatando pelo de menor carga horária no dia.</li>
-            <li><b>Cobertura de Horário:</b> Em voos longos que atravessam mais de uma janela, o instrutor precisa estar marcado como disponível em <b>todas</b> as janelas que o voo interceptar.</li>
+            <li><b>Exclusividade do C152 PR-JPL (Acrobat):</b> O avião <b>PR-JPL</b> é reservado exclusivamente para missões de <b>Parafuso</b> (com instrutor mínimo <b>A06+</b>) e nunca é alocado em outras missões.</li>
+            <li><b>Limites Implícitos de Peso (Aluno + Instrutor):</b> <b>C152 = 170 kg</b>, <b>C172 = 222 kg</b>, <b>PA-34 = 250 kg</b>. Peso <code>0</code> aloca normalmente com aviso amarelo de conferência.</li>
           </ul>
         </div>
 
         <div class="manual-card">
-          <h4>5. Demanda, Sessões e Cascata de Horários</h4>
+          <h4>4. Instrutores: Matriz Cumulativa (A01–A09)</h4>
           <ul>
-            <li><b>Fila de Prioridade (5 a 1):</b> O motor aloca primeiro os alunos de prioridade <b>5</b> até a <b>1</b> (desempatando pela ordem de cadastro).</li>
-            <li><b>Divisão em Sessões (1, 2 ou 3):</b> Um pedido de 6 h em 2 sessões gera dois voos de 3 h + 3 h (5 h em 2 sessões = 3 h + 2 h). Na divisão em 2 sessões, a <i>Pref. 1</i> é o início da 1ª sessão e a <i>Pref. 2</i> o da 2ª.</li>
-            <li><b>Variação entre Sessões:</b> Quando o aluno faz 2 ou 3 sessões no dia, o sistema busca automaticamente <b>variar a aeronave e o instrutor</b> entre uma sessão e outra (só repete se não houver outro recurso livre).</li>
-            <li><b>Efeito Cascata:</b> Se os horários <i>Pref. 1</i> e <i>Pref. 2</i> estiverem ocupados por alunos de maior prioridade, o motor busca automaticamente o <b>Próximo livre</b> (sinalizado em âmbar na escala).</li>
+            <li><b>Habilitações Cumulativas do ACPM:</b>
+              <br>• <b>A01:</b> Voo Local C152 (inclui INVA)
+              <br>• <b>A02:</b> A01 + Simulador (Mono / Multi)
+              <br>• <b>A03:</b> A02 + TGL
+              <br>• <b>A04:</b> A03 + Navegação (&gt;27nm)
+              <br>• <b>A05:</b> A04 + Voo Solo (liberação de solo)
+              <br>• <b>A06:</b> A05 + Parafuso (PR-JPL)
+              <br>• <b>A07:</b> A06 + Aeronave <b>C172</b> e Noturno
+              <br>• <b>A08:</b> A07 + IFR (C172)
+              <br>• <b>A09:</b> A08 + Multimotor <b>PA-34 (Sêneca)</b>
+            </li>
+            <li><b>Otimização de Nível:</b> O motor preserva instrutores seniores (A07–A09) alocando sempre o instrutor disponível de <b>menor nível apto</b> para a combinação Missão + Equipamento.</li>
+          </ul>
+        </div>
+
+        <div class="manual-card">
+          <h4>5. Múltiplas Missões no Dia por Aluno</h4>
+          <ul>
+            <li><b>Botão “+ Missão”:</b> Na aba <i>4 · Demanda</i>, clique em <b>+ Missão</b> ao lado do nome do aluno para agendar diferentes missões no mesmo dia (ex.: <i>Navegação</i> de 3h pela manhã + 2 sessões de <i>Voo Local</i> à tarde + 1 <i>Noturno</i> às 17:30).</li>
+            <li><b>Proteção contra Autoconflito:</b> O motor verifica a agenda do próprio aluno no dia para garantir que suas missões não se sobreponham, deslocando automaticamente para a <i>Pref. 2</i> ou <i>Próximo livre</i> se necessário.</li>
+            <li><b>Variação entre Sessões:</b> O algoritmo prioriza variar aeronave e instrutor entre sessões distintas do mesmo aluno.</li>
           </ul>
         </div>
 
         <div class="manual-card">
           <h4>6. Perguntas Frequentes (FAQ)</h4>
           <div class="faq-item">
-            <b>Por que um aluno foi “Rejeitado” na geração da escala?</b>
-            O alerta vermelho logo acima da tabela informa o motivo exato: falta de aeronave livre, falta de instrutor habilitado no horário, conflito de agenda, instrutor bloqueado pelo aluno ou soma de peso acima do limite da aeronave.
+            <b>Onde agendo voos de TGL ou do curso INVA?</b>
+            Ambos são agendados como <b>Voo Local</b> na coluna Fase/Missão, escolhendo a aeronave desejada (C152 ou C172).
           </div>
           <div class="faq-item">
-            <b>O que acontece ao clicar em “✕ Excluir” na aba Escala?</b>
-            O pedido daquele aluno é desmarcado e toda a escala do dia é recalculada instantaneamente, liberando a aeronave e o instrutor para outros alunos. Você pode restaurar o voo com 1 clique no painel <i>Histórico</i>.
+            <b>Por que um voo de Parafuso no C152 exige o PR-JPL?</b>
+            Porque na frota C152 apenas o <b>PR-JPL</b> (Acrobat) realiza Parafuso, exigindo que o PR-JPL esteja ativo e haja instrutor <b>A06+</b> livre no horário.
           </div>
           <div class="faq-item">
-            <b>Como o Status do Voo afeta o Mapa Visual e o BI?</b>
-            Alterar o status na tabela (<i>Confirmado</i>, <i>Em Voo</i>, <i>Pendente</i> ou <i>Cancelado</i>) atualiza imediatamente a cor/ícone da barra no Mapa de Ocupação. Voos marcados como <i>Cancelado</i> ficam riscados e suas horas são descontadas dos indicadores ativos e do BI.
+            <b>Quem recebe o link compartilhado consegue mudar para Operador ou editar a escala?</b>
+            Não. O link compartilhado trava o sistema em modo <b>Gestor (Somente Leitura)</b> e desabilita a troca de perfil.
           </div>
         </div>
       </div>
@@ -888,11 +936,11 @@ details.pn summary { cursor: pointer; font: 600 16px 'Barlow Semi Condensed', sa
 <script>
 /**
  * ============================================================================
- * ARQUITETURA MODULAR — ESCALA DE VOO ACPM
- *  1. Config & Regras Operacionais (Pesos implícitos: C152=170, C172=222, PA-34=250)
- *  2. ApiClient (Camada de Dados Assíncrona + Sincronização por Link)
- *  3. StateStore & AuditLogger (Estado, Bloqueio Estrito Gestor, Undo e Histórico)
- *  4. SchedulerEngine (Motor Determinístico de Alocação)
+ * ARQUITETURA MODULAR — ESCALA DE VOO ACPM (SCHEMA v3)
+ *  1. Config & Regras Operacionais (A01–A09, PR-JPL Acrobat, 40 Instrutores com Pesos)
+ *  2. ApiClient (Camada Assíncrona + Inicialização sem Alunos + Link Gestor Blindado)
+ *  3. StateStore & AuditLogger (Estado, Multi-Missão por Aluno, Undo e Histórico)
+ *  4. SchedulerEngine (Motor Determinístico Multi-Missão + Cruzamento Missão×Eq)
  *  5. ViewRenderer (Tabela Oficial + Mapa Visual Sincronizado + BI + Manual)
  *  6. ExportService & EventController (CSV, PDF e Eventos Globais)
  * ============================================================================
@@ -915,6 +963,11 @@ const EQ = {
   'PA-34': ['PR-VOM','PT-JOB','PT-KIW']
 };
 
+const ALL_EQ_TYPES = Object.keys(EQ);
+const SIM_EQ_TYPES = ['Sim. Mono', 'Sim. Multi'];
+const AIRCRAFT_EQ_TYPES = ['C152', 'C172', 'PA-34'];
+const ACROBAT_REG = 'PR-JPL'; // Exclusivo para missão de Parafuso (com instrutor A06+)
+
 const EQT = {
   'Sim. Mono': 'Sim. Mono',
   'Sim. Multi': 'Sim. Multi',
@@ -923,27 +976,93 @@ const EQT = {
   'PA-34': 'PA-34'
 };
 
-const MIS = {
-  'Simulador': { lv: 1, eq: ['Sim. Mono','Sim. Multi'] },
-  'PP Local': { lv: 2, eq: ['C152'] },
-  'PP Navegação (>27nm)': { lv: 3, eq: ['C152'] },
-  'PC Visual': { lv: 4, eq: ['C172'] },
-  'Noturno': { lv: 5, eq: ['C172'] },
-  'IFR': { lv: 6, eq: ['C172'] },
-  'Multi': { lv: 7, eq: ['PA-34'] }
+// Nível mínimo de instrutor exigido pelo equipamento operado (A07+ para C172, A09 para PA-34)
+const EQ_MIN_LV = {
+  'C152': 1,
+  'Sim. Mono': 2,
+  'Sim. Multi': 2,
+  'C172': 7,
+  'PA-34': 9
 };
+
+/**
+ * Fases / Missões do CIAC e regras estritas de equipamento:
+ * - Simulador: exclusivamente Sim. Mono ou Sim. Multi (A02+)
+ * - Missões de voo: realizadas exclusivamente em aeronaves (nunca em simuladores)
+ * - IFR: exclusivamente C172 (A08+) ou PA-34 (A09)
+ * - Noturno: exclusivamente C172 (A07+)
+ * - Multimotor: exclusivamente PA-34 (A09)
+ * - Voo Local (inclui TGL e INVA), Navegação, Voo Solo e Parafuso: aeronaves C152, C172 ou PA-34
+ */
+const MIS = {
+  'Simulador':  { lv: 2, defEq: 'Sim. Mono', eq: SIM_EQ_TYPES },
+  'Voo Local':  { lv: 1, defEq: 'C152',      eq: AIRCRAFT_EQ_TYPES },
+  'Navegação':  { lv: 4, defEq: 'C152',      eq: AIRCRAFT_EQ_TYPES },
+  'Voo Solo':   { lv: 5, defEq: 'C152',      eq: AIRCRAFT_EQ_TYPES },
+  'Parafuso':   { lv: 6, defEq: 'C152',      eq: AIRCRAFT_EQ_TYPES },
+  'IFR':        { lv: 8, defEq: 'C172',      eq: ['C172', 'PA-34'] },
+  'Noturno':    { lv: 7, defEq: 'C172',      eq: ['C172'] },
+  'Multimotor': { lv: 9, defEq: 'PA-34',     eq: ['PA-34'] }
+};
+
+function reqInsLevel(mis, eq) {
+  const m = MIS[mis] || MIS['Voo Local'];
+  return Math.max(m.lv, EQ_MIN_LV[eq] || 1);
+}
 
 // Limites máximos de peso implícitos ao equipamento (fixos na regra operacional)
 const DEFAULT_LIM = { 'C152': 170, 'C172': 222, 'PA-34': 250 };
 
-const INS = 'Adriano Luiz,Alan Carvalho,Alessandro Amorim,Ana Reolon,Antônio Paiva,Caio Monteiro,Daniel Barbosa,Davi Guerra,Eder Gonçalves,Eduardo Cougo,Felipe Cardoso,Felipe Ferreira,Flávia Giardini,Frederico Basus,Gabriel Ferreira,Guilherme Oliveira,Gustavo Zucconi,Henrique Pereira,Herbert Levy,Italo Camargos,Juan Alvarenga,Leandro Rangel,Lucas Brabo,Lucas Braga,Luiz Dantas,Luiz Eduardo,Marcelo Ribeiro,Maria Lissandra,Mateus Teixeira,Natalia Grossi,Renato Binder,Rogério Werneck,Rywerthon Junior,Santiago Lopes,Tomas Silveira,Tulio Nogueira,Vander Josafat,Victor Brabo'.split(',');
+// Lista oficial de 40 instrutores do ACPM com respectivos pesos em kg
+const INS_DATA = [
+  ['Alan Carvalho', 75],
+  ['Alessandro Amorim', 77],
+  ['Ana Reolon', 67],
+  ['Antônio Paiva', 87],
+  ['Caio Monteiro', 75],
+  ['Daniel Barbosa', 88],
+  ['Davi Guerra', 91],
+  ['Eder Gonçalves', 85],
+  ['Eduardo Cougo', 83],
+  ['Felipe Cardoso', 85],
+  ['Felipe Ferreira', 73],
+  ['Frederico Basus', 82],
+  ['Gabriel Ferreira', 73],
+  ['Guilherme Oliveira', 75],
+  ['Gustavo Zucconi', 78],
+  ['Henrique Pereira', 72],
+  ['Herbert Levy', 73],
+  ['Isaac Estevan', 75],
+  ['Italo Camargos', 70],
+  ['Juan Alvarenga', 63],
+  ['Juliana Lourenço', 55],
+  ['Lucas Brabo', 77],
+  ['Lucas Braga', 89],
+  ['Luiz Dantas', 80],
+  ['Luiz Eduardo', 72],
+  ['Marcelo Ribeiro', 75],
+  ['Maria Lissandra', 67],
+  ['Mateus Teixeira', 86],
+  ['Natalia Grossi', 52],
+  ['Renato Binder', 125],
+  ['Rogério Werneck', 90],
+  ['Santiago Lopes', 75],
+  ['Tabatha Faro', 51],
+  ['Tomas Silveira', 76],
+  ['Tulio Nogueira', 75],
+  ['Vander Josafat', 79],
+  ['Victor Brabo', 75],
+  ['Wellen Oliveira', 57],
+  ['Weslei Alves', 83],
+  ['Wirley Siqueira', 93]
+];
 
 const PRE = {
   'Dia inteiro': [0,1,2,3,4,5,6,7],
   'Manhã': [0,1,2,3],
   'Tarde': [4,5,6,7],
   'Noturno': [8],
-  'Dia + noturno': [0,1,2,3,4,5,6,7,8]
+  'Dia + noturno': [0,1,2,3,4,4,5,6,7,8]
 };
 
 const FLIGHT_STATUSES = ['Confirmado', 'Em Voo', 'Pendente', 'Cancelado'];
@@ -951,9 +1070,33 @@ const FLIGHT_STATUSES = ['Confirmado', 'Em Voo', 'Pendente', 'Cancelado'];
 const $ = s => document.querySelector(s);
 const pad = i => 'Aluno ' + String(i + 1).padStart(2, '0');
 const A = n => 'A0' + n;
-const LV = [1,2,3,4,5,6,7].map(n => [n, A(n)]);
+const LV_DESC = {
+  1: 'A01 · Local C152',
+  2: 'A02 · Simulador',
+  3: 'A03 · TGL',
+  4: 'A04 · Navegação',
+  5: 'A05 · Voo Solo',
+  6: 'A06 · Parafuso',
+  7: 'A07 · C172 / Noturno',
+  8: 'A08 · IFR',
+  9: 'A09 · PA-34 Sêneca'
+};
+const LV = [1,2,3,4,5,6,7,8,9].map(n => [n, LV_DESC[n]]);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const blank = () => ({ fly: false, mis: 'PP Local', eq: 'C152', p1: 1, p2: 2, nb: 1, ss: 1, pr: 3 });
+const blank = () => ({ fly: false, mis: 'Voo Local', eq: 'C152', p1: 1, p2: 2, nb: 1, ss: 1, pr: 3 });
+
+function migrateLegacyMissionName(mis) {
+  if (MIS[mis]) return mis;
+  const map = {
+    'PP Local': 'Voo Local',
+    'PP Navegação (>27nm)': 'Navegação',
+    'PC Visual': 'Voo Local',
+    'Multi': 'Multimotor',
+    'INVA': 'Voo Local',
+    'TGL': 'Voo Local'
+  };
+  return map[mis] || 'Voo Local';
+}
 
 function showToast(text) {
   const box = $('#toast-box');
@@ -979,23 +1122,82 @@ const ApiClient = {
 
   createFreshState() {
     const state = {
+      schemaVer: 3,
       win: WIN.map(() => true),
       av: {},
       lim: { ...DEFAULT_LIM },
       nid: 1000,
-      ins: INS.map((nm, i) => ({ id: i + 1, nm, on: true, lv: (i % 7) + 1, kg: 0, aw: WIN.map(() => true) })),
-      stu: Array.from({ length: 50 }, (_, i) => ({ id: i + 1, nm: pad(i), kg: 0, bl: [], ...blank() })),
+      ins: INS_DATA.map(([nm, kg], i) => ({
+        id: i + 1,
+        nm,
+        on: true,
+        lv: (i % 9) + 1,
+        kg,
+        aw: WIN.map(() => true)
+      })),
+      stu: [], // Inicializa sem nenhum aluno cadastrado
       fStatus: {}
     };
     Object.values(EQ).flat().forEach(r => state.av[r] = true);
     return state;
   },
 
+  normalizeAndMigrateState(x) {
+    if (!x || !Array.isArray(x.stu) || !Array.isArray(x.ins)) return this.createFreshState();
+    x.lim = { ...DEFAULT_LIM };
+    if (!x.fStatus) x.fStatus = {};
+    if (!x.nid || x.nid < 1000) x.nid = 1000;
+
+    // Migração para Schema v3:
+    // 1. Atualiza quadro de 40 instrutores e respectivos pesos oficiais
+    // 2. Remove os 50 alunos genéricos de fábrica caso nenhum aluno personalizado tenha sido criado
+    if (!x.schemaVer || x.schemaVer < 3) {
+      const prevByName = new Map();
+      x.ins.forEach(ins => prevByName.set(ins.nm.toLowerCase(), ins));
+
+      x.ins = INS_DATA.map(([nm, kg], idx) => {
+        const old = prevByName.get(nm.toLowerCase());
+        return {
+          id: idx + 1,
+          nm,
+          on: old ? old.on : true,
+          lv: (old && old.lv >= 1 && old.lv <= 9) ? ((x.schemaVer || 1) < 2 ? (idx % 9) + 1 : old.lv) : (idx % 9) + 1,
+          kg: (old && old.kg > 0) ? old.kg : kg,
+          aw: (old && Array.isArray(old.aw) && old.aw.length === WIN.length) ? old.aw : WIN.map(() => true)
+        };
+      });
+
+      const isDefaultPlaceholderList =
+        x.stu.length === 50 &&
+        x.stu.every((s, i) => s.nm === pad(i) && !s.fly && (!s.extra || !s.extra.length));
+      if (isDefaultPlaceholderList) {
+        x.stu = [];
+      }
+
+      x.schemaVer = 3;
+    }
+
+    x.stu.forEach(s => {
+      s.mis = migrateLegacyMissionName(s.mis);
+      const mRule = MIS[s.mis] || MIS['Voo Local'];
+      if (!mRule.eq.includes(s.eq)) s.eq = mRule.defEq;
+      if (!Array.isArray(s.extra)) s.extra = [];
+      s.extra.forEach(ex => {
+        if (!ex.mid) ex.mid = x.nid++;
+        ex.mis = migrateLegacyMissionName(ex.mis);
+        const exRule = MIS[ex.mis] || MIS['Voo Local'];
+        if (!exRule.eq.includes(ex.eq)) ex.eq = exRule.defEq;
+      });
+    });
+
+    return x;
+  },
+
   async fetchState() {
     if (this.REMOTE_ENDPOINT) {
       try {
         const res = await fetch(`${this.REMOTE_ENDPOINT}/state`);
-        if (res.ok) return await res.json();
+        if (res.ok) return this.normalizeAndMigrateState(await res.json());
       } catch (e) {}
     }
     try {
@@ -1014,16 +1216,15 @@ const ApiClient = {
           x = o;
         }
       }
-      if (x && x.stu && x.ins) {
-        x.lim = { ...DEFAULT_LIM };
-        if (!x.fStatus) x.fStatus = {};
-        return x;
+      if (x && Array.isArray(x.stu) && Array.isArray(x.ins)) {
+        return this.normalizeAndMigrateState(x);
       }
     } catch (e) {}
     return this.createFreshState();
   },
 
   async saveState(state) {
+    if (SHARED_LOCK) return false;
     try {
       localStorage.setItem(this.KEY_STATE, JSON.stringify(state));
       if (this.REMOTE_ENDPOINT) {
@@ -1046,6 +1247,7 @@ const ApiClient = {
   },
 
   async saveResult(res) {
+    if (SHARED_LOCK) return;
     try { localStorage.setItem(this.KEY_RESULT, JSON.stringify(res)); } catch (e) {}
   },
 
@@ -1058,6 +1260,7 @@ const ApiClient = {
   },
 
   async saveAudit(list) {
+    if (SHARED_LOCK) return;
     try { localStorage.setItem(this.KEY_AUDIT, JSON.stringify(list)); } catch (e) {}
   },
 
@@ -1070,21 +1273,28 @@ const ApiClient = {
   },
 
   async saveBI(biMap) {
+    if (SHARED_LOCK) return;
     try { localStorage.setItem(this.KEY_BI, JSON.stringify(biMap)); } catch (e) {}
   },
 
-  encodeShareableURL(state, dateStr, role = 'gestor') {
+  encodeShareableURL(state, dateStr) {
     const compact = {
       d: dateStr,
       w: state.win.map(v => v ? 1 : 0),
       avOff: Object.keys(state.av).filter(k => !state.av[k]),
-      inOff: state.ins.filter(x => !x.on).map(x => x.id),
+      ins: state.ins.map(x => [x.id, x.nm, x.on ? 1 : 0, x.lv, x.kg, x.aw.map(a => a ? 1 : 0)]),
       st: state.fStatus || {},
-      fly: state.stu.filter(s => s.fly).map(s => [s.id, s.nm, s.kg, s.bl, s.mis, s.eq, s.p1, s.p2, s.nb, s.ss, s.pr])
+      fly: state.stu
+        .filter(s => s.fly || (s.extra && s.extra.some(ex => ex.fly)))
+        .map(s => [
+          s.id, s.nm, s.kg, s.bl,
+          s.fly ? 1 : 0, s.mis, s.eq, s.p1, s.p2, s.nb, s.ss, s.pr,
+          (s.extra || []).filter(ex => ex.fly).map(ex => [ex.mid, ex.mis, ex.eq, ex.p1, ex.p2, ex.nb, ex.ss, ex.pr])
+        ])
     };
     const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(compact))));
     const url = new URL(window.location.href);
-    url.searchParams.set('role', role);
+    url.searchParams.set('role', 'gestor');
     url.searchParams.set('share', b64);
     return url.toString();
   },
@@ -1100,15 +1310,46 @@ const ApiClient = {
       if (decoded.st) state.fStatus = decoded.st;
       Object.keys(state.av).forEach(k => state.av[k] = true);
       (decoded.avOff || []).forEach(k => state.av[k] = false);
-      state.ins.forEach(x => x.on = !(decoded.inOff || []).includes(x.id));
-      state.stu.forEach(s => Object.assign(s, blank()));
-      (decoded.fly || []).forEach(([id, nm, kg, bl, mis, eq, p1, p2, nb, ss, pr]) => {
+
+      if (Array.isArray(decoded.ins)) {
+        state.ins = decoded.ins.map(([id, nm, on, lv, kg, aw]) => ({
+          id, nm, on: Boolean(on), lv, kg: kg || 0, aw: Array.isArray(aw) ? aw.map(Boolean) : WIN.map(() => true)
+        }));
+      } else if (Array.isArray(decoded.inOff)) {
+        state.ins.forEach(x => x.on = !decoded.inOff.includes(x.id));
+      }
+
+      state.stu = [];
+
+      (decoded.fly || []).forEach(row => {
+        const [id, nm, kg, bl] = row;
         let target = state.stu.find(s => s.id === id);
         if (!target) {
-          target = { id, nm, kg, bl: bl || [], ...blank() };
+          target = { id, nm, kg: kg || 0, bl: bl || [], extra: [], ...blank() };
           state.stu.push(target);
         }
-        Object.assign(target, { nm, kg, bl: bl || [], fly: true, mis, eq, p1, p2, nb, ss, pr });
+        if (row.length >= 12) {
+          const [, , , , flyFlag, mis, eq, p1, p2, nb, ss, pr, extraArr] = row;
+          const normMis = migrateLegacyMissionName(mis);
+          const normEq = MIS[normMis].eq.includes(eq) ? eq : MIS[normMis].defEq;
+          Object.assign(target, {
+            nm, kg: kg || 0, bl: bl || [],
+            fly: Boolean(flyFlag), mis: normMis, eq: normEq, p1, p2, nb, ss, pr,
+            extra: Array.isArray(extraArr) ? extraArr.map(([mid, emis, eeq, ep1, ep2, enb, ess, epr]) => {
+              const em = migrateLegacyMissionName(emis);
+              const ee = MIS[em].eq.includes(eeq) ? eeq : MIS[em].defEq;
+              return { mid, fly: true, mis: em, eq: ee, p1: ep1, p2: ep2, nb: enb, ss: ess, pr: epr };
+            }) : []
+          });
+        } else {
+          const [, , , , mis, eq, p1, p2, nb, ss, pr] = row;
+          const normMis = migrateLegacyMissionName(mis);
+          const normEq = MIS[normMis].eq.includes(eq) ? eq : MIS[normMis].defEq;
+          Object.assign(target, {
+            nm, kg: kg || 0, bl: bl || [],
+            fly: true, mis: normMis, eq: normEq, p1, p2, nb, ss, pr, extra: []
+          });
+        }
       });
       return decoded.d || null;
     } catch (e) { return null; }
@@ -1116,26 +1357,43 @@ const ApiClient = {
 };
 
 // ============================================================================
-// 3. ESTADO GLOBAL, CONTROLE DE PERFIL (GESTOR SOMENTE LEITURA), UNDO E LOG
+// 3. ESTADO GLOBAL, CONTROLE DE PERFIL (GESTOR E LINK BLINDADO), UNDO E LOG
 // ============================================================================
 let S = ApiClient.createFreshState();
 let RES = null;
 let AUDIT_LOG = [];
 let BI_HISTORY = {};
 let TL_MODE = 'eq'; // 'eq' (Por Aeronave) ou 'ins' (Por Instrutor)
+let SHARED_LOCK = false; // Quando true, trava permanentemente em modo Gestor (link compartilhado)
 const historyStack = [];
 const activeTimers = new WeakMap();
 
-const isGestor = () => document.body.getAttribute('data-role') === 'gestor';
+const isGestor = () => SHARED_LOCK || document.body.getAttribute('data-role') === 'gestor';
 
-function setRole(role) {
-  const validRole = role === 'gestor' ? 'gestor' : 'operador';
+function setRole(role, lockShared = false) {
+  if (lockShared) SHARED_LOCK = true;
+  const validRole = (SHARED_LOCK || role === 'gestor') ? 'gestor' : 'operador';
   document.body.setAttribute('data-role', validRole);
+  if (SHARED_LOCK) {
+    document.body.setAttribute('data-shared', 'true');
+  }
   const sel = $('#role-sel');
-  if (sel) sel.value = validRole;
+  if (sel) {
+    if (SHARED_LOCK) {
+      sel.innerHTML = '<option value="gestor" selected>🔒 Gestor (Somente Leitura)</option>';
+      sel.value = 'gestor';
+      sel.disabled = true;
+      sel.title = 'Link compartilhado: visualização exclusiva no perfil Gestor';
+    } else {
+      sel.value = validRole;
+    }
+  }
+  const dtInput = $('#dt');
+  if (dtInput) dtInput.disabled = isGestor();
 }
 
 function pushHistory() {
+  if (isGestor()) return;
   historyStack.push(JSON.stringify(S));
   if (historyStack.length > 30) historyStack.shift();
   const btnUndo = $('#btn-undo');
@@ -1143,10 +1401,12 @@ function pushHistory() {
 }
 
 function save() {
+  if (isGestor()) return;
   ApiClient.saveState(S);
 }
 
 function logChange(type, desc, revertAction = null) {
+  if (isGestor()) return;
   const now = new Date();
   const entry = {
     id: Date.now() + Math.floor(Math.random() * 1000),
@@ -1177,29 +1437,59 @@ const insBy = id => S.ins.find(x => x.id === id);
 const stuBy = id => S.stu.find(x => x.id === id);
 const msg = t => { const el = $('#msg'); if (el) el.textContent = t; if (t) showToast(t); };
 
+// Utilitário para acessar missão principal (mid = 0) ou missão extra (mid > 0) de um aluno
+function getMissionTarget(stuId, mid = 0) {
+  const s = stuBy(stuId);
+  if (!s) return null;
+  if (!mid || mid === 0) return s;
+  return (s.extra || []).find(ex => ex.mid === mid) || null;
+}
+
 // ============================================================================
 // 4. MOTOR DE ALOCAÇÃO DETERMINÍSTICO PURO (SCHEDULER ENGINE)
 // ============================================================================
 function runAllocationEngine(state) {
-  const used = {}, busy = {}, load = {}, eu = {}, out = [], al = [];
+  const used = {}, busy = {}, stuBusy = {}, stuLastPick = {}, load = {}, eu = {}, out = [], al = [];
 
-  const stuOrderMap = new Map();
-  state.stu.forEach((st, idx) => stuOrderMap.set(st.id, idx));
+  // Monta fila de pedidos de missão (suporta múltiplas missões por aluno no mesmo dia)
+  const act = [];
+  state.stu.forEach((st, stuIdx) => {
+    if (st.fly) {
+      act.push({ stu: st, stuId: st.id, mid: 0, ref: st, stuOrder: stuIdx, misOrder: 0 });
+    }
+    if (Array.isArray(st.extra)) {
+      st.extra.forEach((ex, exIdx) => {
+        if (ex.fly) {
+          act.push({ stu: st, stuId: st.id, mid: ex.mid, ref: ex, stuOrder: stuIdx, misOrder: exIdx + 1 });
+        }
+      });
+    }
+  });
 
-  const act = state.stu
-    .filter(d => d.fly)
-    .sort((a, b) => b.pr - a.pr || stuOrderMap.get(a.id) - stuOrderMap.get(b.id));
+  // Ordena por prioridade decrescente (5 a 1), ordem de cadastro do aluno e ordem da missão
+  act.sort((a, b) => b.ref.pr - a.ref.pr || a.stuOrder - b.stuOrder || a.misOrder - b.misOrder);
 
   const free = (mp, id, s, e) => !(mp[id] || []).some(([a, b]) => s < b && e > a);
   const cover = (aw, s, e) => T.every((c, k) => !(s < (k < NI ? T[k + 1] : 1440) && e > c) || aw[k]);
 
-  for (const d of act) {
-    const m = MIS[d.mis], nm = d.nm, lim = DEFAULT_LIM[d.eq] || 0;
+  for (const item of act) {
+    const { stu, stuId, mid, ref: d, stuOrder } = item;
+    const m = MIS[d.mis] || MIS['Voo Local'];
+    const nm = stu.nm;
+    const labelStu = mid ? `${nm} (${d.mis})` : nm;
+    const lim = DEFAULT_LIM[d.eq] || 0;
     const H = Math.max(1, +d.nb || 1), K = Math.min(Math.max(+d.ss || 1, 1), H);
     const night = d.mis === 'Noturno';
+    const isParafuso = d.mis === 'Parafuso';
+    const reqLv = reqInsLevel(d.mis, d.eq);
 
+    // 1. Validação de equipamento permitido para a missão (Simulador vs Aeronaves, IFR em C172/PA-34, etc.)
     if (!m.eq.includes(d.eq)) {
-      al.push({ t: 'err', s: nm, m: `Rejeitado: o equipamento “${d.eq}” é incompatível com a missão “${d.mis}” (esperado: ${m.eq.join(' ou ')}).` });
+      al.push({
+        t: 'err',
+        s: labelStu,
+        m: `Rejeitado: a missão “${d.mis}” é realizada apenas em ${m.eq.join(' ou ')} (selecionado: ${d.eq}).`
+      });
       continue;
     }
 
@@ -1216,27 +1506,36 @@ function runAllocationEngine(state) {
       for (const w of c) rec(j + 1, T[w] + len[j], [...pl, { w, a: T[w], b: T[w] + len[j] }]);
     })(0, 0, []);
 
-    const fc = { eq: 0, disp: 0, busy: 0, bloq: 0, peso: 0 };
+    // Filtra a frota candidata respeitando a exclusividade do C152 PR-JPL (Acrobat) para Parafuso
+    const fleetPool = (EQ[d.eq] || []).filter(r => {
+      if (isParafuso && d.eq === 'C152') return r === ACROBAT_REG;
+      return r !== ACROBAT_REG;
+    });
+
+    const fc = { stu_busy: 0, eq: 0, disp: 0, busy: 0, bloq: 0, peso: 0 };
     let ch = null;
 
     for (const pl of plans) {
       const pick = [];
-      let prev = null, bad = null;
+      let prev = stuLastPick[stuId] || null, bad = null;
 
       for (const p of pl) {
-        const eqs = EQ[d.eq].filter(r => state.av[r] && free(used, r, p.a, p.b));
+        // Garante que o aluno não tenha outra missão do dia sobreposta neste horário
+        if (!free(stuBusy, stuId, p.a, p.b)) { bad = 'stu_busy'; break; }
+
+        const eqs = fleetPool.filter(r => state.av[r] && free(used, r, p.a, p.b));
         if (!eqs.length) { bad = 'eq'; break; }
 
-        const q = state.ins.filter(x => x.on && x.lv >= m.lv && cover(x.aw, p.a, p.b));
+        const q = state.ins.filter(x => x.on && x.lv >= reqLv && cover(x.aw, p.a, p.b));
         if (!q.length) { bad = 'disp'; break; }
 
         const f1 = q.filter(x => free(busy, x.id, p.a, p.b));
         if (!f1.length) { bad = 'busy'; break; }
 
-        const f2 = f1.filter(x => !d.bl.includes(x.id));
+        const f2 = f1.filter(x => !stu.bl.includes(x.id));
         if (!f2.length) { bad = 'bloq'; break; }
 
-        const ins = f2.filter(x => !lim || !d.kg || !x.kg || d.kg + x.kg <= lim);
+        const ins = f2.filter(x => !lim || !stu.kg || !x.kg || stu.kg + x.kg <= lim);
         if (!ins.length) { bad = 'peso'; break; }
 
         eqs.sort((a, b) => (prev && (a === prev.r) - (b === prev.r)) || (eu[a] || 0) - (eu[b] || 0));
@@ -1258,21 +1557,24 @@ function runAllocationEngine(state) {
         const { r, x } = pick[j], hh = len[j] / 60;
         (used[r] = used[r] || []).push([p.a, p.b]);
         (busy[x.id] = busy[x.id] || []).push([p.a, p.b]);
+        (stuBusy[stuId] = stuBusy[stuId] || []).push([p.a, p.b]);
+        stuLastPick[stuId] = { r, x };
 
-        const fKey = `${d.id}_${j + 1}`;
+        const fKey = `${stuId}_${mid}_${j + 1}`;
         out.push({
           fKey,
           w: p.w, a: p.a, b: p.b,
-          o: stuOrderMap.get(d.id),
-          stuId: d.id,
+          o: stuOrder,
+          stuId,
+          mid,
           insId: x.id,
           eqType: d.eq,
           s: nm, mis: d.mis, h: hh, ss: `${j + 1}/${K}`,
           r, ins: x.nm, lv: x.lv,
-          stuKg: d.kg || 0,
+          stuKg: stu.kg || 0,
           insKg: x.kg || 0,
           limKg: lim,
-          kg: d.kg && x.kg ? d.kg + x.kg : 0,
+          kg: stu.kg && x.kg ? stu.kg + x.kg : 0,
           tag: p.w == d.p1 ? 'Pref. 1' : p.w == d.p2 ? 'Pref. 2' : 'Próximo livre',
           status: (state.fStatus && state.fStatus[fKey]) || 'Confirmado'
         });
@@ -1280,30 +1582,35 @@ function runAllocationEngine(state) {
         eu[r] = (eu[r] || 0) + hh;
         load[x.id] = (load[x.id] || 0) + hh;
 
-        if (lim && !warned && (!d.kg || !x.kg)) {
+        if (lim && !warned && (!stu.kg || !x.kg)) {
           warned = true;
-          al.push({ t: 'warn', s: nm, m: `Peso não cadastrado (aluno ou instrutor): verificação de peso e balanceamento no ${d.eq} não realizada.` });
+          al.push({ t: 'warn', s: labelStu, m: `Peso do aluno não informado (0 kg): verificação de limite (${lim} kg) no ${d.eq} não realizada.` });
         }
       });
     } else {
       let why;
-      if (!EQ[d.eq].some(r => state.av[r])) {
-        why = `nenhum equipamento ${d.eq} disponível (manutenção/indisponível)`;
-      } else if (!state.ins.some(x => x.on && x.lv >= m.lv)) {
-        why = `nenhum instrutor ativo com nível ${A(m.lv)} ou superior`;
+      if (isParafuso && d.eq === 'C152' && !state.av[ACROBAT_REG]) {
+        why = `a aeronave acrobática ${ACROBAT_REG} (exclusiva para Parafuso no C152) está indisponível/em manutenção`;
+      } else if (!fleetPool.some(r => state.av[r])) {
+        why = `nenhum equipamento ${d.eq} compatível disponível (manutenção/indisponível)`;
+      } else if (!state.ins.some(x => x.on && x.lv >= reqLv)) {
+        why = `nenhum instrutor ativo com nível ${A(reqLv)} ou superior (exigido para ${d.mis} em ${d.eq})`;
       } else if (!plans.length) {
-        why = `não há como encaixar ${H} h${K > 1 ? ' em ' + K + ' sessões' : ' contínuas'} ${night ? 'a partir da janela noturna' : 'dentro do horário diurno (término até ' + hm(T[NI]) + ')'} com as janelas habilitadas`;
+        why = `não há como encaixar ${H} h${K > 1 ? ' em ' + K + ' sessões' : ' contínuas'} ${night ? 'a partir da janela noturna (17:30)' : 'dentro do horário diurno (término até ' + hm(T[NI]) + ')'} com as janelas habilitadas`;
       } else {
         const key = Object.keys(fc).sort((a, b) => fc[b] - fc[a])[0];
         why = {
-          eq: `falta de ${d.eq} livre nos horários testados (ocupado por alunos de maior prioridade)`,
-          disp: `nenhum instrutor ${A(m.lv)}+ disponível durante todo o voo nos horários testados`,
-          busy: `instrutores ${A(m.lv)}+ já ocupados em algum trecho do voo (conflito de horário)`,
-          bloq: 'os instrutores qualificados livres estão bloqueados por este aluno',
+          stu_busy: `conflito de horário com outra missão do próprio aluno (${nm}) já agendada neste dia`,
+          eq: isParafuso && d.eq === 'C152'
+            ? `a aeronave acrobática ${ACROBAT_REG} (exclusiva para Parafuso) já está ocupada nos horários testados`
+            : `falta de ${d.eq} livre nos horários testados (ocupado por voos de maior prioridade)`,
+          disp: `nenhum instrutor ${A(reqLv)}+ disponível durante todo o voo nos horários testados`,
+          busy: `instrutores ${A(reqLv)}+ já ocupados em algum trecho do voo (conflito de horário)`,
+          bloq: `os instrutores ${A(reqLv)}+ livres estão bloqueados por este aluno`,
           peso: `peso aluno + instrutor acima do limite de ${lim} kg do ${d.eq}`
         }[key];
       }
-      al.push({ t: 'err', s: nm, m: `Rejeitado: ${why}.` });
+      al.push({ t: 'err', s: labelStu, m: `Rejeitado: ${why}.` });
     }
   }
 
@@ -1312,6 +1619,7 @@ function runAllocationEngine(state) {
 }
 
 function syncBIHistoryForCurrentDate() {
+  if (SHARED_LOCK) return;
   const dtVal = $('#dt') ? $('#dt').value : '';
   if (dtVal && RES) {
     BI_HISTORY[dtVal] = {
@@ -1345,7 +1653,10 @@ function rRec() {
 
   $('#eqs').innerHTML = Object.keys(EQ).map(k =>
     `<h2>${EQT[k]}</h2><div class="pn"><div class="chips">${
-      EQ[k].map(r => `<label class="chip${S.av[r] ? '' : ' off'}"><input type="checkbox" data-a="av" data-id="${r}"${S.av[r] ? ' checked' : ''}>${r}</label>`).join('')
+      EQ[k].map(r => {
+        const badge = r === ACROBAT_REG ? ' <span class="chip-sub" title="Exclusivo para missão de Parafuso (A06+)">Acrobat · Parafuso</span>' : '';
+        return `<label class="chip${S.av[r] ? '' : ' off'}"><input type="checkbox" data-a="av" data-id="${r}"${S.av[r] ? ' checked' : ''}>${r}${badge}</label>`;
+      }).join('')
     }</div></div>`
   ).join('');
 }
@@ -1381,36 +1692,89 @@ const sum = d => {
   const H = d.nb, K = Math.min(d.ss || 1, H);
   const L = Array.from({ length: K }, (_, j) => Math.floor(H / K) + (j < H % K ? 1 : 0));
   const nt = d.mis === 'Noturno';
-  if (K > 1) return `${H} h em ${K} sessões: ${L.join(' h + ')} h`;
-  if (d.p1 < 0) return `${H} h, sem horário preferido`;
+  const reqLv = reqInsLevel(d.mis, d.eq);
+  const lvTag = ` · Mín. ${A(reqLv)}${d.mis === 'Parafuso' && d.eq === 'C152' ? ' (' + ACROBAT_REG + ')' : ''}`;
+  if (K > 1) return `${H} h em ${K} sessões (${L.join('h+') + 'h'})${lvTag}`;
+  if (d.p1 < 0) return `${H} h, livre${lvTag}`;
   const s = T[d.p1], e = s + H * 60;
-  return `${hm(s)}–${hm(e)}` + ((nt !== (d.p1 == NI) || e > (nt ? 1440 : T[NI])) ? ' ⚠ fora do horário permitido' : '');
+  return `${hm(s)}–${hm(e)}${lvTag}` + ((nt !== (d.p1 == NI) || e > (nt ? 1440 : T[NI])) ? ' ⚠ horário' : '');
 };
 
-const rowHTML = d => `<tr data-k="d" data-id="${d.id}" data-nm="${esc(d.nm.toLowerCase())}" data-mis="${esc(d.mis)}" class="${d.fly ? 'on p' + d.pr : 'off'}">
-  <td>${esc(d.nm)}</td>
-  <td><input type="checkbox" data-f="fly"${d.fly ? ' checked' : ''} aria-label="Vai voar"></td>
-  <td><select data-f="mis">${opts(Object.keys(MIS).map(m => [m, m]), d.mis)}</select></td>
-  <td><select data-f="eq">${opts(Object.keys(EQ).map(m => [m, m]), d.eq)}</select></td>
-  <td><select data-f="p1">${wopt(d.p1, 1)}</select></td>
-  <td><select data-f="p2">${wopt(d.p2, 1)}</select></td>
-  <td><select data-f="nb">${opts(Array.from({ length: 11 }, (_, i) => [i + 1, (i + 1) + ' h']), d.nb)}</select></td>
-  <td><select data-f="ss">${opts([[1, '1'], [2, '2'], [3, '3']].filter(o => o[0] <= d.nb), Math.min(d.ss || 1, d.nb))}</select></td>
-  <td><select data-f="pr">${opts([1, 2, 3, 4, 5].map(n => [n, n]), d.pr)}</select></td>
-  <td class="sm">${sum(d)}</td>
-</tr>`;
+function allowedEqOptionsForMission(mis, currentEq) {
+  const m = MIS[mis] || MIS['Voo Local'];
+  return opts(m.eq.map(eq => [eq, eq]), currentEq);
+}
+
+const singleDemandRowHTML = (stu, d, mid = 0) => {
+  const isExtra = mid !== 0;
+  const trCls = `${d.fly ? 'on p' + d.pr : 'off'}${isExtra ? ' extra-row' : ''}`;
+  const firstCell = isExtra
+    ? `<div class="stu-cell"><span class="sm">↳ ${esc(stu.nm)} (missão extra)</span><button class="x edit-only" data-act="del-mis" data-id="${stu.id}" data-mid="${mid}" title="Remover esta missão extra">✕</button></div>`
+    : `<div class="stu-cell"><span>${esc(stu.nm)}</span><button class="btn-add-mis edit-only" data-act="add-mis" data-id="${stu.id}" title="Adicionar outra missão para este aluno no mesmo dia">+ Missão</button></div>`;
+
+  return `<tr data-k="d" data-id="${stu.id}" data-mid="${mid}" data-nm="${esc(stu.nm.toLowerCase())}" data-mis="${esc(d.mis)}" class="${trCls}">
+    <td>${firstCell}</td>
+    <td><input type="checkbox" data-f="fly"${d.fly ? ' checked' : ''} aria-label="Vai voar"></td>
+    <td><select data-f="mis">${opts(Object.keys(MIS).map(m => [m, m]), d.mis)}</select></td>
+    <td><select data-f="eq">${allowedEqOptionsForMission(d.mis, d.eq)}</select></td>
+    <td><select data-f="p1">${wopt(d.p1, 1)}</select></td>
+    <td><select data-f="p2">${wopt(d.p2, 1)}</select></td>
+    <td><select data-f="nb">${opts(Array.from({ length: 11 }, (_, i) => [i + 1, (i + 1) + ' h']), d.nb)}</select></td>
+    <td><select data-f="ss">${opts([[1, '1'], [2, '2'], [3, '3']].filter(o => o[0] <= d.nb), Math.min(d.ss || 1, d.nb))}</select></td>
+    <td><select data-f="pr">${opts([1, 2, 3, 4, 5].map(n => [n, n]), d.pr)}</select></td>
+    <td class="sm">${sum(d)}</td>
+  </tr>`;
+};
+
+const studentDemandRowsHTML = stu => {
+  let html = singleDemandRowHTML(stu, stu, 0);
+  if (Array.isArray(stu.extra) && stu.extra.length) {
+    html += stu.extra.map(ex => singleDemandRowHTML(stu, ex, ex.mid)).join('');
+  }
+  return html;
+};
 
 const rIns = () => { $('#inst').innerHTML = S.ins.map(insHTML).join(''); };
-const rAlu = () => { $('#alu').innerHTML = S.stu.map(stuHTML).join(''); };
-const cnt = () => { $('#cnt').textContent = S.stu.filter(d => d.fly).length + ' / ' + S.stu.length + ' voam'; };
-const rDem = () => { $('#dem').innerHTML = S.stu.map(rowHTML).join(''); cnt(); renderAuditPanel(); };
+
+const rAlu = () => {
+  if (!S.stu.length) {
+    $('#alu').innerHTML = `<p class="h" style="grid-column:1/-1">Nenhum aluno cadastrado. Clique em “+ Novo aluno” acima para cadastrar ou use “Preencher exemplo” na aba 4 · Demanda.</p>`;
+    return;
+  }
+  $('#alu').innerHTML = S.stu.map(stuHTML).join('');
+};
+
+const cnt = () => {
+  let activeMissions = 0;
+  let activeStudents = 0;
+  S.stu.forEach(s => {
+    const extraActive = (s.extra || []).filter(ex => ex.fly).length;
+    const totStu = (s.fly ? 1 : 0) + extraActive;
+    if (totStu > 0) activeStudents++;
+    activeMissions += totStu;
+  });
+  $('#cnt').textContent = `${activeStudents} / ${S.stu.length} aluno(s) · ${activeMissions} missão(ões) marcada(s)`;
+};
+
+const rDem = () => {
+  if (!S.stu.length) {
+    $('#dem').innerHTML = `<tr class="empty-dem"><td colspan="10" class="h" style="padding:16px">Nenhum aluno cadastrado. Cadastre alunos em “3 · Alunos” ou clique em “Preencher exemplo” acima para testar a escala.</td></tr>`;
+    cnt();
+    renderAuditPanel();
+    return;
+  }
+  $('#dem').innerHTML = S.stu.map(studentDemandRowsHTML).join('');
+  cnt();
+  applyDemandFilters();
+  renderAuditPanel();
+};
 
 const HT = o => o.h + ' h' + (o.ss !== '1/1' ? ` (sessão ${o.ss})` : '');
 
 function missionColorClass(mis) {
   if (mis === 'Simulador') return 'm-sim';
-  if (mis === 'PP Local' || mis === 'PP Navegação (>27nm)') return 'm-pp';
-  if (mis === 'PC Visual' || mis === 'IFR') return 'm-pc';
+  if (mis === 'Voo Local' || mis === 'Voo Solo') return 'm-pp';
+  if (mis === 'Navegação' || mis === 'Parafuso' || mis === 'IFR') return 'm-pc';
   if (mis === 'Noturno') return 'm-nt';
   return 'm-mu';
 }
@@ -1465,7 +1829,7 @@ function buildTimelineGroup(out, groupKey, subLabelFn, barLine1Fn, barLine2Fn, m
               </select>
             </span>
           </div>
-          ${o.stuId ? `<button class="tl-pop-btn edit-only" data-act="rm-fly" data-id="${o.stuId}">✕ Excluir da escala</button>` : ''}
+          ${o.stuId ? `<button class="tl-pop-btn edit-only" data-act="rm-fly" data-id="${o.stuId}" data-mid="${o.mid || 0}">✕ Excluir da escala</button>` : ''}
         </div>
       </div>`;
     }).join('');
@@ -1499,7 +1863,7 @@ function renderVisualTimeline(out) {
         'r',
         (first, totalH) => `${first.eqType || ''} · ${totalH} h`,
         o => `${hm(o.a)}–${hm(o.b)} · ${esc(o.s)}`,
-        o => `${esc(o.ins)} (${A(o.lv)})`,
+        o => `${esc(o.mis)} · ${esc(o.ins)} (${A(o.lv)})`,
         minStart,
         maxEnd
       );
@@ -1514,10 +1878,10 @@ function renderVisualTimeline(out) {
     </div>
     <div class="tl-legend">
       <span><i class="tl-dot m-sim"></i>Simulador</span>
-      <span><i class="tl-dot m-pp"></i>PP</span>
-      <span><i class="tl-dot m-pc"></i>PC / IFR</span>
+      <span><i class="tl-dot m-pp"></i>Voo Local / Solo</span>
+      <span><i class="tl-dot m-pc"></i>Navegação / Parafuso / IFR</span>
       <span><i class="tl-dot m-nt"></i>Noturno</span>
-      <span><i class="tl-dot m-mu"></i>Multi</span>
+      <span><i class="tl-dot m-mu"></i>Multimotor</span>
       <span>🛫 Em Voo</span>
       <span>⏳ Pendente</span>
       <span>✕ Cancelado</span>
@@ -1527,28 +1891,37 @@ function renderVisualTimeline(out) {
 }
 
 function renderAuditPanel() {
-  const activeStudents = S.stu.filter(d => d.fly);
+  const activeItems = [];
+  S.stu.forEach(s => {
+    if (s.fly) activeItems.push({ stuId: s.id, mid: 0, nm: s.nm, mis: s.mis, eq: s.eq, nb: s.nb });
+    if (Array.isArray(s.extra)) {
+      s.extra.forEach(ex => {
+        if (ex.fly) activeItems.push({ stuId: s.id, mid: ex.mid, nm: s.nm, mis: ex.mis, eq: ex.eq, nb: ex.nb });
+      });
+    }
+  });
+
   const cntEl = $('#inc-active-cnt');
-  if (cntEl) cntEl.textContent = activeStudents.length;
+  if (cntEl) cntEl.textContent = activeItems.length;
 
   const badgeCnt = $('#log-cnt');
   if (badgeCnt) badgeCnt.textContent = AUDIT_LOG.length;
 
-  const allocatedSet = new Set(RES ? RES.out.map(o => o.s) : []);
+  const allocatedKeySet = new Set(RES ? RES.out.map(o => `${o.stuId}_${o.mid || 0}`) : []);
 
   const activeListEl = $('#inc-active-list');
   if (activeListEl) {
-    if (!activeStudents.length) {
-      activeListEl.innerHTML = `<div class="audit-item"><span class="h">Nenhum aluno marcado.</span></div>`;
+    if (!activeItems.length) {
+      activeListEl.innerHTML = `<div class="audit-item"><span class="h">Nenhuma missão marcada.</span></div>`;
     } else {
-      activeListEl.innerHTML = activeStudents.map(d => {
-        const isAlloc = allocatedSet.has(d.nm);
+      activeListEl.innerHTML = activeItems.map(d => {
+        const isAlloc = allocatedKeySet.has(`${d.stuId}_${d.mid}`);
         const statusBadge = RES
           ? (isAlloc ? `<span class="audit-badge inc">Alocado</span>` : `<span class="audit-badge exc">Rejeitado</span>`)
           : `<span class="audit-badge mod">Pendente</span>`;
         return `<div class="audit-item">
           <div>${statusBadge} <b>${esc(d.nm)}</b> · ${esc(d.mis)} (${esc(d.eq)}) · ${d.nb} h</div>
-          <button class="x edit-only" data-act="rm-fly" data-id="${d.id}">✕ Excluir</button>
+          <button class="x edit-only" data-act="rm-fly" data-id="${d.stuId}" data-mid="${d.mid}">✕ Excluir</button>
         </div>`;
       }).join('');
     }
@@ -1589,7 +1962,7 @@ function rOut(switchTab = true) {
 
   const filteredOut = out.filter(o => {
     if (curEqFilter && o.r !== curEqFilter) return false;
-    if (qFilter && !o.s.toLowerCase().includes(qFilter) && !o.ins.toLowerCase().includes(qFilter)) return false;
+    if (qFilter && !o.s.toLowerCase().includes(qFilter) && !o.ins.toLowerCase().includes(qFilter) && !o.mis.toLowerCase().includes(qFilter)) return false;
     return true;
   });
 
@@ -1602,8 +1975,8 @@ function rOut(switchTab = true) {
   }, 0);
 
   let h = `<div class="st">
-    <div><strong>${tot}</strong>na demanda</div>
-    <div><strong>${tot - rej}</strong>atendidos</div>
+    <div><strong>${tot}</strong>missões na demanda</div>
+    <div><strong>${tot - rej}</strong>atendidas</div>
     <div><strong>${activeHours} h</strong>horas ativas</div>
     <div><strong style="color:${al.length ? 'var(--er)' : 'var(--ok)'}">${al.length}</strong>alertas</div>
   </div>`;
@@ -1611,7 +1984,7 @@ function rOut(switchTab = true) {
   h += al.map(a => `<div class="al ${a.t}"><b>${esc(a.s)}</b>${a.m}</div>`).join('');
 
   if (!filteredOut.length) {
-    h += `<p class="h">${tot ? 'Nenhum voo alocado.' : 'Nenhum aluno marcado em “4 · Demanda”.'}</p>`;
+    h += `<p class="h">${tot ? 'Nenhum voo alocado.' : 'Nenhuma missão marcada em “4 · Demanda”.'}</p>`;
   } else {
     // 1º: Tabela Oficial da Escala do Dia
     h += '<div class="tw" style="margin-top:10px"><table><thead><tr><th>Horário</th><th>Aluno</th><th>Missão</th><th>Equipamento</th><th>Instrutor</th><th>Duração</th><th>Peso</th><th>Encaixe</th><th>Status</th><th class="edit-only">Ação</th></tr></thead><tbody>';
@@ -1624,21 +1997,22 @@ function rOut(switchTab = true) {
       const stVal = (S.fStatus && S.fStatus[o.fKey]) || o.status || 'Confirmado';
       const stKey = stVal.replace(/\s+/g, '');
       const rowCancelCls = stVal === 'Cancelado' ? ' class="st-Cancelado"' : '';
+      const disabledAttr = isGestor() ? ' disabled' : '';
       h += `<tr${rowCancelCls}>
         <td>${hm(o.a)}–${hm(o.b)}</td>
         <td><b>${esc(o.s)}</b></td>
-        <td>${o.mis}</td>
-        <td>${o.r}</td>
+        <td>${esc(o.mis)}</td>
+        <td>${esc(o.r)}</td>
         <td>${esc(o.ins)} (${A(o.lv)})</td>
         <td>${HT(o)}</td>
         <td>${o.kg ? o.kg + ' kg' : '—'}</td>
         <td><span class="tag${o.tag[0] == 'P' ? '' : ' fb'}">${o.tag}</span></td>
         <td>
-          <select class="st-sel st-${stKey}" data-f="fstatus" data-fkey="${o.fKey}" aria-label="Status do voo">
+          <select class="st-sel st-${stKey}" data-f="fstatus" data-fkey="${o.fKey}" aria-label="Status do voo"${disabledAttr}>
             ${FLIGHT_STATUSES.map(st => `<option value="${st}"${st === stVal ? ' selected' : ''}>${st}</option>`).join('')}
           </select>
         </td>
-        <td class="edit-only">${o.stuId ? `<button class="x" data-act="rm-fly" data-id="${o.stuId}">✕</button>` : ''}</td>
+        <td class="edit-only">${o.stuId ? `<button class="x" data-act="rm-fly" data-id="${o.stuId}" data-mid="${o.mid || 0}">✕</button>` : ''}</td>
       </tr>`;
     }
     h += '</tbody></table></div>';
@@ -1694,6 +2068,7 @@ function rBI() {
     record.out.forEach(o => {
       if (o.status === 'Cancelado') return;
       const h = +o.h || 0;
+      const normMis = migrateLegacyMissionName(o.mis);
       if (isDay) { totH_D += h; totF_D++; }
       if (isWeek) { totH_W += h; totF_W++; }
       if (isMonth) { totH_M += h; totF_M++; }
@@ -1708,10 +2083,10 @@ function rBI() {
       if (isWeek) insStats[o.ins].w += h;
       if (isMonth) { insStats[o.ins].m += h; insStats[o.ins].flightsM++; }
 
-      if (!misStats[o.mis]) misStats[o.mis] = { mis: o.mis, d: 0, w: 0, m: 0 };
-      if (isDay) misStats[o.mis].d += h;
-      if (isWeek) misStats[o.mis].w += h;
-      if (isMonth) misStats[o.mis].m += h;
+      if (!misStats[normMis]) misStats[normMis] = { mis: normMis, d: 0, w: 0, m: 0 };
+      if (isDay) misStats[normMis].d += h;
+      if (isWeek) misStats[normMis].w += h;
+      if (isMonth) misStats[normMis].m += h;
     });
   });
 
@@ -1746,8 +2121,9 @@ function rBI() {
               ${eqList.map(e => {
                 const pct = Math.round((e.m / maxEqM) * 100);
                 const disp = S.av[e.reg] ? '' : ' <span class="tag fb">Manut.</span>';
+                const acro = e.reg === ACROBAT_REG ? ' <span class="tag">Acrobat</span>' : '';
                 return `<tr>
-                  <td><b>${esc(e.reg)}</b>${disp}</td>
+                  <td><b>${esc(e.reg)}</b>${acro}${disp}</td>
                   <td class="sm">${esc(e.type)}</td>
                   <td><b>${e.d} h</b></td>
                   <td>${e.w} h</td>
@@ -1787,15 +2163,18 @@ function rBI() {
       <h3>Horas por Fase / Missão</h3>
       <div class="tw">
         <table style="min-width:100%">
-          <thead><tr><th>Missão</th><th>Frota</th><th>Nível</th><th>Dia</th><th>Semana</th><th>Mês</th><th>Proporção</th></tr></thead>
+          <thead><tr><th>Missão</th><th>Equipamento Permitido</th><th>Nível Base</th><th>Dia</th><th>Semana</th><th>Mês</th><th>Proporção</th></tr></thead>
           <tbody>
             ${Object.values(misStats).map(ms => {
-              const rule = MIS[ms.mis];
+              const rule = MIS[ms.mis] || MIS['Voo Local'];
+              const eqDesc = ms.mis === 'Parafuso'
+                ? 'C152 (PR-JPL) / C172 / PA-34'
+                : rule.eq.join(' / ');
               const pct = Math.round((ms.m / maxMisM) * 100);
               return `<tr>
                 <td><b>${esc(ms.mis)}</b></td>
-                <td>${esc(rule.eq.join(' / '))}</td>
-                <td><span class="tag">${A(rule.lv)}</span></td>
+                <td>${esc(eqDesc)}</td>
+                <td><span class="tag">${A(rule.lv)}+</span></td>
                 <td><b>${ms.d} h</b></td>
                 <td>${ms.w} h</td>
                 <td><b>${ms.m} h</b></td>
@@ -1860,7 +2239,7 @@ async function pdf() {
   doc.setFontSize(18); doc.text('Escala de Voo - ACPM', 14, 15);
   doc.setFontSize(11);
   doc.text(`Data da escala: ${dt}     Emitida em: ${new Date().toLocaleString('pt-BR')}`, 14, 22);
-  doc.text(`Alunos na demanda: ${tot}     Atendidos: ${tot - rej}     Horas de voo escaladas: ${hrs(out)}     Alertas: ${al.length}`, 14, 28);
+  doc.text(`Missões na demanda: ${tot}     Atendidas: ${tot - rej}     Horas de voo escaladas: ${hrs(out)}     Alertas: ${al.length}`, 14, 28);
 
   const body = [];
   let cw = -1;
@@ -1879,7 +2258,7 @@ async function pdf() {
     out.forEach(o => (g[o[k]] = g[o[k]] || []).push(o));
     return Object.entries(g).sort((a, b) => a[0].localeCompare(b[0]));
   };
-  const lst = a => a.map(o => `${hm(o.a)}-${hm(o.b)} ${o.s}`).join('; ');
+  const lst = a => a.map(o => `${hm(o.a)}-${hm(o.b)} ${o.s} (${o.mis})`).join('; ');
   const tb = (t, head, rows) => {
     let y = Y();
     if (y > 165) { doc.addPage(); y = 15; }
@@ -1934,7 +2313,7 @@ document.addEventListener('click', e => {
 function applyDemandFilters() {
   const q = ($('#flt-dem') && $('#flt-dem').value || '').toLowerCase();
   const mis = $('#flt-dem-mis') ? $('#flt-dem-mis').value : '';
-  document.querySelectorAll('#dem tr').forEach(tr => {
+  document.querySelectorAll('#dem tr[data-k="d"]').forEach(tr => {
     const matchName = !q || tr.dataset.nm.includes(q);
     const matchMis = !mis || tr.dataset.mis === mis;
     tr.hidden = !(matchName && matchMis);
@@ -1984,16 +2363,23 @@ $('#exp').onclick = exp;
 $('#pdf').onclick = pdf;
 $('#btn-undo').onclick = undoLastAction;
 
-$('#role-sel').onchange = e => setRole(e.target.value);
+$('#role-sel').onchange = e => {
+  if (SHARED_LOCK) {
+    setRole('gestor', true);
+    return;
+  }
+  setRole(e.target.value);
+  if (RES) rOut(false);
+};
 
 $('#btn-share-link').onclick = async () => {
   const dtVal = $('#dt') ? $('#dt').value : '';
-  const url = ApiClient.encodeShareableURL(S, dtVal, 'gestor');
+  const url = ApiClient.encodeShareableURL(S, dtVal);
   try {
     await navigator.clipboard.writeText(url);
-    showToast('Link copiado!');
+    showToast('Link de Gestor (somente leitura) copiado!');
   } catch (e) {
-    prompt('Copie o link abaixo:', url);
+    prompt('Copie o link abaixo (abre bloqueado no perfil Gestor):', url);
   }
 };
 
@@ -2012,8 +2398,9 @@ $('#btn-clear-log').onclick = () => {
 };
 
 $('#dt').onchange = e => {
+  if (isGestor()) return;
   if ($('#bi-dt')) $('#bi-dt').value = e.target.value;
-  if (RES && !isGestor()) gen(false);
+  if (RES) gen(false);
   else rBI();
 };
 $('#bi-dt').onchange = () => rBI();
@@ -2036,32 +2423,69 @@ const demo = () => {
   let s = 7;
   const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
   const pick = a => a[Math.floor(r() * a.length)];
-  const ms = Object.keys(MIS), wt = [0,0,1,1,1,2,2,3,4,4,5,6,6,7];
-  S.stu.forEach(d => {
+  const wt = [0,0,1,1,1,2,2,3,4,4,5,6,6,7];
+  const poolMis = ['Simulador','Voo Local','Voo Local','Navegação','Navegação','Voo Solo','IFR','Multimotor','Noturno'];
+
+  // Se não houver nenhum aluno cadastrado, cria 20 alunos de exemplo com pesos realistas
+  if (!S.stu.length) {
+    S.stu = Array.from({ length: 20 }, (_, i) => ({
+      id: S.nid++,
+      nm: pad(i),
+      kg: 62 + Math.floor(r() * 28),
+      bl: [],
+      extra: [],
+      ...blank()
+    }));
+  }
+
+  S.stu.forEach((d, idx) => {
+    d.extra = [];
+    // 1º Aluno exemplifica o caso real de múltiplas missões no mesmo dia (Navegação manhã + 2 Locais tarde + Noturno)
+    if (idx === 0) {
+      Object.assign(d, {
+        fly: true, mis: 'Navegação', eq: 'C152', p1: 1, p2: 0, nb: 3, ss: 1, pr: 5,
+        extra: [
+          { mid: S.nid++, fly: true, mis: 'Voo Local', eq: 'C152', p1: 4, p2: 6, nb: 2, ss: 2, pr: 5 },
+          { mid: S.nid++, fly: true, mis: 'Noturno', eq: 'C172', p1: NI, p2: NI, nb: 1, ss: 1, pr: 5 }
+        ]
+      });
+      return;
+    }
+    // 2º Aluno exemplifica missão de Parafuso no PR-JPL (C152 Acrobat)
+    if (idx === 1) {
+      Object.assign(d, {
+        fly: true, mis: 'Parafuso', eq: 'C152', p1: 2, p2: 5, nb: 1, ss: 1, pr: 4, extra: []
+      });
+      return;
+    }
     if (r() > .82) { Object.assign(d, blank()); return; }
-    const mis = pick([...ms, 'Simulador', 'PP Local', 'PP Local', 'PC Visual']);
+    const mis = pick(poolMis);
     const nt = mis === 'Noturno';
-    const nb = nt ? 1 + Math.floor(r() * 3) : 1 + Math.floor(r() * r() * 6);
+    const nb = nt ? 1 + Math.floor(r() * 2) : 1 + Math.floor(r() * r() * 4);
+    let eq = MIS[mis].defEq;
+    if (mis === 'Simulador') eq = pick(SIM_EQ_TYPES);
+    else if (mis === 'IFR') eq = r() > 0.78 ? 'PA-34' : 'C172';
+    else if (mis === 'Navegação' || mis === 'Voo Local') eq = r() > 0.72 ? 'C172' : 'C152';
+
     Object.assign(d, {
-      fly: true, mis,
-      eq: mis === 'Simulador' ? pick(['Sim. Mono', 'Sim. Multi']) : MIS[mis].eq[0],
+      fly: true, mis, eq,
       p1: nt ? NI : pick(wt),
       p2: nt ? NI : pick(wt),
       nb,
-      ss: nb >= 4 && r() > .5 ? 2 : 1,
+      ss: nb >= 3 && r() > .5 ? 2 : 1,
       pr: 1 + Math.floor(r() * 5)
     });
   });
-  save(); rDem();
-  logChange('inc', 'Demanda preenchida com exemplo');
-  showToast('Exemplo carregado.');
+  save(); rAlu(); rDem();
+  logChange('inc', 'Demanda preenchida com exemplo operacional');
+  showToast('Exemplo operacional carregado.');
 };
 
 armed('#demo', 'Confirmar exemplo', demo);
 armed('#clr', 'Confirmar limpeza', () => {
   if (isGestor()) return;
   pushHistory();
-  S.stu.forEach(d => Object.assign(d, blank()));
+  S.stu.forEach(d => { Object.assign(d, blank()); d.extra = []; });
   save(); rDem();
   logChange('exc', 'Demanda limpa');
   if (RES) gen(false);
@@ -2075,6 +2499,7 @@ armed('#btn-bi-sim', 'Confirmar simulação', () => {
   const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const pick = a => a[Math.floor(rnd() * a.length)];
   const allMis = Object.keys(MIS);
+  const stuPool = S.stu.length ? S.stu : Array.from({ length: 15 }, (_, i) => ({ nm: pad(i) }));
 
   for (let dayOffset = 0; dayOffset < 30; dayOffset++) {
     const d = new Date(baseDate.getTime() - dayOffset * 86400000);
@@ -2084,12 +2509,15 @@ armed('#btn-bi-sim', 'Confirmar simulação', () => {
     const flights = [];
     const numFlights = 10 + Math.floor(rnd() * 14);
     for (let f = 0; f < numFlights; f++) {
-      const mis = pick([...allMis, 'PP Local', 'PP Local', 'PC Visual', 'IFR']);
+      const mis = pick([...allMis, 'Voo Local', 'Voo Local', 'Navegação', 'IFR']);
       const eqType = pick(MIS[mis].eq);
-      const reg = pick(EQ[eqType]);
-      const qualIns = S.ins.filter(x => x.lv >= MIS[mis].lv);
+      const reg = (mis === 'Parafuso' && eqType === 'C152')
+        ? ACROBAT_REG
+        : pick(EQ[eqType].filter(r => r !== ACROBAT_REG));
+      const minLv = reqInsLevel(mis, eqType);
+      const qualIns = S.ins.filter(x => x.lv >= minLv);
       const ins = pick(qualIns.length ? qualIns : S.ins);
-      const stu = pick(S.stu);
+      const stu = pick(stuPool);
       const h = 1 + Math.floor(rnd() * 3);
       const w = mis === 'Noturno' ? 8 : Math.floor(rnd() * 7);
       flights.push({
@@ -2118,19 +2546,58 @@ document.addEventListener('click', e => {
   if (!b) return;
   if (isGestor()) { e.preventDefault(); return; }
   const a = b.dataset.act, c = b.closest('[data-k]'), id = c ? +c.dataset.id : +b.dataset.id || 0;
+  const mid = b.dataset.mid !== undefined ? +b.dataset.mid : (c && c.dataset.mid !== undefined ? +c.dataset.mid : 0);
+
+  if (a === 'add-mis') {
+    const s = stuBy(id);
+    if (!s) return;
+    pushHistory();
+    if (!Array.isArray(s.extra)) s.extra = [];
+    const newEx = {
+      mid: S.nid++,
+      fly: true,
+      mis: 'Voo Local',
+      eq: 'C152',
+      p1: 4,
+      p2: 6,
+      nb: 1,
+      ss: 1,
+      pr: s.pr || 3
+    };
+    s.extra.push(newEx);
+    save();
+    rDem();
+    logChange('inc', `Missão extra adicionada para ${s.nm}`);
+    if (RES) gen(false);
+    showToast(`Nova missão adicionada para ${s.nm}.`);
+    return;
+  }
+
+  if (a === 'del-mis') {
+    const s = stuBy(id);
+    if (!s || !Array.isArray(s.extra)) return;
+    pushHistory();
+    s.extra = s.extra.filter(ex => ex.mid !== mid);
+    save();
+    rDem();
+    logChange('exc', `Missão extra removida de ${s.nm}`);
+    if (RES) gen(false);
+    return;
+  }
 
   if (a === 'rm-fly') {
     const s = stuBy(id);
-    if (!s || !s.fly) return;
+    const target = getMissionTarget(id, mid);
+    if (!s || !target || !target.fly) return;
     pushHistory();
-    s.fly = false;
+    target.fly = false;
     save();
-    logChange('exc', `${s.nm} excluído da escala (${s.mis} · ${s.eq})`, {
-      kind: 'setFly', stuId: s.id, val: true, label: '↶ Restaurar'
+    logChange('exc', `${s.nm} excluído da escala (${target.mis} · ${target.eq})`, {
+      kind: 'setFly', stuId: s.id, mid, val: true, label: '↶ Restaurar'
     });
     rDem();
     gen(false);
-    msg(`Inclusão de ${s.nm} removida.`);
+    msg(`Inclusão de ${s.nm} (${target.mis}) removida.`);
     return;
   }
 
@@ -2143,11 +2610,12 @@ document.addEventListener('click', e => {
 
     if (rev.kind === 'setFly') {
       const st = stuBy(rev.stuId);
-      if (st) {
-        st.fly = rev.val;
+      const target = getMissionTarget(rev.stuId, rev.mid || 0);
+      if (st && target) {
+        target.fly = rev.val;
         AUDIT_LOG.splice(entryIdx, 1);
         ApiClient.saveAudit(AUDIT_LOG);
-        logChange(rev.val ? 'inc' : 'exc', `Revertido: ${st.nm}`);
+        logChange(rev.val ? 'inc' : 'exc', `Revertido: ${st.nm} (${target.mis})`);
         save(); rDem(); gen(false);
       }
     } else if (rev.kind === 'setAv') {
@@ -2175,7 +2643,7 @@ document.addEventListener('click', e => {
     logChange('inc', `Instrutor adicionado: ${newIns.nm}`);
   } else if (a === 'adds') {
     pushHistory();
-    const newStu = { id: S.nid++, nm: 'Novo aluno', kg: 0, bl: [], ...blank() };
+    const newStu = { id: S.nid++, nm: 'Novo aluno', kg: 0, bl: [], extra: [], ...blank() };
     S.stu.push(newStu);
     save(); rAlu(); rDem(); focusLast('#alu .nm');
     logChange('inc', `Aluno cadastrado: ${newStu.nm}`);
@@ -2211,7 +2679,7 @@ document.addEventListener('click', e => {
   }
 });
 
-// Sincronização em tempo real de alterações (com trava estrita para Perfil Gestor)
+// Sincronização em tempo real de alterações (com trava estrita para Perfil Gestor e Links Compartilhados)
 document.addEventListener('change', e => {
   const t = e.target, f = t.dataset.f, a = t.dataset.a;
   if (t.id === 'onlyfly') { $('#dem').classList.toggle('only', t.checked); return; }
@@ -2267,6 +2735,7 @@ document.addEventListener('change', e => {
   if (!c || !f) return;
   pushHistory();
   const k = c.dataset.k, id = +c.dataset.id;
+  const mid = c.dataset.mid !== undefined ? +c.dataset.mid : 0;
 
   if (k === 'i') {
     const x = insBy(id);
@@ -2313,20 +2782,38 @@ document.addEventListener('change', e => {
       if (f === 'nm') rDem();
       if (RES) gen(false);
     } else {
+      const target = getMissionTarget(id, mid);
+      if (!target) return;
       if (f === 'fly') {
-        s.fly = t.checked;
+        target.fly = t.checked;
         logChange(
-          s.fly ? 'inc' : 'exc',
-          `${s.nm} ${s.fly ? 'incluído' : 'retirado'} (${s.mis} · ${s.eq} · ${s.nb} h)`,
-          { kind: 'setFly', stuId: s.id, val: !s.fly, label: s.fly ? '✕ Excluir' : '↶ Restaurar' }
+          target.fly ? 'inc' : 'exc',
+          `${s.nm} ${target.fly ? 'incluído' : 'retirado'} (${target.mis} · ${target.eq} · ${target.nb} h)`,
+          { kind: 'setFly', stuId: s.id, mid, val: !target.fly, label: target.fly ? '✕ Excluir' : '↶ Restaurar' }
         );
       } else {
-        s[f] = (f === 'mis' || f === 'eq') ? t.value : +t.value;
-        if (f === 'mis') s.eq = MIS[s.mis].eq[0];
-        if (f === 'nb') s.ss = Math.min(s.ss || 1, s.nb);
-        logChange('mod', `Pedido ${s.nm}: ${s.mis} · ${s.eq} · ${s.nb} h`);
+        target[f] = (f === 'mis' || f === 'eq') ? t.value : +t.value;
+        if (f === 'mis') {
+          const mRule = MIS[target.mis] || MIS['Voo Local'];
+          // Garante que o equipamento selecionado seja estritamente compatível com a missão escolhida
+          if (!mRule.eq.includes(target.eq)) {
+            target.eq = mRule.defEq;
+          }
+          if (target.mis === 'Noturno') {
+            target.p1 = NI;
+            target.p2 = NI;
+          } else if (target.p1 === NI) {
+            target.p1 = 1;
+            target.p2 = 2;
+          }
+        }
+        if (f === 'nb') target.ss = Math.min(target.ss || 1, target.nb);
+        logChange('mod', `Pedido ${s.nm}: ${target.mis} · ${target.eq} · ${target.nb} h`);
       }
-      save(); c.outerHTML = rowHTML(s); cnt(); renderAuditPanel();
+      save();
+      c.outerHTML = singleDemandRowHTML(s, target, mid);
+      cnt();
+      renderAuditPanel();
       if (RES) gen(false);
     }
   }
@@ -2350,8 +2837,15 @@ document.addEventListener('change', e => {
   BI_HISTORY = await ApiClient.fetchBI();
 
   const params = new URLSearchParams(window.location.search);
-  if (params.get('role')) setRole(params.get('role'));
+  const hasShare = params.has('share');
   const sharedDate = ApiClient.applySharedURLIfPresent(S);
+
+  // Se aberto via link compartilhado, força bloqueio estrito no perfil Gestor sem permitir troca para Operador
+  if (hasShare) {
+    setRole('gestor', true);
+  } else if (params.get('role')) {
+    setRole(params.get('role'), false);
+  }
 
   rRec(); rIns(); rAlu(); rDem(); renderAuditPanel();
 
@@ -2359,7 +2853,7 @@ document.addEventListener('change', e => {
     $('#dt').value = sharedDate;
     $('#bi-dt').value = sharedDate;
     gen(true);
-    showToast('Escala compartilhada carregada.');
+    showToast('Escala compartilhada carregada (Modo Gestor Somente Leitura).');
   } else if (RES) {
     rOut(false);
   }
