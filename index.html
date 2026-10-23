@@ -260,6 +260,7 @@ tr.st-Cancelado td { opacity: 0.45; text-decoration: line-through; }
   white-space: nowrap;
 }
 .tag.fb { color: var(--wa); border-color: var(--wa); }
+.tag.grp { color: var(--ok); border-color: var(--ok); }
 
 /* Status Operacional do Voo */
 .st-sel {
@@ -431,6 +432,7 @@ p.h { color: var(--mu); margin: 4px 0 8px; }
   overflow: visible;
 }
 
+.m-gnd { background: #2E6F40; color: #fff; }
 .m-sim { background: #3A506B; color: #fff; }
 .m-pp  { background: #1F5FA8; color: #fff; }
 .m-pc  { background: #0E7C6B; color: #fff; }
@@ -496,7 +498,7 @@ p.h { color: var(--mu); margin: 4px 0 8px; }
   bottom: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%) translateY(4px);
-  width: 265px;
+  width: 280px;
   background: var(--pop-bg);
   color: var(--pop-txt);
   border: 1px solid var(--ln);
@@ -535,9 +537,9 @@ p.h { color: var(--mu); margin: 4px 0 8px; }
   justify-content: space-between;
   color: var(--ye);
 }
-.tl-pop-grid { display: grid; grid-template-columns: 74px 1fr; gap: 3px 6px; margin-bottom: 8px; align-items: center; }
+.tl-pop-grid { display: grid; grid-template-columns: 74px 1fr; gap: 3px 6px; margin-bottom: 8px; align-items: start; }
 .tl-pop-grid span:nth-child(odd) { opacity: 0.75; }
-.tl-pop-grid span:nth-child(even) { font-weight: 600; }
+.tl-pop-grid span:nth-child(even) { font-weight: 600; white-space: normal; }
 .tl-pop-btn {
   width: 100%;
   background: var(--er);
@@ -714,7 +716,7 @@ details.pn summary { cursor: pointer; font: 600 16px 'Barlow Semi Condensed', sa
       <input type="search" class="flt-ctrl" data-flt="inst" placeholder="Buscar instrutor…" aria-label="Buscar instrutor">
       <select id="flt-ins-lv" class="flt-ctrl" aria-label="Filtrar por nível">
         <option value="">Todos os níveis</option>
-        <option value="1">A01+ (Local C152)</option>
+        <option value="1">A01+ (Local C152 / Todos os Grounds)</option>
         <option value="2">A02+ (Simulador)</option>
         <option value="3">A03+ (TGL)</option>
         <option value="4">A04+ (Navegação)</option>
@@ -751,6 +753,10 @@ details.pn summary { cursor: pointer; font: 600 16px 'Barlow Semi Condensed', sa
       <input type="search" id="flt-dem" class="flt-ctrl" placeholder="Buscar aluno…" aria-label="Filtrar aluno na demanda">
       <select id="flt-dem-mis" class="flt-ctrl" aria-label="Filtrar por missão">
         <option value="">Todas as missões</option>
+        <option value="Ground C152">Ground C152</option>
+        <option value="Ground C172">Ground C172</option>
+        <option value="Ground PA-34">Ground PA-34</option>
+        <option value="Ground Navegação">Ground Navegação</option>
         <option value="Simulador">Simulador</option>
         <option value="Voo Local">Voo Local</option>
         <option value="Navegação">Navegação</option>
@@ -794,7 +800,7 @@ details.pn summary { cursor: pointer; font: 600 16px 'Barlow Semi Condensed', sa
       <select id="flt-esc-eq" class="flt-ctrl" aria-label="Filtrar por equipamento">
         <option value="">Todos os equipamentos</option>
       </select>
-      <input type="search" id="flt-esc-q" class="flt-ctrl" placeholder="Buscar aluno ou instrutor…" aria-label="Filtrar na escala">
+      <input type="search" id="flt-esc-q" class="flt-ctrl" placeholder="Buscar aluno, instrutor ou missão…" aria-label="Filtrar na escala">
       <span id="msg" class="h" role="status"></span>
     </div>
 
@@ -831,12 +837,13 @@ details.pn summary { cursor: pointer; font: 600 16px 'Barlow Semi Condensed', sa
     <div class="bar">
       <label class="chip">Data base <input type="date" id="bi-dt"></label>
       <select id="bi-flt-eq" class="flt-ctrl" aria-label="Filtrar frota no BI">
-        <option value="">Todas as frotas</option>
+        <option value="">Todas as frotas / recursos</option>
         <option value="C152">C152</option>
         <option value="C172">C172</option>
         <option value="PA-34">PA-34</option>
         <option value="Sim. Mono">Sim. Mono</option>
         <option value="Sim. Multi">Sim. Multi</option>
+        <option value="Sala Ground">Sala Ground</option>
       </select>
       <input type="search" id="bi-flt-ins" class="flt-ctrl" placeholder="Buscar instrutor…" aria-label="Filtrar instrutor no BI">
       <button class="btn sec edit-only" id="btn-bi-sim">Simular 30 dias</button>
@@ -847,7 +854,7 @@ details.pn summary { cursor: pointer; font: 600 16px 'Barlow Semi Condensed', sa
     <!-- MANUAL DO USUÁRIO E GUIA DE REGRAS OPERACIONAIS (RECOLHÍVEL) -->
     <details class="pn manual-panel">
       <summary>📘 Manual do Usuário e Regras de Alocação da Escala (Operador &amp; Gestor)</summary>
-      <p class="h" style="margin-top:8px">Guia de referência rápida com os parâmetros operacionais do CIAC/ACPM, matriz de instrutores A01–A09, regras de equipamentos e respostas para dúvidas frequentes.</p>
+      <p class="h" style="margin-top:8px">Guia de referência rápida com os parâmetros operacionais do CIAC/ACPM, Ground School coletivo, matriz de instrutores A01–A09 e respostas para dúvidas frequentes.</p>
 
       <div class="manual-grid">
         <div class="manual-card">
@@ -860,12 +867,12 @@ details.pn summary { cursor: pointer; font: 600 16px 'Barlow Semi Condensed', sa
         </div>
 
         <div class="manual-card">
-          <h4>2. Janelas de Operação e Tempos de Voo</h4>
+          <h4>2. Ground School (01h30) e Turmas Coletivas</h4>
           <ul>
-            <li><b>9 Horários de Início:</b> 1º (06:30), 2º (08:20), 3º (10:10), 4º (11:30), 5º (12:40), 6º (13:40), 7º (14:30), 8º (16:20) e 9º (17:30 — exclusivo Noturno).</li>
-            <li><b>Voo Contínuo:</b> Cada sessão ocupa o bloco contínuo a partir do início (ex.: 3 h iniciando às 08:20 vai das <b>08:20 às 11:20</b>, mantendo o mesmo avião e instrutor na sessão).</li>
-            <li><b>Teto Diurno (17:30):</b> Missões diurnas precisam terminar até as 17:30. Voos de missão <b>Noturno</b> iniciam exclusivamente às 17:30 (até 24:00).</li>
-            <li><b>Emenda de Voos:</b> Não há intervalo mínimo obrigatório entre dois voos — uma aeronave ou instrutor que pousa às 11:30 já pode assumir outro voo às 11:30.</li>
+            <li><b>Sem Restrição de Nível de Instrutor (A01+):</b> Todas as temáticas (<b>Ground C152</b>, <b>Ground C172</b>, <b>Ground PA-34</b> e <b>Ground Navegação</b>) podem ser ministradas por qualquer instrutor ativo (<b>A01+</b>, considerando carteira MLTE para planejamento), priorizando sempre os instrutores de <b>menor nível</b>.</li>
+            <li><b>Duração Fixa de 01h30 (90 min):</b> Inicia em qualquer janela diurna compatível (ex.: 06:30 às 08:00, liberando o aluno e o instrutor para decolar às 08:20).</li>
+            <li><b>Turma Coletiva no Mesmo Horário:</b> Vários alunos (ex.: 6 alunos de Ground C152 ou Ground PA-34) realizam o mesmo Ground simultaneamente com o <b>mesmo instrutor</b>.</li>
+            <li><b>Precedência sobre o Voo:</b> Quando o aluno tem Ground e o voo da respectiva temática no mesmo dia, o motor agenda obrigatoriamente o Ground <b>antes</b> do voo.</li>
           </ul>
         </div>
 
@@ -876,54 +883,53 @@ details.pn summary { cursor: pointer; font: 600 16px 'Barlow Semi Condensed', sa
             <li><b>Missões de Voo e Restrições de Equipamento:</b>
               <br>• <b>Voo Local</b> (inclui TGL e INVA), <b>Navegação</b>, <b>Voo Solo</b> e <b>Parafuso</b>: Aeronaves <b>C152</b>, <b>C172</b> ou <b>PA-34</b>.
               <br>• <b>IFR:</b> Exclusivo em <b>C172</b> ou <b>PA-34</b>.
-              <br>• <b>Noturno:</b> Exclusivo em <b>C172</b>.
+              <br>• <b>Noturno:</b> Exclusivo em <b>C172</b> (janela 17:30).
               <br>• <b>Multimotor:</b> Exclusivo em <b>PA-34</b>.
             </li>
             <li><b>Exclusividade do C152 PR-JPL (Acrobat):</b> O avião <b>PR-JPL</b> é reservado exclusivamente para missões de <b>Parafuso</b> (com instrutor mínimo <b>A06+</b>) e nunca é alocado em outras missões.</li>
-            <li><b>Limites Implícitos de Peso (Aluno + Instrutor):</b> <b>C152 = 170 kg</b>, <b>C172 = 222 kg</b>, <b>PA-34 = 250 kg</b>. Peso <code>0</code> aloca normalmente com aviso amarelo de conferência.</li>
+            <li><b>Limites Implícitos de Peso (Aluno + Instrutor):</b> <b>C152 = 170 kg</b>, <b>C172 = 222 kg</b>, <b>PA-34 = 250 kg</b>.</li>
           </ul>
         </div>
 
         <div class="manual-card">
           <h4>4. Instrutores: Matriz Cumulativa (A01–A09)</h4>
           <ul>
-            <li><b>Habilitações Cumulativas do ACPM:</b>
-              <br>• <b>A01:</b> Voo Local C152 (inclui INVA)
+            <li><b>Habilitações Cumulativas de Voo e Ground do ACPM:</b>
+              <br>• <b>A01:</b> Voo Local C152 (inclui INVA) + <b>Todos os Grounds</b> (C152, C172, PA-34 e Navegação)
               <br>• <b>A02:</b> A01 + Simulador (Mono / Multi)
               <br>• <b>A03:</b> A02 + TGL
-              <br>• <b>A04:</b> A03 + Navegação (&gt;27nm)
+              <br>• <b>A04:</b> A03 + Voo de Navegação (&gt;27nm)
               <br>• <b>A05:</b> A04 + Voo Solo (liberação de solo)
-              <br>• <b>A06:</b> A05 + Parafuso (PR-JPL)
-              <br>• <b>A07:</b> A06 + Aeronave <b>C172</b> e Noturno
-              <br>• <b>A08:</b> A07 + IFR (C172)
-              <br>• <b>A09:</b> A08 + Multimotor <b>PA-34 (Sêneca)</b>
+              <br>• <b>A06:</b> A05 + Voo de Parafuso (PR-JPL)
+              <br>• <b>A07:</b> A06 + Voo em Aeronave <b>C172</b> e Noturno
+              <br>• <b>A08:</b> A07 + Voo IFR (C172)
+              <br>• <b>A09:</b> A08 + Voo Multimotor <b>PA-34 (Sêneca)</b>
             </li>
-            <li><b>Otimização de Nível:</b> O motor preserva instrutores seniores (A07–A09) alocando sempre o instrutor disponível de <b>menor nível apto</b> para a combinação Missão + Equipamento.</li>
+            <li><b>Otimização de Nível:</b> O motor preserva instrutores seniores (A07–A09) para os voos avançados, alocando instrutores de menor nível (A01+) nos Grounds e nos voos iniciais.</li>
           </ul>
         </div>
 
         <div class="manual-card">
           <h4>5. Múltiplas Missões no Dia por Aluno</h4>
           <ul>
-            <li><b>Botão “+ Missão”:</b> Na aba <i>4 · Demanda</i>, clique em <b>+ Missão</b> ao lado do nome do aluno para agendar diferentes missões no mesmo dia (ex.: <i>Navegação</i> de 3h pela manhã + 2 sessões de <i>Voo Local</i> à tarde + 1 <i>Noturno</i> às 17:30).</li>
-            <li><b>Proteção contra Autoconflito:</b> O motor verifica a agenda do próprio aluno no dia para garantir que suas missões não se sobreponham, deslocando automaticamente para a <i>Pref. 2</i> ou <i>Próximo livre</i> se necessário.</li>
-            <li><b>Variação entre Sessões:</b> O algoritmo prioriza variar aeronave e instrutor entre sessões distintas do mesmo aluno.</li>
+            <li><b>Botão “+ Missão”:</b> Na aba <i>4 · Demanda</i>, clique em <b>+ Missão</b> ao lado do nome do aluno para agendar Ground School + Voo(s) no mesmo dia (ex.: <i>Ground Navegação</i> às 06:30 + <i>Navegação</i> de 3h às 08:20 + <i>Noturno</i> às 17:30).</li>
+            <li><b>Proteção contra Autoconflito:</b> O motor verifica a agenda do próprio aluno no dia para garantir que suas missões não se sobreponham e que o voo ocorra após o Ground correspondente.</li>
           </ul>
         </div>
 
         <div class="manual-card">
           <h4>6. Perguntas Frequentes (FAQ)</h4>
           <div class="faq-item">
-            <b>Onde agendo voos de TGL ou do curso INVA?</b>
-            Ambos são agendados como <b>Voo Local</b> na coluna Fase/Missão, escolhendo a aeronave desejada (C152 ou C172).
+            <b>Um instrutor A01 pode ser escalado para dar Ground PA-34 ou Ground C172?</b>
+            Sim. Para fins de planejamento do Ground School não há restrição de nível: qualquer instrutor ativo (A01+) pode ministrar qualquer Ground, sendo priorizados justamente os instrutores de menor nível (A01) para liberar os instrutores A07–A09 para os voos práticos.
           </div>
           <div class="faq-item">
-            <b>Por que um voo de Parafuso no C152 exige o PR-JPL?</b>
-            Porque na frota C152 apenas o <b>PR-JPL</b> (Acrobat) realiza Parafuso, exigindo que o PR-JPL esteja ativo e haja instrutor <b>A06+</b> livre no horário.
+            <b>As horas do instrutor no Ground coletivo são multiplicadas pelo número de alunos?</b>
+            Não. Mesmo que 6 alunos assistam ao Ground juntos, o sistema contabiliza exatamente <b>1,5 h (01h30)</b> de aula para o instrutor no Mapa de Ocupação, no PDF e no BI.
           </div>
           <div class="faq-item">
-            <b>Quem recebe o link compartilhado consegue mudar para Operador ou editar a escala?</b>
-            Não. O link compartilhado trava o sistema em modo <b>Gestor (Somente Leitura)</b> e desabilita a troca de perfil.
+            <b>O que acontece se o aluno tiver Ground e o Voo da mesma temática no mesmo dia?</b>
+            O motor aloca primeiro o <b>Ground</b> (01h30) e agenda o <b>Voo</b> obrigatoriamente em uma janela após o término do Ground.
           </div>
         </div>
       </div>
@@ -936,12 +942,12 @@ details.pn summary { cursor: pointer; font: 600 16px 'Barlow Semi Condensed', sa
 <script>
 /**
  * ============================================================================
- * ARQUITETURA MODULAR — ESCALA DE VOO ACPM (SCHEMA v3)
- *  1. Config & Regras Operacionais (A01–A09, PR-JPL Acrobat, 40 Instrutores com Pesos)
+ * ARQUITETURA MODULAR — ESCALA DE VOO ACPM (SCHEMA v4.1)
+ *  1. Config & Regras Operacionais (A01–A09, Ground School A01+ 1h30, PR-JPL, 40 Instrutores)
  *  2. ApiClient (Camada Assíncrona + Inicialização sem Alunos + Link Gestor Blindado)
  *  3. StateStore & AuditLogger (Estado, Multi-Missão por Aluno, Undo e Histórico)
- *  4. SchedulerEngine (Motor Determinístico Multi-Missão + Cruzamento Missão×Eq)
- *  5. ViewRenderer (Tabela Oficial + Mapa Visual Sincronizado + BI + Manual)
+ *  4. SchedulerEngine (Motor Determinístico: Ground Coletivo A01+ + Precedência + Voos)
+ *  5. ViewRenderer (Tabela Oficial + Mapa Visual Consolidado + BI + Manual)
  *  6. ExportService & EventController (CSV, PDF e Eventos Globais)
  * ============================================================================
  */
@@ -955,6 +961,14 @@ const T = WIN.map(w => w.split(':')[0] * 60 + +w.split(':')[1]);
 const hm = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
 const WLB = i => `${WIN[i]} · ${i + 1}º tempo` + (i == NI ? ' (noturno)' : '');
 
+// Formatação limpa de horas (suporta 1.5 h = 01h30 do Ground School e horas inteiras de voo)
+const fmtH = v => {
+  const n = Math.round((+v || 0) * 10) / 10;
+  return Number.isInteger(n) ? `${n} h` : `${String(n).replace('.', ',')} h`;
+};
+const fmtDurLabel = h => (+h === 1.5 ? '01h30 (1,5 h)' : `${h} h`);
+
+// Frotas físicas exibidas na Aba 1 (Recursos)
 const EQ = {
   'Sim. Mono': ['SIM-MONO-1','SIM-MONO-2'],
   'Sim. Multi': ['SIM-MULTI-1','SIM-MULTI-2'],
@@ -963,9 +977,14 @@ const EQ = {
   'PA-34': ['PR-VOM','PT-JOB','PT-KIW']
 };
 
-const ALL_EQ_TYPES = Object.keys(EQ);
+const GROUND_EQ_TYPE = 'Sala Ground';
+const GROUND_REG = 'SALA-GROUND';
+const GROUND_DURATION_MIN = 90; // 01h30min
+const GROUND_DURATION_H = 1.5;
+
 const SIM_EQ_TYPES = ['Sim. Mono', 'Sim. Multi'];
 const AIRCRAFT_EQ_TYPES = ['C152', 'C172', 'PA-34'];
+const ALL_EQ_TYPES = [...Object.keys(EQ), GROUND_EQ_TYPE];
 const ACROBAT_REG = 'PR-JPL'; // Exclusivo para missão de Parafuso (com instrutor A06+)
 
 const EQT = {
@@ -976,8 +995,9 @@ const EQT = {
   'PA-34': 'PA-34'
 };
 
-// Nível mínimo de instrutor exigido pelo equipamento operado (A07+ para C172, A09 para PA-34)
+// Nível mínimo de instrutor exigido pelo equipamento operado em VOO (A07+ para C172, A09 para PA-34)
 const EQ_MIN_LV = {
+  'Sala Ground': 1,
   'C152': 1,
   'Sim. Mono': 2,
   'Sim. Multi': 2,
@@ -986,28 +1006,47 @@ const EQ_MIN_LV = {
 };
 
 /**
- * Fases / Missões do CIAC e regras estritas de equipamento:
+ * Fases / Missões do CIAC (incluindo Ground School de 01h30 e Missões de Voo/Simulador):
+ * - Ground C152, Ground C172, Ground PA-34 e Ground Navegação:
+ *     Sem restrição de nível de instrutor (lv: 1 -> qualquer instrutor A01+ pode ministrar,
+ *     priorizando sempre o de menor nível disponível). Duração 01h30 em turma coletiva,
+ *     precedendo obrigatoriamente o primeiro voo da respectiva temática no mesmo dia.
  * - Simulador: exclusivamente Sim. Mono ou Sim. Multi (A02+)
  * - Missões de voo: realizadas exclusivamente em aeronaves (nunca em simuladores)
  * - IFR: exclusivamente C172 (A08+) ou PA-34 (A09)
  * - Noturno: exclusivamente C172 (A07+)
  * - Multimotor: exclusivamente PA-34 (A09)
- * - Voo Local (inclui TGL e INVA), Navegação, Voo Solo e Parafuso: aeronaves C152, C172 ou PA-34
  */
 const MIS = {
-  'Simulador':  { lv: 2, defEq: 'Sim. Mono', eq: SIM_EQ_TYPES },
-  'Voo Local':  { lv: 1, defEq: 'C152',      eq: AIRCRAFT_EQ_TYPES },
-  'Navegação':  { lv: 4, defEq: 'C152',      eq: AIRCRAFT_EQ_TYPES },
-  'Voo Solo':   { lv: 5, defEq: 'C152',      eq: AIRCRAFT_EQ_TYPES },
-  'Parafuso':   { lv: 6, defEq: 'C152',      eq: AIRCRAFT_EQ_TYPES },
-  'IFR':        { lv: 8, defEq: 'C172',      eq: ['C172', 'PA-34'] },
-  'Noturno':    { lv: 7, defEq: 'C172',      eq: ['C172'] },
-  'Multimotor': { lv: 9, defEq: 'PA-34',     eq: ['PA-34'] }
+  'Ground C152':      { lv: 1, defEq: GROUND_EQ_TYPE, eq: [GROUND_EQ_TYPE], isGround: true, gatesEq: 'C152' },
+  'Ground C172':      { lv: 1, defEq: GROUND_EQ_TYPE, eq: [GROUND_EQ_TYPE], isGround: true, gatesEq: 'C172' },
+  'Ground PA-34':     { lv: 1, defEq: GROUND_EQ_TYPE, eq: [GROUND_EQ_TYPE], isGround: true, gatesEq: 'PA-34' },
+  'Ground Navegação': { lv: 1, defEq: GROUND_EQ_TYPE, eq: [GROUND_EQ_TYPE], isGround: true, gatesMis: 'Navegação' },
+  'Simulador':        { lv: 2, defEq: 'Sim. Mono',    eq: SIM_EQ_TYPES },
+  'Voo Local':        { lv: 1, defEq: 'C152',         eq: AIRCRAFT_EQ_TYPES },
+  'Navegação':        { lv: 4, defEq: 'C152',         eq: AIRCRAFT_EQ_TYPES },
+  'Voo Solo':         { lv: 5, defEq: 'C152',         eq: AIRCRAFT_EQ_TYPES },
+  'Parafuso':         { lv: 6, defEq: 'C152',         eq: AIRCRAFT_EQ_TYPES },
+  'IFR':              { lv: 8, defEq: 'C172',         eq: ['C172', 'PA-34'] },
+  'Noturno':          { lv: 7, defEq: 'C172',         eq: ['C172'] },
+  'Multimotor':       { lv: 9, defEq: 'PA-34',        eq: ['PA-34'] }
 };
+
+const isGroundMission = mis => Boolean(MIS[mis] && MIS[mis].isGround);
 
 function reqInsLevel(mis, eq) {
   const m = MIS[mis] || MIS['Voo Local'];
+  if (m.isGround) return 1; // Sem restrição de nível para Ground School (qualquer instrutor A01+)
   return Math.max(m.lv, EQ_MIN_LV[eq] || 1);
+}
+
+// Verifica se um voo (d) depende de uma missão de Ground (gMis) agendada para o mesmo aluno no dia
+function doesGroundGateFlight(gMis, flightReq) {
+  const gRule = MIS[gMis];
+  if (!gRule || !gRule.isGround || isGroundMission(flightReq.mis)) return false;
+  if (gRule.gatesEq && flightReq.eq === gRule.gatesEq) return true;
+  if (gRule.gatesMis && flightReq.mis === gRule.gatesMis) return true;
+  return false;
 }
 
 // Limites máximos de peso implícitos ao equipamento (fixos na regra operacional)
@@ -1062,7 +1101,7 @@ const PRE = {
   'Manhã': [0,1,2,3],
   'Tarde': [4,5,6,7],
   'Noturno': [8],
-  'Dia + noturno': [0,1,2,3,4,4,5,6,7,8]
+  'Dia + noturno': [0,1,2,3,4,5,6,7,8]
 };
 
 const FLIGHT_STATUSES = ['Confirmado', 'Em Voo', 'Pendente', 'Cancelado'];
@@ -1071,7 +1110,7 @@ const $ = s => document.querySelector(s);
 const pad = i => 'Aluno ' + String(i + 1).padStart(2, '0');
 const A = n => 'A0' + n;
 const LV_DESC = {
-  1: 'A01 · Local C152',
+  1: 'A01 · Local C152 / Grounds',
   2: 'A02 · Simulador',
   3: 'A03 · TGL',
   4: 'A04 · Navegação',
@@ -1093,9 +1132,25 @@ function migrateLegacyMissionName(mis) {
     'PC Visual': 'Voo Local',
     'Multi': 'Multimotor',
     'INVA': 'Voo Local',
-    'TGL': 'Voo Local'
+    'TGL': 'Voo Local',
+    'Ground de Navegação': 'Ground Navegação'
   };
   return map[mis] || 'Voo Local';
+}
+
+function normalizeMissionFields(target) {
+  target.mis = migrateLegacyMissionName(target.mis);
+  const mRule = MIS[target.mis] || MIS['Voo Local'];
+  if (!mRule.eq.includes(target.eq)) target.eq = mRule.defEq;
+  if (mRule.isGround) {
+    target.eq = GROUND_EQ_TYPE;
+    target.nb = GROUND_DURATION_H;
+    target.ss = 1;
+    if (target.p1 === NI) target.p1 = 0;
+    if (target.p2 === NI) target.p2 = 1;
+  } else if (+target.nb === GROUND_DURATION_H || !Number.isInteger(+target.nb)) {
+    target.nb = 1;
+  }
 }
 
 function showToast(text) {
@@ -1122,7 +1177,7 @@ const ApiClient = {
 
   createFreshState() {
     const state = {
-      schemaVer: 3,
+      schemaVer: 4,
       win: WIN.map(() => true),
       av: {},
       lim: { ...DEFAULT_LIM },
@@ -1148,9 +1203,6 @@ const ApiClient = {
     if (!x.fStatus) x.fStatus = {};
     if (!x.nid || x.nid < 1000) x.nid = 1000;
 
-    // Migração para Schema v3:
-    // 1. Atualiza quadro de 40 instrutores e respectivos pesos oficiais
-    // 2. Remove os 50 alunos genéricos de fábrica caso nenhum aluno personalizado tenha sido criado
     if (!x.schemaVer || x.schemaVer < 3) {
       const prevByName = new Map();
       x.ins.forEach(ins => prevByName.set(ins.nm.toLowerCase(), ins));
@@ -1173,20 +1225,16 @@ const ApiClient = {
       if (isDefaultPlaceholderList) {
         x.stu = [];
       }
-
-      x.schemaVer = 3;
     }
 
+    x.schemaVer = 4;
+
     x.stu.forEach(s => {
-      s.mis = migrateLegacyMissionName(s.mis);
-      const mRule = MIS[s.mis] || MIS['Voo Local'];
-      if (!mRule.eq.includes(s.eq)) s.eq = mRule.defEq;
+      normalizeMissionFields(s);
       if (!Array.isArray(s.extra)) s.extra = [];
       s.extra.forEach(ex => {
         if (!ex.mid) ex.mid = x.nid++;
-        ex.mis = migrateLegacyMissionName(ex.mis);
-        const exRule = MIS[ex.mis] || MIS['Voo Local'];
-        if (!exRule.eq.includes(ex.eq)) ex.eq = exRule.defEq;
+        normalizeMissionFields(ex);
       });
     });
 
@@ -1330,25 +1378,23 @@ const ApiClient = {
         }
         if (row.length >= 12) {
           const [, , , , flyFlag, mis, eq, p1, p2, nb, ss, pr, extraArr] = row;
-          const normMis = migrateLegacyMissionName(mis);
-          const normEq = MIS[normMis].eq.includes(eq) ? eq : MIS[normMis].defEq;
           Object.assign(target, {
             nm, kg: kg || 0, bl: bl || [],
-            fly: Boolean(flyFlag), mis: normMis, eq: normEq, p1, p2, nb, ss, pr,
+            fly: Boolean(flyFlag), mis, eq, p1, p2, nb, ss, pr,
             extra: Array.isArray(extraArr) ? extraArr.map(([mid, emis, eeq, ep1, ep2, enb, ess, epr]) => {
-              const em = migrateLegacyMissionName(emis);
-              const ee = MIS[em].eq.includes(eeq) ? eeq : MIS[em].defEq;
-              return { mid, fly: true, mis: em, eq: ee, p1: ep1, p2: ep2, nb: enb, ss: ess, pr: epr };
+              const exObj = { mid, fly: true, mis: emis, eq: eeq, p1: ep1, p2: ep2, nb: enb, ss: ess, pr: epr };
+              normalizeMissionFields(exObj);
+              return exObj;
             }) : []
           });
+          normalizeMissionFields(target);
         } else {
           const [, , , , mis, eq, p1, p2, nb, ss, pr] = row;
-          const normMis = migrateLegacyMissionName(mis);
-          const normEq = MIS[normMis].eq.includes(eq) ? eq : MIS[normMis].defEq;
           Object.assign(target, {
             nm, kg: kg || 0, bl: bl || [],
-            fly: true, mis: normMis, eq: normEq, p1, p2, nb, ss, pr, extra: []
+            fly: true, mis, eq, p1, p2, nb, ss, pr, extra: []
           });
+          normalizeMissionFields(target);
         }
       });
       return decoded.d || null;
@@ -1446,10 +1492,14 @@ function getMissionTarget(stuId, mid = 0) {
 }
 
 // ============================================================================
-// 4. MOTOR DE ALOCAÇÃO DETERMINÍSTICO PURO (SCHEDULER ENGINE)
+// 4. MOTOR DE ALOCAÇÃO DETERMINÍSTICO (GROUND COLETIVO A01+ + PRECEDÊNCIA + VOOS)
 // ============================================================================
 function runAllocationEngine(state) {
   const used = {}, busy = {}, stuBusy = {}, stuLastPick = {}, load = {}, eu = {}, out = [], al = [];
+  // Armazena turmas abertas de Ground School por missão para permitir múltiplos alunos no mesmo horário/instrutor
+  const openGroundClasses = {};
+  // Registra os Grounds agendados por aluno no dia para exigir precedência antes do respectivo voo
+  const stuGroundStatus = {};
 
   // Monta fila de pedidos de missão (suporta múltiplas missões por aluno no mesmo dia)
   const act = [];
@@ -1466,8 +1516,29 @@ function runAllocationEngine(state) {
     }
   });
 
-  // Ordena por prioridade decrescente (5 a 1), ordem de cadastro do aluno e ordem da missão
-  act.sort((a, b) => b.ref.pr - a.ref.pr || a.stuOrder - b.stuOrder || a.misOrder - b.misOrder);
+  // Registra todos os Grounds que cada aluno tem marcados para hoje (para checar precedência nos voos)
+  act.forEach(item => {
+    if (isGroundMission(item.ref.mis)) {
+      (stuGroundStatus[item.stuId] = stuGroundStatus[item.stuId] || []).push({
+        mis: item.ref.mis,
+        allocatedEnd: null
+      });
+    }
+  });
+
+  /**
+   * Ordenação da Fila:
+   * 1º: Missões de Ground School SEMPRE antes de missões de Voo/Simulador (garante a criação das turmas
+   *     coletivas e define o horário de término do Ground antes de alocar o voo dependente do aluno).
+   * 2º: Maior prioridade (5 a 1).
+   * 3º: Ordem de cadastro do aluno e ordem da missão.
+   */
+  act.sort((a, b) => {
+    const gA = isGroundMission(a.ref.mis) ? 1 : 0;
+    const gB = isGroundMission(b.ref.mis) ? 1 : 0;
+    if (gA !== gB) return gB - gA;
+    return b.ref.pr - a.ref.pr || a.stuOrder - b.stuOrder || a.misOrder - b.misOrder;
+  });
 
   const free = (mp, id, s, e) => !(mp[id] || []).some(([a, b]) => s < b && e > a);
   const cover = (aw, s, e) => T.every((c, k) => !(s < (k < NI ? T[k + 1] : 1440) && e > c) || aw[k]);
@@ -1477,13 +1548,164 @@ function runAllocationEngine(state) {
     const m = MIS[d.mis] || MIS['Voo Local'];
     const nm = stu.nm;
     const labelStu = mid ? `${nm} (${d.mis})` : nm;
+    const isGnd = Boolean(m.isGround);
+
+    // ========================================================================
+    // RAMO A: ALOCAÇÃO DE GROUND SCHOOL (01h30 = 90 MIN · TURMA COLETIVA · A01+)
+    // ========================================================================
+    if (isGnd) {
+      const reqLv = 1; // Sem restrição de instrutor: qualquer instrutor ativo A01+ pode ministrar Ground
+      const durMin = GROUND_DURATION_MIN; // 90 min (1.5 h)
+      const endMax = T[NI]; // 17:30 (1050 min)
+      const starts = DAY.filter(w => state.win[w] && T[w] + durMin <= endMax);
+      const pf = [+d.p1, +d.p2];
+
+      // Se o aluno também tem um voo dependente hoje com horário preferido, prioriza janelas que terminem antes do voo
+      const dependentFlights = act.filter(other => other.stuId === stuId && doesGroundGateFlight(d.mis, other.ref));
+      const earliestFlightPrefMin = dependentFlights.reduce((minT, flt) => {
+        const fp1 = +flt.ref.p1;
+        return (fp1 >= 0 && T[fp1] < minT) ? T[fp1] : minT;
+      }, Infinity);
+
+      const candidateWins = [...new Set([...pf.filter(w => w >= 0), ...starts])].filter(w => starts.includes(w));
+      // Prioriza janelas que terminam antes do voo preferido do aluno, mantendo a cascata Pref.1 -> Pref.2 -> Próximo livre
+      candidateWins.sort((w1, w2) => {
+        const ok1 = T[w1] + durMin <= earliestFlightPrefMin ? 0 : 1;
+        const ok2 = T[w2] + durMin <= earliestFlightPrefMin ? 0 : 1;
+        return ok1 - ok2;
+      });
+
+      const existingClasses = openGroundClasses[d.mis] || [];
+      let chosenClass = null;
+
+      // 1ª Tentativa: Unir-se a uma turma já aberta da mesma temática de Ground (mesmo horário e mesmo instrutor)
+      const orderedExisting = [...existingClasses].sort((c1, c2) => {
+        const inPref1 = (c1.w == d.p1 || c1.w == d.p2) ? 0 : 1;
+        const inPref2 = (c2.w == d.p1 || c2.w == d.p2) ? 0 : 1;
+        if (inPref1 !== inPref2) return inPref1 - inPref2;
+        const okFlt1 = c1.b <= earliestFlightPrefMin ? 0 : 1;
+        const okFlt2 = c2.b <= earliestFlightPrefMin ? 0 : 1;
+        return okFlt1 - okFlt2;
+      });
+
+      for (const cls of orderedExisting) {
+        if (!free(stuBusy, stuId, cls.a, cls.b)) continue;
+        if (stu.bl.includes(cls.x.id)) continue;
+        if (cls.b > earliestFlightPrefMin && candidateWins.some(w => T[w] + durMin <= earliestFlightPrefMin)) continue;
+        chosenClass = cls;
+        break;
+      }
+
+      // 2ª Tentativa: Abrir nova turma de Ground se não pôde ingressar em turma existente
+      const fcGnd = { stu_busy: 0, disp: 0, busy: 0, bloq: 0 };
+      if (!chosenClass) {
+        // Verifica restrições de bloqueio de todos os alunos da mesma turma potencial para escolher um instrutor comum
+        const cohortBlocked = new Set(stu.bl);
+        act.forEach(other => {
+          if (other.ref.mis === d.mis) other.stu.bl.forEach(bId => cohortBlocked.add(bId));
+        });
+
+        for (const w of candidateWins) {
+          const a = T[w], b = a + durMin;
+          if (!free(stuBusy, stuId, a, b)) { fcGnd.stu_busy++; continue; }
+
+          const sameWinCls = existingClasses.find(c => c.w === w && !stu.bl.includes(c.x.id));
+          if (sameWinCls) {
+            chosenClass = sameWinCls;
+            break;
+          }
+
+          const q = state.ins.filter(x => x.on && x.lv >= reqLv && cover(x.aw, a, b));
+          if (!q.length) { fcGnd.disp++; continue; }
+
+          const f1 = q.filter(x => free(busy, x.id, a, b));
+          if (!f1.length) { fcGnd.busy++; continue; }
+
+          const f2 = f1.filter(x => !stu.bl.includes(x.id));
+          if (!f2.length) { fcGnd.bloq++; continue; }
+
+          // Ordena instrutores priorizando: não bloqueado pela turma -> MENOR NÍVEL (A01 primeiro) -> menor carga no dia
+          f2.sort((x1, x2) =>
+            (cohortBlocked.has(x1.id) - cohortBlocked.has(x2.id)) ||
+            (x1.lv - x2.lv) ||
+            ((load[x1.id] || 0) - (load[x2.id] || 0))
+          );
+
+          const pickedIns = f2[0];
+          const classKey = `GND_${d.mis}_${w}_${pickedIns.id}`;
+          chosenClass = { classKey, mis: d.mis, w, a, b, x: pickedIns, count: 0 };
+          (openGroundClasses[d.mis] = openGroundClasses[d.mis] || []).push(chosenClass);
+
+          // Marca o instrutor ocupado neste intervalo (outros alunos do MESMO Ground entram via chosenClass)
+          (busy[pickedIns.id] = busy[pickedIns.id] || []).push([a, b]);
+          load[pickedIns.id] = (load[pickedIns.id] || 0) + GROUND_DURATION_H;
+          eu[GROUND_REG] = (eu[GROUND_REG] || 0) + GROUND_DURATION_H;
+          break;
+        }
+      }
+
+      if (chosenClass) {
+        chosenClass.count++;
+        (stuBusy[stuId] = stuBusy[stuId] || []).push([chosenClass.a, chosenClass.b]);
+
+        // Registra que o aluno concluiu este Ground às chosenClass.b (liberando voos a partir de chosenClass.b)
+        const stGnds = stuGroundStatus[stuId] || [];
+        const gRec = stGnds.find(g => g.mis === d.mis && g.allocatedEnd === null) || stGnds.find(g => g.mis === d.mis);
+        if (gRec) gRec.allocatedEnd = chosenClass.b;
+
+        const fKey = `${stuId}_${mid}_1`;
+        const baseTag = chosenClass.w == d.p1 ? 'Pref. 1' : chosenClass.w == d.p2 ? 'Pref. 2' : 'Próximo livre';
+
+        out.push({
+          fKey,
+          classKey: chosenClass.classKey,
+          isGround: true,
+          w: chosenClass.w, a: chosenClass.a, b: chosenClass.b,
+          o: stuOrder,
+          stuId,
+          mid,
+          insId: chosenClass.x.id,
+          eqType: GROUND_EQ_TYPE,
+          s: nm, mis: d.mis, h: GROUND_DURATION_H, ss: '1/1',
+          r: GROUND_REG, ins: chosenClass.x.nm, lv: chosenClass.x.lv,
+          stuKg: stu.kg || 0,
+          insKg: chosenClass.x.kg || 0,
+          limKg: 0,
+          kg: 0,
+          baseTag,
+          tag: baseTag,
+          status: (state.fStatus && state.fStatus[fKey]) || 'Confirmado'
+        });
+      } else {
+        let why;
+        if (!state.ins.some(x => x.on && x.lv >= reqLv)) {
+          why = `nenhum instrutor ativo disponível para ministrar ${d.mis}`;
+        } else if (!starts.length) {
+          why = `nenhuma janela diurna habilitada comporta 01h30 de Ground até ${hm(endMax)}`;
+        } else {
+          const key = Object.keys(fcGnd).sort((a, b) => fcGnd[b] - fcGnd[a])[0];
+          why = {
+            stu_busy: `conflito de horário com outra missão do próprio aluno (${nm})`,
+            disp: `nenhum instrutor disponível durante todo o período de 01h30`,
+            busy: `todos os instrutores disponíveis já estão ocupados nos horários testados`,
+            bloq: `os instrutores disponíveis no horário estão bloqueados por este aluno`
+          }[key];
+        }
+        al.push({ t: 'err', s: labelStu, m: `Rejeitado: ${why}.` });
+      }
+      continue;
+    }
+
+    // ========================================================================
+    // RAMO B: ALOCAÇÃO DE MISSÕES DE VOO E SIMULADOR
+    // ========================================================================
     const lim = DEFAULT_LIM[d.eq] || 0;
-    const H = Math.max(1, +d.nb || 1), K = Math.min(Math.max(+d.ss || 1, 1), H);
+    const H = Math.max(1, Math.round(+d.nb || 1)), K = Math.min(Math.max(+d.ss || 1, 1), H);
     const night = d.mis === 'Noturno';
     const isParafuso = d.mis === 'Parafuso';
     const reqLv = reqInsLevel(d.mis, d.eq);
 
-    // 1. Validação de equipamento permitido para a missão (Simulador vs Aeronaves, IFR em C172/PA-34, etc.)
+    // 1. Validação de equipamento permitido para a missão
     if (!m.eq.includes(d.eq)) {
       al.push({
         t: 'err',
@@ -1492,6 +1714,19 @@ function runAllocationEngine(state) {
       });
       continue;
     }
+
+    // 2. Validação de Precedência de Ground School (Ground deve ocorrer antes do 1º voo da temática)
+    const gatingGrounds = (stuGroundStatus[stuId] || []).filter(g => doesGroundGateFlight(g.mis, d));
+    const unallocatedGround = gatingGrounds.find(g => g.allocatedEnd === null);
+    if (unallocatedGround) {
+      al.push({
+        t: 'err',
+        s: labelStu,
+        m: `Rejeitado: o pré-requisito “${unallocatedGround.mis}” agendado para hoje não pôde ser alocado antes deste voo.`
+      });
+      continue;
+    }
+    const minStartAfterGround = gatingGrounds.reduce((maxEnd, g) => Math.max(maxEnd, g.allocatedEnd || 0), 0);
 
     const starts = (night ? NIGHT_OK : DAY).filter(w => state.win[w]);
     const endMax = night ? 1440 : T[NI];
@@ -1504,7 +1739,7 @@ function runAllocationEngine(state) {
       const c = [...new Set([...(j < 2 ? [pf[j]] : []), ...(j == 0 ? [pf[1]] : []), ...starts])]
         .filter(w => starts.includes(w) && T[w] >= from && T[w] + len[j] <= endMax);
       for (const w of c) rec(j + 1, T[w] + len[j], [...pl, { w, a: T[w], b: T[w] + len[j] }]);
-    })(0, 0, []);
+    })(0, minStartAfterGround, []);
 
     // Filtra a frota candidata respeitando a exclusividade do C152 PR-JPL (Acrobat) para Parafuso
     const fleetPool = (EQ[d.eq] || []).filter(r => {
@@ -1520,7 +1755,6 @@ function runAllocationEngine(state) {
       let prev = stuLastPick[stuId] || null, bad = null;
 
       for (const p of pl) {
-        // Garante que o aluno não tenha outra missão do dia sobreposta neste horário
         if (!free(stuBusy, stuId, p.a, p.b)) { bad = 'stu_busy'; break; }
 
         const eqs = fleetPool.filter(r => state.av[r] && free(used, r, p.a, p.b));
@@ -1561,8 +1795,11 @@ function runAllocationEngine(state) {
         stuLastPick[stuId] = { r, x };
 
         const fKey = `${stuId}_${mid}_${j + 1}`;
+        const baseTag = p.w == d.p1 ? 'Pref. 1' : p.w == d.p2 ? 'Pref. 2' : 'Próximo livre';
         out.push({
           fKey,
+          classKey: fKey,
+          isGround: false,
           w: p.w, a: p.a, b: p.b,
           o: stuOrder,
           stuId,
@@ -1575,7 +1812,8 @@ function runAllocationEngine(state) {
           insKg: x.kg || 0,
           limKg: lim,
           kg: stu.kg && x.kg ? stu.kg + x.kg : 0,
-          tag: p.w == d.p1 ? 'Pref. 1' : p.w == d.p2 ? 'Pref. 2' : 'Próximo livre',
+          baseTag,
+          tag: baseTag,
           status: (state.fStatus && state.fStatus[fKey]) || 'Confirmado'
         });
 
@@ -1596,11 +1834,13 @@ function runAllocationEngine(state) {
       } else if (!state.ins.some(x => x.on && x.lv >= reqLv)) {
         why = `nenhum instrutor ativo com nível ${A(reqLv)} ou superior (exigido para ${d.mis} em ${d.eq})`;
       } else if (!plans.length) {
-        why = `não há como encaixar ${H} h${K > 1 ? ' em ' + K + ' sessões' : ' contínuas'} ${night ? 'a partir da janela noturna (17:30)' : 'dentro do horário diurno (término até ' + hm(T[NI]) + ')'} com as janelas habilitadas`;
+        why = minStartAfterGround > 0
+          ? `não há janela disponível após o término do Ground School (${hm(minStartAfterGround)}) para encaixar ${H} h antes das ${hm(endMax)}`
+          : `não há como encaixar ${H} h${K > 1 ? ' em ' + K + ' sessões' : ' contínuas'} ${night ? 'a partir da janela noturna (17:30)' : 'dentro do horário diurno (término até ' + hm(T[NI]) + ')'} com as janelas habilitadas`;
       } else {
         const key = Object.keys(fc).sort((a, b) => fc[b] - fc[a])[0];
         why = {
-          stu_busy: `conflito de horário com outra missão do próprio aluno (${nm}) já agendada neste dia`,
+          stu_busy: `conflito de horário com outra missão/Ground do próprio aluno (${nm}) já agendada neste dia`,
           eq: isParafuso && d.eq === 'C152'
             ? `a aeronave acrobática ${ACROBAT_REG} (exclusiva para Parafuso) já está ocupada nos horários testados`
             : `falta de ${d.eq} livre nos horários testados (ocupado por voos de maior prioridade)`,
@@ -1614,8 +1854,40 @@ function runAllocationEngine(state) {
     }
   }
 
-  out.sort((a, b) => a.a - b.a || a.o - b.o);
+  // Atualiza a tag das turmas coletivas de Ground com a quantidade de alunos na mesma sala/horário
+  const classCounts = {};
+  out.forEach(o => {
+    if (o.isGround && o.classKey) {
+      classCounts[o.classKey] = (classCounts[o.classKey] || 0) + 1;
+    }
+  });
+  out.forEach(o => {
+    if (o.isGround && o.classKey) {
+      const c = classCounts[o.classKey] || 1;
+      o.groupSize = c;
+      o.tag = c > 1 ? `${o.baseTag} · Turma (${c})` : o.baseTag;
+    }
+  });
+
+  out.sort((a, b) => a.a - b.a || (b.isGround ? 1 : 0) - (a.isGround ? 1 : 0) || a.o - b.o);
   return { out, al, tot: act.length };
+}
+
+// Calcula horas operacionais deduplicando turmas coletivas de Ground School
+function sumUniqueOperationalHours(flights, statusLookupFn) {
+  const seenClasses = new Set();
+  let total = 0;
+  flights.forEach(o => {
+    const st = statusLookupFn ? statusLookupFn(o) : (o.status || 'Confirmado');
+    if (st === 'Cancelado') return;
+    const key = o.classKey || o.fKey || `${o.w}_${o.a}_${o.b}_${o.mis}_${o.ins}`;
+    if (o.isGround || isGroundMission(o.mis)) {
+      if (seenClasses.has(key)) return;
+      seenClasses.add(key);
+    }
+    total += (+o.h || 0);
+  });
+  return Math.round(total * 10) / 10;
 }
 
 function syncBIHistoryForCurrentDate() {
@@ -1689,10 +1961,17 @@ const stuHTML = s => `<div class="cd" data-k="s" data-id="${s.id}" data-nm="${es
 
 const sum = d => {
   if (!d.fly) return '';
+  const isGnd = isGroundMission(d.mis);
+  const reqLv = reqInsLevel(d.mis, d.eq);
+  if (isGnd) {
+    const lvTag = ` · 01h30 · Instrutor A01+ · Turma coletiva`;
+    if (d.p1 < 0) return `Livre${lvTag}`;
+    const s = T[d.p1], e = s + GROUND_DURATION_MIN;
+    return `${hm(s)}–${hm(e)}${lvTag}` + ((d.p1 == NI || e > T[NI]) ? ' ⚠ horário' : '');
+  }
   const H = d.nb, K = Math.min(d.ss || 1, H);
   const L = Array.from({ length: K }, (_, j) => Math.floor(H / K) + (j < H % K ? 1 : 0));
   const nt = d.mis === 'Noturno';
-  const reqLv = reqInsLevel(d.mis, d.eq);
   const lvTag = ` · Mín. ${A(reqLv)}${d.mis === 'Parafuso' && d.eq === 'C152' ? ' (' + ACROBAT_REG + ')' : ''}`;
   if (K > 1) return `${H} h em ${K} sessões (${L.join('h+') + 'h'})${lvTag}`;
   if (d.p1 < 0) return `${H} h, livre${lvTag}`;
@@ -1707,20 +1986,29 @@ function allowedEqOptionsForMission(mis, currentEq) {
 
 const singleDemandRowHTML = (stu, d, mid = 0) => {
   const isExtra = mid !== 0;
+  const isGnd = isGroundMission(d.mis);
   const trCls = `${d.fly ? 'on p' + d.pr : 'off'}${isExtra ? ' extra-row' : ''}`;
   const firstCell = isExtra
     ? `<div class="stu-cell"><span class="sm">↳ ${esc(stu.nm)} (missão extra)</span><button class="x edit-only" data-act="del-mis" data-id="${stu.id}" data-mid="${mid}" title="Remover esta missão extra">✕</button></div>`
     : `<div class="stu-cell"><span>${esc(stu.nm)}</span><button class="btn-add-mis edit-only" data-act="add-mis" data-id="${stu.id}" title="Adicionar outra missão para este aluno no mesmo dia">+ Missão</button></div>`;
 
+  const nbOpts = isGnd
+    ? `<select data-f="nb" disabled title="Ground School tem duração fixa de 01h30"><option value="1.5" selected>01h30</option></select>`
+    : `<select data-f="nb">${opts(Array.from({ length: 11 }, (_, i) => [i + 1, (i + 1) + ' h']), d.nb)}</select>`;
+
+  const ssOpts = isGnd
+    ? `<select data-f="ss" disabled><option value="1" selected>1</option></select>`
+    : `<select data-f="ss">${opts([[1, '1'], [2, '2'], [3, '3']].filter(o => o[0] <= d.nb), Math.min(d.ss || 1, d.nb))}</select>`;
+
   return `<tr data-k="d" data-id="${stu.id}" data-mid="${mid}" data-nm="${esc(stu.nm.toLowerCase())}" data-mis="${esc(d.mis)}" class="${trCls}">
     <td>${firstCell}</td>
     <td><input type="checkbox" data-f="fly"${d.fly ? ' checked' : ''} aria-label="Vai voar"></td>
     <td><select data-f="mis">${opts(Object.keys(MIS).map(m => [m, m]), d.mis)}</select></td>
-    <td><select data-f="eq">${allowedEqOptionsForMission(d.mis, d.eq)}</select></td>
+    <td><select data-f="eq"${isGnd ? ' disabled' : ''}>${allowedEqOptionsForMission(d.mis, d.eq)}</select></td>
     <td><select data-f="p1">${wopt(d.p1, 1)}</select></td>
     <td><select data-f="p2">${wopt(d.p2, 1)}</select></td>
-    <td><select data-f="nb">${opts(Array.from({ length: 11 }, (_, i) => [i + 1, (i + 1) + ' h']), d.nb)}</select></td>
-    <td><select data-f="ss">${opts([[1, '1'], [2, '2'], [3, '3']].filter(o => o[0] <= d.nb), Math.min(d.ss || 1, d.nb))}</select></td>
+    <td>${nbOpts}</td>
+    <td>${ssOpts}</td>
     <td><select data-f="pr">${opts([1, 2, 3, 4, 5].map(n => [n, n]), d.pr)}</select></td>
     <td class="sm">${sum(d)}</td>
   </tr>`;
@@ -1769,9 +2057,10 @@ const rDem = () => {
   renderAuditPanel();
 };
 
-const HT = o => o.h + ' h' + (o.ss !== '1/1' ? ` (sessão ${o.ss})` : '');
+const HT = o => (o.isGround || isGroundMission(o.mis) ? '01h30 (1,5 h)' : o.h + ' h' + (o.ss !== '1/1' ? ` (sessão ${o.ss})` : ''));
 
 function missionColorClass(mis) {
+  if (isGroundMission(mis)) return 'm-gnd';
   if (mis === 'Simulador') return 'm-sim';
   if (mis === 'Voo Local' || mis === 'Voo Solo') return 'm-pp';
   if (mis === 'Navegação' || mis === 'Parafuso' || mis === 'IFR') return 'm-pc';
@@ -1786,6 +2075,35 @@ function statusPrefixIcon(st) {
   return '';
 }
 
+/**
+ * Agrupa voos para o Mapa Visual de Ocupação:
+ * - Turmas coletivas de Ground School no mesmo horário/instrutor são consolidadas em uma única barra visual,
+ *   evitando sobreposição de barras e contabilizando 1,5 h uma única vez para o instrutor/sala.
+ */
+function consolidateTimelineSlots(flights) {
+  const slots = [];
+  const groundMap = new Map();
+
+  flights.forEach(o => {
+    if (o.isGround || isGroundMission(o.mis)) {
+      const k = o.classKey || `GND_${o.mis}_${o.w}_${o.ins}`;
+      if (!groundMap.has(k)) {
+        const clone = { ...o, students: [o.s], items: [o] };
+        groundMap.set(k, clone);
+        slots.push(clone);
+      } else {
+        const g = groundMap.get(k);
+        g.students.push(o.s);
+        g.items.push(o);
+      }
+    } else {
+      slots.push({ ...o, students: [o.s], items: [o] });
+    }
+  });
+
+  return slots;
+}
+
 function buildTimelineGroup(out, groupKey, subLabelFn, barLine1Fn, barLine2Fn, minStart, maxEnd) {
   const span = maxEnd - minStart;
   const groups = {};
@@ -1795,21 +2113,27 @@ function buildTimelineGroup(out, groupKey, subLabelFn, barLine1Fn, barLine2Fn, m
   for (let m = minStart; m <= maxEnd; m += 60) ticks.push(`<span>${hm(m)}</span>`);
 
   const rowsHTML = Object.keys(groups).sort((a, b) => a.localeCompare(b)).map(key => {
-    const flights = groups[key];
-    const activeH = flights.reduce((n, o) => {
-      const st = (S.fStatus && S.fStatus[o.fKey]) || o.status || 'Confirmado';
-      return st === 'Cancelado' ? n : n + o.h;
-    }, 0);
-    const sub = subLabelFn(flights[0], activeH);
+    const rawFlights = groups[key];
+    const activeH = sumUniqueOperationalHours(rawFlights, o => (S.fStatus && S.fStatus[o.fKey]) || o.status || 'Confirmado');
+    const sub = subLabelFn(rawFlights[0], activeH);
+    const consolidated = consolidateTimelineSlots(rawFlights);
 
-    const bars = flights.map(o => {
+    const bars = consolidated.map(o => {
       const left = ((o.a - minStart) / span) * 100;
       const width = ((o.b - o.a) / span) * 100;
       const cls = missionColorClass(o.mis);
-      const stVal = (S.fStatus && S.fStatus[o.fKey]) || o.status || 'Confirmado';
+
+      // Para turmas coletivas, verifica o status consolidado
+      const activeItems = o.items.filter(it => ((S.fStatus && S.fStatus[it.fKey]) || it.status || 'Confirmado') !== 'Cancelado');
+      const primaryItem = activeItems[0] || o.items[0];
+      const stVal = activeItems.length === 0
+        ? 'Cancelado'
+        : ((S.fStatus && S.fStatus[primaryItem.fKey]) || primaryItem.status || 'Confirmado');
       const stKey = stVal.replace(/\s+/g, '');
       const icon = statusPrefixIcon(stVal);
       const pesoTxt = o.kg ? `${o.kg} kg` : '—';
+      const isCollective = o.students.length > 1;
+      const stuListTxt = isCollective ? `${o.students.length} alunos: ${o.students.join(', ')}` : o.s;
 
       return `<div class="tl-bar ${cls} tl-st-${stKey}" tabindex="0" style="left:${left.toFixed(2)}%;width:${width.toFixed(2)}%">
         <div class="tl-bar-t1">${icon}${barLine1Fn(o)}</div>
@@ -1817,19 +2141,19 @@ function buildTimelineGroup(out, groupKey, subLabelFn, barLine1Fn, barLine2Fn, m
         <div class="tl-pop">
           <div class="tl-pop-hd"><span>${hm(o.a)} – ${hm(o.b)}</span><span>${HT(o)}</span></div>
           <div class="tl-pop-grid">
-            <span>Aluno:</span><span>${esc(o.s)}</span>
+            <span>${isCollective ? 'Turma:' : 'Aluno:'}</span><span>${esc(stuListTxt)}</span>
             <span>Instrutor:</span><span>${esc(o.ins)} (${A(o.lv)})</span>
-            <span>Aeronave:</span><span>${esc(o.r)}</span>
+            <span>Recurso:</span><span>${esc(o.r)}</span>
             <span>Missão:</span><span>${esc(o.mis)}</span>
             <span>Peso Trip.:</span><span>${pesoTxt}</span>
             <span>Status:</span>
             <span>
-              <select class="st-sel st-${stKey}" data-f="fstatus" data-fkey="${o.fKey}" aria-label="Status do voo">
+              <select class="st-sel st-${stKey}" data-f="fstatus" data-fkey="${primaryItem.fKey}" aria-label="Status do voo">
                 ${FLIGHT_STATUSES.map(st => `<option value="${st}"${st === stVal ? ' selected' : ''}>${st}</option>`).join('')}
               </select>
             </span>
           </div>
-          ${o.stuId ? `<button class="tl-pop-btn edit-only" data-act="rm-fly" data-id="${o.stuId}" data-mid="${o.mid || 0}">✕ Excluir da escala</button>` : ''}
+          ${!isCollective && o.stuId ? `<button class="tl-pop-btn edit-only" data-act="rm-fly" data-id="${o.stuId}" data-mid="${o.mid || 0}">✕ Excluir da escala</button>` : ''}
         </div>
       </div>`;
     }).join('');
@@ -1852,18 +2176,26 @@ function renderVisualTimeline(out) {
     ? buildTimelineGroup(
         out,
         'ins',
-        (first, totalH) => `${A(first.lv)} · ${totalH} h`,
-        o => `${hm(o.a)}–${hm(o.b)} · ${esc(o.r)}`,
-        o => `${esc(o.s)} · ${esc(o.mis)}`,
+        (first, totalH) => `${A(first.lv)} · ${fmtH(totalH)}`,
+        o => o.students.length > 1
+          ? `${hm(o.a)}–${hm(o.b)} · Turma (${o.students.length} alunos)`
+          : `${hm(o.a)}–${hm(o.b)} · ${esc(o.r)}`,
+        o => o.students.length > 1
+          ? `${esc(o.mis)}: ${esc(o.students.join(', '))}`
+          : `${esc(o.s)} · ${esc(o.mis)}`,
         minStart,
         maxEnd
       )
     : buildTimelineGroup(
         out,
         'r',
-        (first, totalH) => `${first.eqType || ''} · ${totalH} h`,
-        o => `${hm(o.a)}–${hm(o.b)} · ${esc(o.s)}`,
-        o => `${esc(o.mis)} · ${esc(o.ins)} (${A(o.lv)})`,
+        (first, totalH) => `${first.eqType || ''} · ${fmtH(totalH)}`,
+        o => o.students.length > 1
+          ? `${hm(o.a)}–${hm(o.b)} · ${esc(o.mis)} (${o.students.length} alunos)`
+          : `${hm(o.a)}–${hm(o.b)} · ${esc(o.s)}`,
+        o => o.students.length > 1
+          ? `${esc(o.ins)} (${A(o.lv)}) · ${esc(o.students.join(', '))}`
+          : `${esc(o.mis)} · ${esc(o.ins)} (${A(o.lv)})`,
         minStart,
         maxEnd
       );
@@ -1872,11 +2204,12 @@ function renderVisualTimeline(out) {
     <div class="tl-header">
       <h3 style="margin:0">Mapa de Ocupação</h3>
       <div class="tl-switch">
-        <button data-tl="eq" class="${TL_MODE === 'eq' ? 'on' : ''}">✈ Por Aeronave</button>
+        <button data-tl="eq" class="${TL_MODE === 'eq' ? 'on' : ''}">✈ Por Aeronave / Sala</button>
         <button data-tl="ins" class="${TL_MODE === 'ins' ? 'on' : ''}">👨‍✈️ Por Instrutor</button>
       </div>
     </div>
     <div class="tl-legend">
+      <span><i class="tl-dot m-gnd"></i>Ground School (01h30)</span>
       <span><i class="tl-dot m-sim"></i>Simulador</span>
       <span><i class="tl-dot m-pp"></i>Voo Local / Solo</span>
       <span><i class="tl-dot m-pc"></i>Navegação / Parafuso / IFR</span>
@@ -1920,7 +2253,7 @@ function renderAuditPanel() {
           ? (isAlloc ? `<span class="audit-badge inc">Alocado</span>` : `<span class="audit-badge exc">Rejeitado</span>`)
           : `<span class="audit-badge mod">Pendente</span>`;
         return `<div class="audit-item">
-          <div>${statusBadge} <b>${esc(d.nm)}</b> · ${esc(d.mis)} (${esc(d.eq)}) · ${d.nb} h</div>
+          <div>${statusBadge} <b>${esc(d.nm)}</b> · ${esc(d.mis)} (${esc(d.eq)}) · ${fmtDurLabel(d.nb)}</div>
           <button class="x edit-only" data-act="rm-fly" data-id="${d.stuId}" data-mid="${d.mid}">✕ Excluir</button>
         </div>`;
       }).join('');
@@ -1969,15 +2302,12 @@ function rOut(switchTab = true) {
   const winCount = {};
   filteredOut.forEach(o => { winCount[o.w] = (winCount[o.w] || 0) + 1; });
 
-  const activeHours = out.reduce((n, o) => {
-    const st = (S.fStatus && S.fStatus[o.fKey]) || o.status || 'Confirmado';
-    return st === 'Cancelado' ? n : n + o.h;
-  }, 0);
+  const activeHours = sumUniqueOperationalHours(out, o => (S.fStatus && S.fStatus[o.fKey]) || o.status || 'Confirmado');
 
   let h = `<div class="st">
     <div><strong>${tot}</strong>missões na demanda</div>
     <div><strong>${tot - rej}</strong>atendidas</div>
-    <div><strong>${activeHours} h</strong>horas ativas</div>
+    <div><strong>${fmtH(activeHours)}</strong>horas ativas</div>
     <div><strong style="color:${al.length ? 'var(--er)' : 'var(--ok)'}">${al.length}</strong>alertas</div>
   </div>`;
 
@@ -1992,12 +2322,13 @@ function rOut(switchTab = true) {
     for (const o of filteredOut) {
       if (o.w !== cw) {
         cw = o.w;
-        h += `<tr class="win"><td colspan="10">${WLB(o.w)} · ${winCount[o.w]} voo(s) iniciando</td></tr>`;
+        h += `<tr class="win"><td colspan="10">${WLB(o.w)} · ${winCount[o.w]} lançamento(s) iniciando</td></tr>`;
       }
       const stVal = (S.fStatus && S.fStatus[o.fKey]) || o.status || 'Confirmado';
       const stKey = stVal.replace(/\s+/g, '');
       const rowCancelCls = stVal === 'Cancelado' ? ' class="st-Cancelado"' : '';
       const disabledAttr = isGestor() ? ' disabled' : '';
+      const tagCls = o.groupSize > 1 ? ' grp' : (o.baseTag && o.baseTag[0] !== 'P' ? ' fb' : '');
       h += `<tr${rowCancelCls}>
         <td>${hm(o.a)}–${hm(o.b)}</td>
         <td><b>${esc(o.s)}</b></td>
@@ -2006,7 +2337,7 @@ function rOut(switchTab = true) {
         <td>${esc(o.ins)} (${A(o.lv)})</td>
         <td>${HT(o)}</td>
         <td>${o.kg ? o.kg + ' kg' : '—'}</td>
-        <td><span class="tag${o.tag[0] == 'P' ? '' : ' fb'}">${o.tag}</span></td>
+        <td><span class="tag${tagCls}">${esc(o.tag)}</span></td>
         <td>
           <select class="st-sel st-${stKey}" data-f="fstatus" data-fkey="${o.fKey}" aria-label="Status do voo"${disabledAttr}>
             ${FLIGHT_STATUSES.map(st => `<option value="${st}"${st === stVal ? ' selected' : ''}>${st}</option>`).join('')}
@@ -2045,6 +2376,7 @@ function rBI() {
   Object.entries(EQ).forEach(([type, list]) => {
     list.forEach(reg => { eqStats[reg] = { reg, type, d: 0, w: 0, m: 0, flightsM: 0 }; });
   });
+  eqStats[GROUND_REG] = { reg: GROUND_REG, type: GROUND_EQ_TYPE, d: 0, w: 0, m: 0, flightsM: 0 };
 
   const insStats = {};
   S.ins.forEach(x => { insStats[x.nm] = { nm: x.nm, lv: x.lv, on: x.on, d: 0, w: 0, m: 0, flightsM: 0 }; });
@@ -2065,10 +2397,21 @@ function rBI() {
 
     if (isMonth && record.out.length > 0) daysRecordedInMonth++;
 
+    // Deduplica turmas coletivas de Ground School no mesmo dia para somar 1,5 h uma única vez por turma
+    const seenDayClasses = new Set();
+
     record.out.forEach(o => {
       if (o.status === 'Cancelado') return;
       const h = +o.h || 0;
       const normMis = migrateLegacyMissionName(o.mis);
+      const isGnd = Boolean(o.isGround || isGroundMission(normMis));
+      const cKey = o.classKey || `${dt}_${o.w}_${o.a}_${normMis}_${o.ins}`;
+
+      if (isGnd) {
+        if (seenDayClasses.has(cKey)) return;
+        seenDayClasses.add(cKey);
+      }
+
       if (isDay) { totH_D += h; totF_D++; }
       if (isWeek) { totH_W += h; totF_W++; }
       if (isMonth) { totH_M += h; totF_M++; }
@@ -2105,29 +2448,29 @@ function rBI() {
 
   container.innerHTML = `
     <div class="st">
-      <div><strong>${totH_D} h</strong>No Dia (${fmtDateBR})<small>${totF_D} voos ativos</small></div>
-      <div><strong>${totH_W} h</strong>Na Semana (7d)<small>${totF_W} voos ativos</small></div>
-      <div><strong>${totH_M} h</strong>No Mês (${refMonth.split('-').reverse().join('/')})<small>${daysRecordedInMonth} dias registrados</small></div>
+      <div><strong>${fmtH(totH_D)}</strong>No Dia (${fmtDateBR})<small>${totF_D} voos/aulas ativas</small></div>
+      <div><strong>${fmtH(totH_W)}</strong>Na Semana (7d)<small>${totF_W} voos/aulas ativas</small></div>
+      <div><strong>${fmtH(totH_M)}</strong>No Mês (${refMonth.split('-').reverse().join('/')})<small>${daysRecordedInMonth} dias registrados</small></div>
       <div><strong>${Object.values(S.av).filter(Boolean).length}/${Object.keys(S.av).length}</strong>Frota Ativa<small>${S.ins.filter(x => x.on).length}/${S.ins.length} instrutores</small></div>
     </div>
 
     <div class="bi-grid-2">
       <div class="pn">
-        <h3>Horas por Equipamento (Dia · Semana · Mês)</h3>
+        <h3>Horas por Equipamento / Sala (Dia · Semana · Mês)</h3>
         <div class="tw" style="max-height:440px;overflow-y:auto">
           <table style="min-width:100%">
             <thead><tr><th>Equipamento</th><th>Frota</th><th>Dia</th><th>Semana</th><th>Mês</th><th>Uso</th></tr></thead>
             <tbody>
               ${eqList.map(e => {
                 const pct = Math.round((e.m / maxEqM) * 100);
-                const disp = S.av[e.reg] ? '' : ' <span class="tag fb">Manut.</span>';
+                const disp = (e.reg !== GROUND_REG && !S.av[e.reg]) ? ' <span class="tag fb">Manut.</span>' : '';
                 const acro = e.reg === ACROBAT_REG ? ' <span class="tag">Acrobat</span>' : '';
                 return `<tr>
                   <td><b>${esc(e.reg)}</b>${acro}${disp}</td>
                   <td class="sm">${esc(e.type)}</td>
-                  <td><b>${e.d} h</b></td>
-                  <td>${e.w} h</td>
-                  <td><b>${e.m} h</b></td>
+                  <td><b>${fmtH(e.d)}</b></td>
+                  <td>${fmtH(e.w)}</td>
+                  <td><b>${fmtH(e.m)}</b></td>
                   <td><div class="bi-bar-wrap"><div class="bi-bar-fill" style="width:${pct}%"></div></div></td>
                 </tr>`;
               }).join('')}
@@ -2147,9 +2490,9 @@ function rBI() {
                 return `<tr>
                   <td><b>${esc(x.nm)}</b></td>
                   <td><span class="tag">${A(x.lv)}</span></td>
-                  <td><b>${x.d} h</b></td>
-                  <td>${x.w} h</td>
-                  <td><b>${x.m} h</b></td>
+                  <td><b>${fmtH(x.d)}</b></td>
+                  <td>${fmtH(x.w)}</td>
+                  <td><b>${fmtH(x.m)}</b></td>
                   <td><div class="bi-bar-wrap"><div class="bi-bar-fill" style="width:${pct}%"></div></div></td>
                 </tr>`;
               }).join('')}
@@ -2175,9 +2518,9 @@ function rBI() {
                 <td><b>${esc(ms.mis)}</b></td>
                 <td>${esc(eqDesc)}</td>
                 <td><span class="tag">${A(rule.lv)}+</span></td>
-                <td><b>${ms.d} h</b></td>
-                <td>${ms.w} h</td>
-                <td><b>${ms.m} h</b></td>
+                <td><b>${fmtH(ms.d)}</b></td>
+                <td>${fmtH(ms.w)}</td>
+                <td><b>${fmtH(ms.m)}</b></td>
                 <td><div class="bi-bar-wrap"><div class="bi-bar-fill" style="width:${pct}%"></div></div></td>
               </tr>`;
             }).join('')}
@@ -2212,7 +2555,7 @@ async function exp() {
   if (!RES) { msg('Gere a escala antes de exportar.'); return; }
   const q = v => '"' + String(v).replace(/"/g, '""') + '"';
   const L = [['Início','Fim','Tempo de instrução','Aluno','Missão','Duração (h)','Sessão','Equipamento','Instrutor','Peso tripulação (kg)','Encaixe','Status'].map(q).join(';')];
-  RES.out.forEach(o => L.push([hm(o.a), hm(o.b), `${o.w + 1}º`, o.s, o.mis, o.h, o.ss, o.r, o.ins, o.kg || '', o.tag, (S.fStatus && S.fStatus[o.fKey]) || o.status || 'Confirmado'].map(q).join(';')));
+  RES.out.forEach(o => L.push([hm(o.a), hm(o.b), `${o.w + 1}º`, o.s, o.mis, String(o.h).replace('.', ','), o.ss, o.r, o.ins, o.kg || '', o.tag, (S.fStatus && S.fStatus[o.fKey]) || o.status || 'Confirmado'].map(q).join(';')));
   if (RES.al.length) {
     L.push('');
     L.push(['Alertas','Aluno','Mensagem'].map(q).join(';'));
@@ -2234,19 +2577,19 @@ async function pdf() {
   const dt = ($('#dt').value || '').split('-').reverse().join('/');
   const H = { fillColor: [18, 38, 58] };
   const Y = () => doc.lastAutoTable.finalY + 8;
-  const hrs = a => a.reduce((n, o) => n + o.h, 0);
+  const hrs = a => fmtH(sumUniqueOperationalHours(a));
 
   doc.setFontSize(18); doc.text('Escala de Voo - ACPM', 14, 15);
   doc.setFontSize(11);
   doc.text(`Data da escala: ${dt}     Emitida em: ${new Date().toLocaleString('pt-BR')}`, 14, 22);
-  doc.text(`Missões na demanda: ${tot}     Atendidas: ${tot - rej}     Horas de voo escaladas: ${hrs(out)}     Alertas: ${al.length}`, 14, 28);
+  doc.text(`Missões na demanda: ${tot}     Atendidas: ${tot - rej}     Horas escaladas: ${hrs(out)}     Alertas: ${al.length}`, 14, 28);
 
   const body = [];
   let cw = -1;
   out.forEach(o => {
     if (o.w !== cw) {
       cw = o.w;
-      body.push([{ content: `${WLB(o.w)}  -  ${out.filter(x => x.w === o.w).length} voo(s) iniciando`, colSpan: 8, styles: { fillColor: [222, 230, 238], fontStyle: 'bold' } }]);
+      body.push([{ content: `${WLB(o.w)}  -  ${out.filter(x => x.w === o.w).length} lançamento(s) iniciando`, colSpan: 8, styles: { fillColor: [222, 230, 238], fontStyle: 'bold' } }]);
     }
     body.push([`${hm(o.a)}-${hm(o.b)}`, o.s, o.mis, o.r, `${o.ins} (${A(o.lv)})`, HT(o), o.kg ? o.kg + ' kg' : '-', o.tag]);
   });
@@ -2258,7 +2601,7 @@ async function pdf() {
     out.forEach(o => (g[o[k]] = g[o[k]] || []).push(o));
     return Object.entries(g).sort((a, b) => a[0].localeCompare(b[0]));
   };
-  const lst = a => a.map(o => `${hm(o.a)}-${hm(o.b)} ${o.s} (${o.mis})`).join('; ');
+  const lst = a => consolidateTimelineSlots(a).map(o => `${hm(o.a)}-${hm(o.b)} ${o.students.join(', ')} (${o.mis})`).join('; ');
   const tb = (t, head, rows) => {
     let y = Y();
     if (y > 165) { doc.addPage(); y = 15; }
@@ -2266,8 +2609,8 @@ async function pdf() {
     doc.autoTable({ startY: y + 3, head: [head], body: rows, styles: { fontSize: 9 }, headStyles: H });
   };
 
-  tb('Quadro por instrutor', ['Instrutor','Nível','Horas de voo','Horários e alunos'], grp('ins').map(([n, a]) => [n, A(a[0].lv), hrs(a), lst(a)]));
-  tb('Quadro por equipamento', ['Equipamento','Horas de voo','Horários e alunos'], grp('r').map(([n, a]) => [n, hrs(a), lst(a)]));
+  tb('Quadro por instrutor', ['Instrutor','Nível','Horas','Horários e alunos'], grp('ins').map(([n, a]) => [n, A(a[0].lv), hrs(a), lst(a)]));
+  tb('Quadro por equipamento / sala', ['Recurso','Horas','Horários e alunos'], grp('r').map(([n, a]) => [n, hrs(a), lst(a)]));
   if (al.length) tb('Alertas e pendências', ['Situação','Aluno','Detalhe'], al.map(a => [a.t === 'err' ? 'Rejeitado' : 'Aviso', a.s, a.m]));
 
   let y = Y();
@@ -2440,19 +2783,29 @@ const demo = () => {
 
   S.stu.forEach((d, idx) => {
     d.extra = [];
-    // 1º Aluno exemplifica o caso real de múltiplas missões no mesmo dia (Navegação manhã + 2 Locais tarde + Noturno)
+    // Aluno 01 exemplifica Ground PA-34 (com instrutor A01+) às 06:30 + Multimotor PA-34 (instrutor A09) às 08:20
     if (idx === 0) {
       Object.assign(d, {
-        fly: true, mis: 'Navegação', eq: 'C152', p1: 1, p2: 0, nb: 3, ss: 1, pr: 5,
+        fly: true, mis: 'Ground PA-34', eq: GROUND_EQ_TYPE, p1: 0, p2: 1, nb: GROUND_DURATION_H, ss: 1, pr: 5,
         extra: [
-          { mid: S.nid++, fly: true, mis: 'Voo Local', eq: 'C152', p1: 4, p2: 6, nb: 2, ss: 2, pr: 5 },
+          { mid: S.nid++, fly: true, mis: 'Multimotor', eq: 'PA-34', p1: 1, p2: 2, nb: 2, ss: 1, pr: 5 },
           { mid: S.nid++, fly: true, mis: 'Noturno', eq: 'C172', p1: NI, p2: NI, nb: 1, ss: 1, pr: 5 }
         ]
       });
       return;
     }
-    // 2º Aluno exemplifica missão de Parafuso no PR-JPL (C152 Acrobat)
-    if (idx === 1) {
+    // Alunos 02 a 07 (6 alunos) exemplificam uma turma coletiva de Ground C152 no mesmo horário com o mesmo instrutor A01
+    if (idx >= 1 && idx <= 6) {
+      Object.assign(d, {
+        fly: true, mis: 'Ground C152', eq: GROUND_EQ_TYPE, p1: 0, p2: 1, nb: GROUND_DURATION_H, ss: 1, pr: 4,
+        extra: idx <= 3 ? [
+          { mid: S.nid++, fly: true, mis: 'Voo Local', eq: 'C152', p1: 1, p2: 2, nb: 1, ss: 1, pr: 4 }
+        ] : []
+      });
+      return;
+    }
+    // Aluno 08 exemplifica missão de Parafuso no PR-JPL (C152 Acrobat)
+    if (idx === 7) {
       Object.assign(d, {
         fly: true, mis: 'Parafuso', eq: 'C152', p1: 2, p2: 5, nb: 1, ss: 1, pr: 4, extra: []
       });
@@ -2477,7 +2830,7 @@ const demo = () => {
     });
   });
   save(); rAlu(); rDem();
-  logChange('inc', 'Demanda preenchida com exemplo operacional');
+  logChange('inc', 'Demanda preenchida com exemplo (Ground A01+ e turmas coletivas)');
   showToast('Exemplo operacional carregado.');
 };
 
@@ -2510,18 +2863,26 @@ armed('#btn-bi-sim', 'Confirmar simulação', () => {
     const numFlights = 10 + Math.floor(rnd() * 14);
     for (let f = 0; f < numFlights; f++) {
       const mis = pick([...allMis, 'Voo Local', 'Voo Local', 'Navegação', 'IFR']);
-      const eqType = pick(MIS[mis].eq);
-      const reg = (mis === 'Parafuso' && eqType === 'C152')
-        ? ACROBAT_REG
-        : pick(EQ[eqType].filter(r => r !== ACROBAT_REG));
+      const isGnd = isGroundMission(mis);
+      const eqType = isGnd ? GROUND_EQ_TYPE : pick(MIS[mis].eq);
+      const reg = isGnd
+        ? GROUND_REG
+        : (mis === 'Parafuso' && eqType === 'C152')
+          ? ACROBAT_REG
+          : pick(EQ[eqType].filter(r => r !== ACROBAT_REG));
       const minLv = reqInsLevel(mis, eqType);
-      const qualIns = S.ins.filter(x => x.lv >= minLv);
+      const qualIns = isGnd
+        ? S.ins.filter(x => x.lv === 1 || x.lv === 2)
+        : S.ins.filter(x => x.lv >= minLv);
       const ins = pick(qualIns.length ? qualIns : S.ins);
       const stu = pick(stuPool);
-      const h = 1 + Math.floor(rnd() * 3);
+      const h = isGnd ? GROUND_DURATION_H : 1 + Math.floor(rnd() * 3);
+      const durMin = isGnd ? GROUND_DURATION_MIN : h * 60;
       const w = mis === 'Noturno' ? 8 : Math.floor(rnd() * 7);
       flights.push({
-        w, a: T[w], b: T[w] + h * 60,
+        isGround: isGnd,
+        classKey: isGnd ? `SIM_${iso}_${mis}_${w}_${ins.id}` : `SIM_${iso}_${f}`,
+        w, a: T[w], b: T[w] + durMin,
         s: stu.nm, mis, h, ss: '1/1',
         r: reg, eqType, ins: ins.nm, lv: ins.lv, status: 'Confirmado'
       });
@@ -2788,27 +3149,36 @@ document.addEventListener('change', e => {
         target.fly = t.checked;
         logChange(
           target.fly ? 'inc' : 'exc',
-          `${s.nm} ${target.fly ? 'incluído' : 'retirado'} (${target.mis} · ${target.eq} · ${target.nb} h)`,
+          `${s.nm} ${target.fly ? 'incluído' : 'retirado'} (${target.mis} · ${target.eq} · ${fmtDurLabel(target.nb)})`,
           { kind: 'setFly', stuId: s.id, mid, val: !target.fly, label: target.fly ? '✕ Excluir' : '↶ Restaurar' }
         );
       } else {
         target[f] = (f === 'mis' || f === 'eq') ? t.value : +t.value;
         if (f === 'mis') {
           const mRule = MIS[target.mis] || MIS['Voo Local'];
-          // Garante que o equipamento selecionado seja estritamente compatível com a missão escolhida
           if (!mRule.eq.includes(target.eq)) {
             target.eq = mRule.defEq;
           }
-          if (target.mis === 'Noturno') {
-            target.p1 = NI;
-            target.p2 = NI;
-          } else if (target.p1 === NI) {
-            target.p1 = 1;
-            target.p2 = 2;
+          if (mRule.isGround) {
+            target.eq = GROUND_EQ_TYPE;
+            target.nb = GROUND_DURATION_H;
+            target.ss = 1;
+            if (target.p1 === NI) { target.p1 = 0; target.p2 = 1; }
+          } else {
+            if (+target.nb === GROUND_DURATION_H || !Number.isInteger(+target.nb)) target.nb = 1;
+            if (target.mis === 'Noturno') {
+              target.p1 = NI;
+              target.p2 = NI;
+            } else if (target.p1 === NI) {
+              target.p1 = 1;
+              target.p2 = 2;
+            }
           }
         }
-        if (f === 'nb') target.ss = Math.min(target.ss || 1, target.nb);
-        logChange('mod', `Pedido ${s.nm}: ${target.mis} · ${target.eq} · ${target.nb} h`);
+        if (f === 'nb' && !isGroundMission(target.mis)) {
+          target.ss = Math.min(target.ss || 1, target.nb);
+        }
+        logChange('mod', `Pedido ${s.nm}: ${target.mis} · ${target.eq} · ${fmtDurLabel(target.nb)}`);
       }
       save();
       c.outerHTML = singleDemandRowHTML(s, target, mid);
