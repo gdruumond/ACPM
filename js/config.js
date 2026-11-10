@@ -72,50 +72,6 @@ export const MIS = {
 // Limites máximos de peso implícitos ao equipamento (fixos na regra operacional)
 export const DEFAULT_LIM = { 'C152': 170, 'C172': 222, 'PA-34': 250 };
 
-// Lista oficial de 40 instrutores do ACPM com respectivos pesos em kg
-export const INS_DATA = [
-  ['Alan Carvalho', 75],
-  ['Alessandro Amorim', 77],
-  ['Ana Reolon', 67],
-  ['Antônio Paiva', 87],
-  ['Caio Monteiro', 75],
-  ['Daniel Barbosa', 88],
-  ['Davi Guerra', 91],
-  ['Eder Gonçalves', 85],
-  ['Eduardo Cougo', 83],
-  ['Felipe Cardoso', 85],
-  ['Felipe Ferreira', 73],
-  ['Frederico Basus', 82],
-  ['Gabriel Ferreira', 73],
-  ['Guilherme Oliveira', 75],
-  ['Gustavo Zucconi', 78],
-  ['Henrique Pereira', 72],
-  ['Herbert Levy', 73],
-  ['Isaac Estevan', 75],
-  ['Italo Camargos', 70],
-  ['Juan Alvarenga', 63],
-  ['Juliana Lourenço', 55],
-  ['Lucas Brabo', 77],
-  ['Lucas Braga', 89],
-  ['Luiz Dantas', 80],
-  ['Luiz Eduardo', 72],
-  ['Marcelo Ribeiro', 75],
-  ['Maria Lissandra', 67],
-  ['Mateus Teixeira', 86],
-  ['Natalia Grossi', 52],
-  ['Renato Binder', 125],
-  ['Rogério Werneck', 90],
-  ['Santiago Lopes', 75],
-  ['Tabatha Faro', 51],
-  ['Tomas Silveira', 76],
-  ['Tulio Nogueira', 75],
-  ['Vander Josafat', 79],
-  ['Victor Brabo', 75],
-  ['Wellen Oliveira', 57],
-  ['Weslei Alves', 83],
-  ['Wirley Siqueira', 93]
-];
-
 export const PRE = {
   'Dia inteiro': [0,1,2,3,4,5,6,7],
   'Manhã': [0,1,2,3],

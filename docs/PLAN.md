@@ -103,15 +103,23 @@ Each item was written test-first and has its own commit.
 - [x] **jsPDF 4.2.1 + AutoTable 5.0.9** with SRI (`integrity` + `crossorigin`). `npm audit` is clean. The PDF test now checks content and page count.
 - Moved to Phase 2: taking the instructor roster out of `js/config.js`. Gabriel considers the public names and weights irrelevant, so there is no history rewrite and no private repo.
 
-### Phase 2: Shared storage (about 3–5 days)
-- [x] Supabase project provisioned: org "ACPM", project `acpm-escala`, São Paulo, Free plan, still empty.
-- [ ] Add a `profiles(role: operador|gestor)` table and row-level security: Gestor can only read, Operador can read and write.
-- [ ] Seed the instructor roster from Supabase instead of `INS_DATA` in `js/config.js`.
-- [ ] Share links become `?date=YYYY-MM-DD`, read from the backend behind login, instead of carrying the data in the URL.
-- [ ] Implement a `SupabaseStorage` adapter behind the existing `ApiClient` methods (`fetchState`, `saveState`, `fetchResult` …). Keep `localStorage` as an offline cache and a fallback.
-- [ ] Add **optimistic concurrency**: each document carries a `version`. A save with a stale version is rejected, and the user gets "a colleague changed this, reload" instead of a silent overwrite.
-- [ ] Add login (magic link). Remove the client-side role picker; the role comes from the signed-in profile.
-- [ ] Write a one-time migration button: "Upload my local data". Whoever has the real instructor levels pushes their `localStorage` up.
+### Phase 2: Shared storage (built on branch `fase-2`, on top of `fase-1`; live on the preview)
+Decisions: email + password accounts created by the admin (no open sign-up, no email service needed); read-only Gestor logins; a separate Supabase project for the preview and the database tests.
+- [x] Supabase projects provisioned: `acpm-escala` (production, still empty) and `acpm-escala-preview` (preview and tests), São Paulo, Free plan.
+- [x] Schema with row-level security (`supabase/migrations`): `perfis` (operador | gestor); `documentos` for the same four keys as `localStorage`, readable by any account with a profile; writes only through `salvar_documento` (Operador only). Covered by 24 pgTAP checks (`npm run test:db`, preview project only).
+- [x] **Optimistic concurrency:** each save sends the version it read. A stale version gets HTTP 409, and the app shows "a colleague changed this, reload" instead of silently overwriting. Saves of the same document go one at a time.
+- [x] `ApiClient` reads and writes through a swappable backend: `js/backends/local.js` (`localStorage`, used on localhost) and `js/backends/supabase.js` (the published sites).
+- [x] Login screen (email + password). The role comes from the account's profile, and the role picker is hidden.
+- [x] Share links carry only the date (`?data=AAAA-MM-DD`); the person opening one logs in with their own account. Old `share=` links are ignored when logged in.
+- [x] One-time upload: an Operador's first login to an empty server offers to send that browser's data (roster with the real levels, demand, schedule, history and BI).
+- [x] The roster left the code (`INS_DATA` removed). Fresh state has no instructors; "Preencher exemplo" creates fictional ones.
+- [x] Preview: demo accounts `operador.previa@example.com` and `gestor.previa@example.com` (passwords in Pedro's Keychain) and 40 fictional instructors. A real-login smoke test runs against it (`test/e2e/publicado.spec.js`).
+
+#### Go-live checklist (production: `acpm-escala`)
+1. [x] Schema and auth config applied to production (2026-11-10): migration `20261110191032_documentos_e_perfis`, sign-up off. Pool sizes are left to each project (`config.toml` no longer manages them).
+2. [x] Personal Operador accounts created for Gabriel, Pedro and Rayane, and checked with a real login. Passwords are in Pedro's Keychain; he sends them privately.
+3. [ ] Merge Phase 2. From then on, Gabriel's site asks for a login.
+4. [ ] **Gabriel logs in first**, from the browser that has his data, and chooses "Enviar os dados deste navegador". The first Operador to log in to the empty server gets this offer, so Pedro and Rayane should wait. If that browser has no data, the old roster is still in `js/config.js` at `f462ed7` (merge of PR #3).
 
 ### Phase 3: Data model that matches the job (about 1 week)
 - [ ] Separate the **master data** (instructors, students, fleet, rules) from **per-date documents** (demand, schedule result, flight statuses, audit). The date picker then loads and saves that date's schedule.

@@ -10,10 +10,12 @@
     "serve": "node scripts/serve.mjs",
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "node --test \"test/unit/**/*.test.js\"",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:db": "node scripts/testar-banco.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.65.0",
+    "@supabase/supabase-js": "2.119.0",
     "jspdf": "4.2.1",
     "jspdf-autotable": "5.0.9"
   }

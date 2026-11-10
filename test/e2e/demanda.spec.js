@@ -1,4 +1,4 @@
-import { test, expect, abrirSintetico, irPara, preencherExemplo, json } from './fixtures.js';
+import { test, expect, abrir, abrirSintetico, irPara, preencherExemplo, json } from './fixtures.js';
 
 const lerDemanda = page => page.locator('#dem tr[data-k="d"]').evaluateAll(linhas => linhas.map(tr => {
   const valor = f => {
@@ -19,6 +19,15 @@ test.describe('Demanda', () => {
     await expect(page.locator('#dem tr[data-k="d"][data-mid="0"]')).toHaveCount(20);
     expect(json({ contagem: await page.locator('#cnt').innerText(), linhas: await lerDemanda(page) }))
       .toMatchSnapshot('demanda-exemplo.json');
+  });
+
+  test('"Preencher exemplo" num navegador sem cadastro cria 40 instrutores e 20 alunos de exemplo', async ({ page }) => {
+    await abrir(page);
+    await preencherExemplo(page);
+    await expect(page.locator('#dem tr[data-k="d"][data-mid="0"]')).toHaveCount(20);
+    await irPara(page, 'ins');
+    await expect(page.locator('#inst .cd')).toHaveCount(40);
+    await expect(page.locator('#inst .cd .nm').first()).toHaveValue('Instrutor 01');
   });
 
   test('"+ Missão" adiciona e remove uma missão extra do aluno', async ({ page }) => {

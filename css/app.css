@@ -654,6 +654,27 @@ p.h { color: var(--mu); margin: 4px 0 8px; }
 .sm { font-size: 13px; color: var(--mu); white-space: nowrap; }
 details.pn summary { cursor: pointer; font: 600 16px 'Barlow Semi Condensed', sans-serif; }
 
+/* ==========================================================================
+   LOGIN (MODO COMPARTILHADO, SUPABASE)
+   ========================================================================== */
+#s-login { display: none; max-width: 420px; margin: 32px auto; }
+body[data-login] #s-login { display: block; }
+body[data-login] main > section:not(#s-login),
+body[data-login] #nav,
+body[data-login] .hd-tools > :not(#btn-theme) { display: none !important; }
+body[data-backend="supabase"] #role-sel { display: none; }
+.login label { display: block; margin-bottom: 12px; font-weight: 600; }
+.login input { display: block; width: 100%; margin-top: 4px; }
+.login .btn { width: 100%; }
+#login-erro { color: var(--er); margin: 10px 0 0; }
+#login-erro:empty { display: none; }
+.hd-usuario { color: var(--hdT); font: 600 13px 'Barlow Semi Condensed', sans-serif; opacity: .9; }
+.aviso-sync {
+  display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  border: 1px solid var(--er); border-left-width: 5px; border-radius: 6px;
+  background: var(--pn); color: var(--ink); padding: 10px 14px; margin-bottom: 12px; font-weight: 600;
+}
+
 @media print {
   header, .bar, nav, section:not(#s-esc), textarea, #audit-panel, #toast-box { display: none !important; }
   section#s-esc { display: block; }

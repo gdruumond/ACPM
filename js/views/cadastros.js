@@ -30,7 +30,13 @@ export const stuHTML = s => `<div class="cd" data-k="s" data-id="${s.id}" data-n
   </div>
 </div>`;
 
-export const rIns = () => { $('#inst').innerHTML = S.ins.map(insHTML).join(''); };
+export const rIns = () => {
+  if (!S.ins.length) {
+    $('#inst').innerHTML = `<p class="h" style="grid-column:1/-1">Nenhum instrutor cadastrado. Clique em “+ Novo instrutor” acima para cadastrar ou use “Preencher exemplo” na aba 4 · Demanda.</p>`;
+    return;
+  }
+  $('#inst').innerHTML = S.ins.map(insHTML).join('');
+};
 
 export const rAlu = () => {
   if (!S.stu.length) {
