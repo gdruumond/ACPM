@@ -10,6 +10,8 @@ async function entrar(page, conta, url = URL_APP) {
   await page.locator('#login-senha').fill(conta.senha);
   await page.locator('#btn-entrar').click();
   await expect(page.locator('#usuario')).toBeVisible();
+  // Espera os dados do servidor serem carregados (os instrutores aparecem depois da leitura)
+  await expect(page.locator('#inst .cd').first()).toBeAttached();
 }
 
 async function novoContexto(browser) {

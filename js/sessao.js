@@ -2,6 +2,7 @@
 // (Operador edita, Gestor só consulta) e liga o ApiClient ao banco.
 import { ApiClient } from './storage.js';
 import { criarBackendSupabase } from './backends/supabase.js';
+import { backendLocal } from './backends/local.js';
 import { setRole } from './actions.js';
 import { $ } from './dom.js';
 
@@ -41,6 +42,32 @@ function pedirLogin(cliente) {
   });
 }
 
+// Primeiro acesso de um operador com o servidor vazio: oferece enviar os dados que este navegador já tinha
+// (modo local). Documentos que já existem no servidor nunca são sobrescritos.
+async function oferecerEnvioDosDadosLocais() {
+  const servidor = ApiClient.backend;
+  if (await servidor.ler('estado')) return;
+  const local = await backendLocal.ler('estado');
+  if (!local || !Array.isArray(local.ins) || !Array.isArray(local.stu)) return;
+
+  document.body.dataset.login = 'sim';
+  $('#form-login').hidden = true;
+  $('#envio-local').hidden = false;
+  $('#envio-local-texto').textContent = `Este navegador tem dados da escala (${local.ins.length} instrutores e ${local.stu.length} alunos) que ainda não estão no servidor. Enviá-los para que todos usem os mesmos dados?`;
+  const enviar = await new Promise(resolve => {
+    $('#btn-enviar-local').onclick = () => resolve(true);
+    $('#btn-ignorar-local').onclick = () => resolve(false);
+  });
+  $('#envio-local').hidden = true;
+  if (!enviar) return;
+
+  for (const documento of ['estado', 'escala', 'historico', 'bi']) {
+    const conteudo = documento === 'estado' ? ApiClient.normalizeAndMigrateState(local) : await backendLocal.ler(documento);
+    if (conteudo === null || (documento !== 'estado' && await servidor.ler(documento) !== null)) continue;
+    await servidor.gravar(documento, conteudo);
+  }
+}
+
 async function sair(cliente) {
   await cliente.auth.signOut();
   window.location.reload();
@@ -76,5 +103,7 @@ export async function iniciarSessaoSupabase(projeto) {
   $('#btn-sair').hidden = false;
   $('#btn-sair').onclick = () => sair(cliente);
   setRole(perfil.perfil, perfil.perfil === 'gestor');
+  if (perfil.perfil === 'operador') await oferecerEnvioDosDadosLocais();
+  delete document.body.dataset.login;
   return true;
 }

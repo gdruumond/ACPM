@@ -1,14 +1,15 @@
 import { test, expect, abrir, abrirSintetico, irPara } from './fixtures.js';
 
 test.describe('Recursos', () => {
-  test('estado inicial: 9 janelas, 26 recursos, 40 instrutores e nenhum aluno', async ({ page }) => {
+  test('estado inicial: 9 janelas, 26 recursos, nenhum instrutor e nenhum aluno', async ({ page }) => {
     await abrir(page);
     await expect(page.locator('#wins input[data-a="win"]')).toHaveCount(9);
     await expect(page.locator('#wins label').last()).toHaveText('9º · 17:30 (noturno)');
     await expect(page.locator('#eqs input[data-a="av"]')).toHaveCount(26);
     await expect(page.locator('#eqs h2')).toHaveText(['Sim. Mono', 'Sim. Multi', 'C152', 'C172', 'PA-34']);
     await expect(page.locator('#eqs label:has(input[data-id="PR-JPL"])')).toContainText('Acrobat · Parafuso');
-    await expect(page.locator('#inst .cd')).toHaveCount(40);
+    await expect(page.locator('#inst .cd')).toHaveCount(0);
+    await expect(page.locator('#inst')).toContainText('Nenhum instrutor cadastrado');
     await irPara(page, 'alu');
     await expect(page.locator('#alu')).toContainText('Nenhum aluno cadastrado');
   });

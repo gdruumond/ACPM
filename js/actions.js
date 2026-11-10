@@ -1,6 +1,6 @@
 // Ações que alteram o estado: perfil de acesso, desfazer, histórico de alterações, geração da escala,
 // sincronização do BI e "Preencher exemplo".
-import { NI, GROUND_EQ_TYPE, GROUND_DURATION_H, SIM_EQ_TYPES, MIS, DEFAULT_LIM } from './config.js';
+import { WIN, NI, GROUND_EQ_TYPE, GROUND_DURATION_H, SIM_EQ_TYPES, MIS, DEFAULT_LIM } from './config.js';
 import { pad } from './format.js';
 import { blank } from './rules.js';
 import { runAllocationEngine } from './engine.js';
@@ -110,6 +110,18 @@ export const demo = () => {
   const wt = [0,0,1,1,1,2,2,3,4,4,5,6,6,7];
   const poolMis = ['Simulador','Voo Local','Voo Local','Navegação','Navegação','Voo Solo','IFR','Multimotor','Noturno'];
 
+  // Se não houver nenhum instrutor cadastrado, cria 40 instrutores fictícios (níveis A01–A09 em ciclo)
+  if (!S.ins.length) {
+    S.ins = Array.from({ length: 40 }, (_, i) => ({
+      id: i + 1,
+      nm: `Instrutor ${String(i + 1).padStart(2, '0')}`,
+      on: true,
+      lv: (i % 9) + 1,
+      kg: 55 + ((i * 17) % 45),
+      aw: WIN.map(() => true)
+    }));
+  }
+
   // Se não houver nenhum aluno cadastrado, cria 20 alunos de exemplo com pesos realistas
   if (!S.stu.length) {
     S.stu = Array.from({ length: 20 }, (_, i) => ({
@@ -170,7 +182,7 @@ export const demo = () => {
       pr: 1 + Math.floor(r() * 5)
     });
   });
-  save(); rAlu(); rDem();
+  save(); rIns(); rAlu(); rDem();
   logChange('inc', 'Demanda preenchida com exemplo (Ground A01+ e turmas coletivas)');
   showToast('Exemplo operacional carregado.');
 };

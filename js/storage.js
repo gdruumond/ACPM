@@ -1,6 +1,6 @@
 // Camada de acesso a dados: estado inicial, migrações de schema, persistência por um backend
 // (localStorage ou Supabase) e o link compartilhável que abre a escala no perfil Gestor.
-import { WIN, NI, EQ, DEFAULT_LIM, INS_DATA, FLIGHT_STATUSES } from './config.js';
+import { WIN, NI, EQ, DEFAULT_LIM, FLIGHT_STATUSES } from './config.js';
 import { pad } from './format.js';
 import { blank, normalizeMissionFields } from './rules.js';
 import { backendLocal, CHAVES_LOCAIS, CHAVE_LEGADA } from './backends/local.js';
@@ -37,15 +37,9 @@ export const ApiClient = {
       av: {},
       lim: { ...DEFAULT_LIM },
       nid: 1000,
-      ins: INS_DATA.map(([nm, kg], i) => ({
-        id: i + 1,
-        nm,
-        on: true,
-        lv: (i % 9) + 1,
-        kg,
-        aw: WIN.map(() => true)
-      })),
-      stu: [], // Inicializa sem nenhum aluno cadastrado
+      // Sem cadastro: no modo compartilhado os instrutores e alunos vêm do servidor
+      ins: [],
+      stu: [],
       fStatus: {}
     };
     Object.values(EQ).flat().forEach(r => state.av[r] = true);
@@ -59,20 +53,15 @@ export const ApiClient = {
     if (!x.nid || x.nid < 1000) x.nid = 1000;
 
     if (!x.schemaVer || x.schemaVer < 3) {
-      const prevByName = new Map();
-      x.ins.forEach(ins => prevByName.set(ins.nm.toLowerCase(), ins));
-
-      x.ins = INS_DATA.map(([nm, kg], idx) => {
-        const old = prevByName.get(nm.toLowerCase());
-        return {
-          id: idx + 1,
-          nm,
-          on: old ? old.on : true,
-          lv: (old && old.lv >= 1 && old.lv <= 9) ? ((x.schemaVer || 1) < 2 ? (idx % 9) + 1 : old.lv) : (idx % 9) + 1,
-          kg: (old && old.kg > 0) ? old.kg : kg,
-          aw: (old && Array.isArray(old.aw) && old.aw.length === WIN.length) ? old.aw : WIN.map(() => true)
-        };
-      });
+      // Versões antigas: mantém os instrutores do navegador (e os ids, usados nos bloqueios), completando campos ausentes
+      x.ins = x.ins.map((old, idx) => ({
+        id: Number.isInteger(old.id) ? old.id : idx + 1,
+        nm: typeof old.nm === 'string' ? old.nm : `Instrutor ${idx + 1}`,
+        on: old.on !== false,
+        lv: old.lv >= 1 && old.lv <= 9 ? old.lv : 1,
+        kg: old.kg > 0 ? old.kg : 0,
+        aw: Array.isArray(old.aw) && old.aw.length === WIN.length ? old.aw : WIN.map(() => true)
+      }));
 
       const isDefaultPlaceholderList =
         x.stu.length === 50 &&

@@ -60,7 +60,8 @@ export async function abrir(page, { estado = null, url = './' } = {}) {
     }, JSON.stringify(estado));
   }
   await page.goto(url);
-  await expect(page.locator('#inst .cd').first()).toBeAttached();
+  // As janelas de operação são desenhadas depois de carregar os dados (mesmo sem nenhum cadastro)
+  await expect(page.locator('#wins input[data-a="win"]').first()).toBeAttached();
 }
 
 export const abrirSintetico = (page, opts = {}) => abrir(page, { estado: estadoSintetico(), ...opts });

@@ -2,7 +2,8 @@
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { ApiClient } from '../../js/storage.js';
-import { INS_DATA, DEFAULT_LIM } from '../../js/config.js';
+import { DEFAULT_LIM } from '../../js/config.js';
+import { rosterSintetico } from '../helpers/estado.js';
 import { simularNavegador, navegarPara } from '../helpers/navegador.js';
 import { aluno, instrutor, missaoExtra } from '../helpers/montar.js';
 
@@ -12,7 +13,7 @@ beforeEach(() => {
 });
 
 describe('Estado inicial', () => {
-  it('janelas e frota habilitadas, 40 instrutores A01–A09 em ciclo e nenhum aluno', () => {
+  it('janelas e frota habilitadas, sem instrutores e sem alunos (o cadastro vem do servidor ou do usuário)', () => {
     const s = ApiClient.createFreshState();
     assert.equal(s.schemaVer, 4);
     assert.deepEqual(s.win, Array(9).fill(true));
@@ -22,9 +23,7 @@ describe('Estado inicial', () => {
     assert.equal(s.nid, 1000);
     assert.deepEqual(s.stu, []);
     assert.deepEqual(s.fStatus, {});
-    assert.equal(s.ins.length, INS_DATA.length);
-    assert.deepEqual(s.ins.slice(0, 10).map(x => x.lv), [1, 2, 3, 4, 5, 6, 7, 8, 9, 1]);
-    assert.deepEqual(s.ins[0], { id: 1, nm: INS_DATA[0][0], on: true, lv: 1, kg: INS_DATA[0][1], aw: Array(9).fill(true) });
+    assert.deepEqual(s.ins, []);
   });
 });
 
@@ -49,27 +48,27 @@ describe('Migração de estado', () => {
     );
   });
 
-  it('schema anterior ao v3: refaz a lista oficial de instrutores mantendo disponibilidade, peso e turnos', () => {
-    const [nome] = INS_DATA[3];
+  it('schema anterior ao v3: mantém os instrutores do navegador (com os mesmos ids) e completa campos ausentes', () => {
     const aw = [true, false, true, false, true, false, true, false, true];
     const antigo = {
       schemaVer: 2,
       win: Array(9).fill(true), av: {}, lim: {}, nid: 1200,
-      ins: [{ id: 77, nm: nome.toUpperCase(), on: false, lv: 6, kg: 99, aw }, instrutor(78, 3)],
+      ins: [{ id: 77, nm: 'Instrutor Antigo', on: false, lv: 6, kg: 99, aw }, instrutor(78, 3), { id: 79, nm: 'Sem dados', lv: 12, aw: [true] }],
       stu: Array.from({ length: 50 }, (_, i) => ({ id: i + 1, nm: `Aluno ${String(i + 1).padStart(2, '0')}`, fly: false, extra: [], ...missaoExtra(0, { fly: false }) }))
     };
     const x = ApiClient.normalizeAndMigrateState(antigo);
-    assert.equal(x.ins.length, INS_DATA.length);
-    assert.deepEqual(x.ins[3], { id: 4, nm: nome, on: false, lv: 6, kg: 99, aw });
-    assert.deepEqual(x.ins[0].lv, 1);
+    assert.deepEqual(x.ins, [
+      { id: 77, nm: 'Instrutor Antigo', on: false, lv: 6, kg: 99, aw },
+      instrutor(78, 3),
+      { id: 79, nm: 'Sem dados', on: true, lv: 1, kg: 0, aw: Array(9).fill(true) }
+    ]);
     assert.deepEqual(x.stu, [], 'remove os 50 alunos de exemplo das versões antigas');
     assert.equal(x.schemaVer, 4);
   });
 
-  it('schema v1: reatribui os níveis A01–A09 em ciclo', () => {
-    const [nome] = INS_DATA[3];
-    const x = ApiClient.normalizeAndMigrateState({ schemaVer: 1, ins: [{ id: 9, nm: nome, on: true, lv: 9, kg: 70, aw: Array(9).fill(true) }], stu: [] });
-    assert.equal(x.ins[3].lv, 4);
+  it('schema v1: mantém os níveis válidos dos instrutores', () => {
+    const x = ApiClient.normalizeAndMigrateState({ schemaVer: 1, ins: [instrutor(9, 9)], stu: [] });
+    assert.equal(x.ins[0].lv, 9);
   });
 });
 
@@ -92,7 +91,7 @@ describe('Persistência local', () => {
   });
 
   it('sem dados salvos: estado inicial, sem escala, histórico e BI vazios', async () => {
-    assert.equal((await ApiClient.fetchState()).ins.length, INS_DATA.length);
+    assert.deepEqual((await ApiClient.fetchState()).ins, []);
     assert.equal(await ApiClient.fetchResult(), null);
     assert.deepEqual(await ApiClient.fetchAudit(), []);
     assert.deepEqual(await ApiClient.fetchBI(), {});
@@ -107,11 +106,10 @@ describe('Persistência local', () => {
   });
 
   it('migra o formato acpm2 (7 janelas) para as 9 janelas atuais', async () => {
-    const [nome] = INS_DATA[0];
     localStorage.setItem(ApiClient.KEY_LEGACY, JSON.stringify({
       win: [true, true, false, true, true, true, false],
       lim: {},
-      ins: [{ id: 1, nm: nome, on: true, lv: 3, kg: 80, aw: [true, false, true, true, false, true, true] }],
+      ins: [{ id: 1, nm: 'Instrutor 01', on: true, lv: 3, kg: 80, aw: [true, false, true, true, false, true, true] }],
       stu: [{ id: 5, nm: 'Aluno 5', kg: 70, bl: [], fly: true, mis: 'PP Local', eq: 'C152', p1: 3, p2: -1, nb: 1, ss: 2, pr: 3 }]
     }));
     const x = await ApiClient.fetchState();
@@ -135,6 +133,7 @@ describe('Persistência local', () => {
 describe('Link compartilhável (perfil Gestor)', () => {
   it('leva data, janelas, manutenção, instrutores, status e somente os alunos que voam', () => {
     const estado = ApiClient.createFreshState();
+    estado.ins = rosterSintetico();
     estado.win[2] = false;
     estado.av['PR-BTB'] = false;
     estado.ins[0].on = false;
