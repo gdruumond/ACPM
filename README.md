@@ -26,8 +26,9 @@ npm run test:e2e       # aplicação no navegador (Playwright)
   `BASE_URL=https://gdruumond.github.io/ACPM/ npm run test:e2e` (com a barra final).
 - Os testes E2E comparam a escala gerada com snapshots em `test/e2e/__snapshots__/`. Se uma mudança
   de comportamento for intencional, atualize-os com `npx playwright test --update-snapshots` e revise o diff.
-- `test/fixtures/motor-goldens.json` guarda a saída do motor original para 40 cenários aleatórios e para o
-  "Preencher exemplo" (gerada por `scripts/capturar-goldens-motor.mjs`).
+- `test/fixtures/motor-goldens.json` guarda a escala aprovada do motor para 40 cenários aleatórios e para o
+  "Preencher exemplo". Depois de mudar uma regra do motor de propósito, regrave com
+  `node scripts/capturar-goldens-motor.mjs` e revise a diferença.
 - Os testes usam somente nomes e pesos fictícios.
 
 ## Estrutura

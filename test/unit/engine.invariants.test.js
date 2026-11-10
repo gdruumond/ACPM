@@ -136,6 +136,13 @@ describe('Invariantes do motor de alocação', () => {
     });
   }));
 
+  it('a sala de Ground recebe uma turma por vez', () => emTodos(({ out }) => {
+    const turmas = [...Map.groupBy(out.filter(o => o.isGround), o => o.classKey).values()].map(m => m[0]);
+    for (const [i, x] of turmas.entries()) {
+      for (const y of turmas.slice(i + 1)) assert.ok(!sobrepoe(x, y), `${x.classKey} e ${y.classKey} ao mesmo tempo`);
+    }
+  }));
+
   it('turmas de Ground reúnem a mesma temática, horário e instrutor', () => emTodos(({ out }) => {
     const turmas = Map.groupBy(out.filter(o => o.isGround), o => o.classKey);
     for (const membros of turmas.values()) {

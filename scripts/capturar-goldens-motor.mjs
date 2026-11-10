@@ -1,41 +1,26 @@
-// Captura a saída do motor de alocação ORIGINAL (index.html do commit 9b5de75, antes da modularização)
-// para os cenários usados em test/unit/engine.golden.test.js.
+// Grava a saída APROVADA do motor de alocação (js/engine.js) para os cenários de test/unit/engine.golden.test.js.
+// Rode somente depois de uma mudança intencional nas regras do motor e revise a diferença no PR.
 // Uso: node scripts/capturar-goldens-motor.mjs
-import { execFileSync } from 'node:child_process';
-import { writeFile } from 'node:fs/promises';
-import { chromium } from '@playwright/test';
+//
+// Histórico: os goldens começaram como a saída do motor original (index.html do commit 9b5de75, fase 0);
+// na fase 1 as regras do motor passaram a mudar de propósito (ver "Phase 1" em docs/PLAN.md).
+import { readFile, writeFile } from 'node:fs/promises';
+import { runAllocationEngine } from '../js/engine.js';
 import { gerarCenario, hashEstado } from '../test/helpers/cenarios.js';
-import { estadoSintetico } from '../test/helpers/estado.js';
 
-const COMMIT = '9b5de75';
 const SEEDS = Array.from({ length: 40 }, (_, i) => i + 1);
 const DESTINO = new URL('../test/fixtures/motor-goldens.json', import.meta.url);
+const semIndefinidos = valor => JSON.parse(JSON.stringify(valor));
 
-const html = execFileSync('git', ['show', `${COMMIT}:index.html`], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
-const browser = await chromium.launch({ channel: process.env.PW_CHANNEL || undefined });
-const page = await browser.newPage();
-await page.route('http://acpm.test/**', r => r.fulfill({ contentType: 'text/html; charset=utf-8', body: html }));
-await page.route(/^https:\/\//, r => r.abort());
-await page.addInitScript(json => {
-  if (!localStorage.getItem('acpm3')) localStorage.setItem('acpm3', json);
-}, JSON.stringify(estadoSintetico()));
-await page.goto('http://acpm.test/');
+// O estado do cenário "Preencher exemplo" (roster sintético + demanda do botão) foi gravado da aplicação original
+const { exemplo: { estado: estadoExemplo } } = JSON.parse(await readFile(DESTINO, 'utf8'));
 
-// Cenário do botão "Preencher exemplo" aplicado ao roster sintético
-const exemplo = await page.evaluate(() => {
-  demo();
-  const estado = JSON.parse(JSON.stringify(S));
-  return { estado, saida: runAllocationEngine(estado) };
+const exemplo = { estado: estadoExemplo, saida: semIndefinidos(runAllocationEngine(estadoExemplo)) };
+const cenarios = SEEDS.map(seed => {
+  const estado = gerarCenario(seed);
+  return { seed, hash: hashEstado(estado), saida: semIndefinidos(runAllocationEngine(estado)) };
 });
 
-const cenarios = [];
-for (const seed of SEEDS) {
-  const estado = gerarCenario(seed);
-  const saida = await page.evaluate(st => runAllocationEngine(st), estado);
-  cenarios.push({ seed, hash: hashEstado(estado), saida });
-}
-
-await browser.close();
-await writeFile(DESTINO, JSON.stringify({ commit: COMMIT, exemplo, cenarios }) + '\n');
+await writeFile(DESTINO, JSON.stringify({ origem: 'js/engine.js', exemplo, cenarios }) + '\n');
 const total = cenarios.reduce((n, c) => n + c.saida.out.length, 0);
-console.log(`${cenarios.length} cenários + exemplo capturados (${total} lançamentos) em ${DESTINO.pathname}`);
+console.log(`${cenarios.length} cenários + exemplo gravados (${total} lançamentos) em ${DESTINO.pathname}`);
