@@ -5,6 +5,7 @@ import { criarBackendSupabase } from './backends/supabase.js';
 import { backendLocal } from './backends/local.js';
 import { setRole } from './actions.js';
 import { $ } from './dom.js';
+import { amanhaISO } from './format.js';
 
 const ROTULO = { operador: 'Operador', gestor: 'Gestor' };
 
@@ -46,7 +47,7 @@ function pedirLogin(cliente) {
 // (modo local). Documentos que já existem no servidor nunca são sobrescritos.
 async function oferecerEnvioDosDadosLocais() {
   const servidor = ApiClient.backend;
-  if (await servidor.ler('estado')) return;
+  if (await servidor.ler('cadastro') || await servidor.ler('estado')) return;
   const local = await backendLocal.ler('estado');
   if (!local || !Array.isArray(local.ins) || !Array.isArray(local.stu)) return;
 
@@ -61,11 +62,8 @@ async function oferecerEnvioDosDadosLocais() {
   $('#envio-local').hidden = true;
   if (!enviar) return;
 
-  for (const documento of ['estado', 'escala', 'historico', 'bi']) {
-    const conteudo = documento === 'estado' ? ApiClient.normalizeAndMigrateState(local) : await backendLocal.ler(documento);
-    if (conteudo === null || (documento !== 'estado' && await servidor.ler(documento) !== null)) continue;
-    await servidor.gravar(documento, conteudo);
-  }
+  // Os dados do navegador (formato da fase 2) chegam ao servidor já no formato por data
+  await ApiClient.migrarDocumentosAntigos(amanhaISO(), backendLocal);
 }
 
 async function sair(cliente) {
@@ -102,6 +100,7 @@ export async function iniciarSessaoSupabase(projeto) {
   $('#usuario').hidden = false;
   $('#btn-sair').hidden = false;
   $('#btn-sair').onclick = () => sair(cliente);
+  ApiClient.autorAtual = perfil.nome || sessao.user.email;
   setRole(perfil.perfil, perfil.perfil === 'gestor');
   if (perfil.perfil === 'operador') await oferecerEnvioDosDadosLocais();
   delete document.body.dataset.login;

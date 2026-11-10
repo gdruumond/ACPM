@@ -1,42 +1,89 @@
 // Backend Supabase: leitura com versão, gravação em série e controle de concorrência otimista.
-// Usa um cliente falso com a mesma interface do supabase-js (from/select/eq/maybeSingle e rpc).
+// Usa um cliente falso com a mesma interface do supabase-js (from/select/filtros/order/limit/maybeSingle e rpc).
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { criarBackendSupabase } from '../../js/backends/supabase.js';
 
 const espera = ms => new Promise(r => setTimeout(r, ms));
 
-function clienteFalso(documentos = {}, { atraso = 0 } = {}) {
+// Tabelas em memória (documentos, dias e historico) com o mesmo contrato das funções do banco testadas em pgTAP
+function clienteFalso(documentos = {}, { atraso = 0, dias = {} } = {}) {
   const banco = new Map(Object.entries(documentos));
+  const tabelaDias = new Map(Object.entries(dias));
+  const historico = [];
   const rpcs = [];
+  const chamadas = [];
   let falhasDeRede = 0;
+
+  const linhasDe = tabela => {
+    if (tabela === 'documentos') return [...banco].map(([chave, d]) => ({ chave, ...d }));
+    if (tabela === 'dias') return [...tabelaDias].map(([data, d]) => ({ data, ...d }));
+    if (tabela === 'historico') return historico.map(h => ({ ...h }));
+    throw new Error(`tabela inesperada: ${tabela}`);
+  };
+
+  const salvar = (mapa, chave, conteudo, versaoLida) => {
+    const atual = mapa.get(chave);
+    const versaoAtual = atual ? atual.versao : 0;
+    if (versaoLida !== versaoAtual) return { data: null, error: { code: 'PT409', message: 'alterado por outra pessoa' } };
+    mapa.set(chave, { conteudo, versao: versaoAtual + 1 });
+    return { data: versaoAtual + 1, error: null };
+  };
+
   return {
     banco,
+    dias: tabelaDias,
+    historico,
     rpcs,
+    chamadas,
     falharProximas(n) { falhasDeRede = n; },
     from(tabela) {
-      assert.equal(tabela, 'documentos');
-      const filtros = {};
+      const filtros = [];
+      let colunas = null, ordem = null, limite = null;
+      const resultado = () => {
+        let linhas = linhasDe(tabela).filter(l => filtros.every(f => f(l)));
+        if (ordem) linhas.sort((a, b) => (a[ordem.coluna] < b[ordem.coluna] ? -1 : a[ordem.coluna] > b[ordem.coluna] ? 1 : 0) * (ordem.ascending ? 1 : -1));
+        if (limite !== null) linhas = linhas.slice(0, limite);
+        return structuredClone(colunas ? linhas.map(l => Object.fromEntries(colunas.map(c => [c, l[c] ?? null]))) : linhas);
+      };
       const consulta = {
-        select(colunas) { assert.equal(colunas, 'conteudo, versao'); return consulta; },
-        eq(coluna, valor) { filtros[coluna] = valor; return consulta; },
-        async maybeSingle() {
-          const doc = banco.get(filtros.chave);
-          return { data: doc ? structuredClone(doc) : null, error: null };
-        }
+        select(lista) { colunas = lista.split(',').map(c => c.trim()); return consulta; },
+        eq(c, v) { filtros.push(l => l[c] === v); return consulta; },
+        gte(c, v) { filtros.push(l => l[c] >= v); return consulta; },
+        lte(c, v) { filtros.push(l => l[c] <= v); return consulta; },
+        lt(c, v) { filtros.push(l => l[c] < v); return consulta; },
+        order(coluna, { ascending = true } = {}) { ordem = { coluna, ascending }; return consulta; },
+        limit(n) { limite = n; return consulta; },
+        async maybeSingle() { return { data: resultado()[0] ?? null, error: null }; },
+        then(ok, erro) { return Promise.resolve({ data: resultado(), error: null }).then(ok, erro); }
       };
       return consulta;
     },
     async rpc(nome, args) {
-      assert.equal(nome, 'salvar_documento');
-      rpcs.push(structuredClone(args));
+      chamadas.push([nome, structuredClone(args)]);
+      if (nome === 'salvar_documento' || nome === 'salvar_dia') rpcs.push(structuredClone(args));
       await espera(atraso);
       if (falhasDeRede > 0) { falhasDeRede--; return { data: null, error: { message: 'Failed to fetch', code: '' } }; }
-      const atual = banco.get(args.p_chave);
-      const versaoAtual = atual ? atual.versao : 0;
-      if (args.p_versao_lida !== versaoAtual) return { data: null, error: { code: 'PT409', message: 'alterado por outra pessoa' } };
-      banco.set(args.p_chave, { conteudo: args.p_conteudo, versao: versaoAtual + 1 });
-      return { data: versaoAtual + 1, error: null };
+      if (nome === 'salvar_documento') {
+        // Depois da conversão (o cadastro existe), os documentos da fase 2 ficam só como cópia
+        if (args.p_chave !== 'cadastro' && banco.has('cadastro')) return { data: null, error: { code: 'PT409', message: 'versão anterior do app' } };
+        return salvar(banco, args.p_chave, args.p_conteudo, args.p_versao_lida);
+      }
+      if (nome === 'salvar_dia') return salvar(tabelaDias, args.p_data, args.p_conteudo, args.p_versao_lida);
+      if (nome === 'registrar_historico') {
+        const id = historico.length + 1;
+        historico.push({ id, data: args.p_data, registrado_em: new Date(Date.UTC(2026, 10, 10, 12, 0, id)).toISOString(), autor: 'Operador',
+          tipo: args.p_tipo, descricao: args.p_descricao, reverter: args.p_reverter, reverte: args.p_reverte, importado: false });
+        return { data: id, error: null };
+      }
+      if (nome === 'importar_historico') {
+        if (historico.some(h => h.importado)) return { data: 0, error: null };
+        for (const e of args.p_entradas) {
+          historico.push({ id: historico.length + 1, data: args.p_data, registrado_em: e.registrado_em, autor: null, tipo: e.tipo, descricao: e.descricao, reverter: null, reverte: null, importado: true });
+        }
+        return { data: args.p_entradas.length, error: null };
+      }
+      throw new Error(`função inesperada: ${nome}`);
     }
   };
 }
@@ -115,5 +162,80 @@ describe('Backend Supabase', () => {
     cliente.from = () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: { message: 'sem conexão' } }) }) }) });
     const backend = criarBackendSupabase(cliente);
     await assert.rejects(backend.ler('estado'), /sem conexão/);
+  });
+});
+
+describe('Backend Supabase: escala por data e histórico', () => {
+  it('escala de uma data: lê e grava na tabela dias com a versão lida (salvar_dia)', async () => {
+    const cliente = clienteFalso({}, { dias: { '2026-11-11': { conteudo: { a: 1 }, versao: 2 } } });
+    const backend = criarBackendSupabase(cliente);
+    assert.deepEqual(await backend.ler('dia:2026-11-11'), { a: 1 });
+    assert.equal(await backend.gravar('dia:2026-11-11', { a: 2 }), true);
+    assert.deepEqual(cliente.chamadas.at(-1), ['salvar_dia', { p_data: '2026-11-11', p_conteudo: { a: 2 }, p_versao_lida: 2 }]);
+    assert.deepEqual(cliente.dias.get('2026-11-11'), { conteudo: { a: 2 }, versao: 3 });
+    assert.equal(await backend.ler('dia:2026-11-12'), null);
+    assert.equal(await backend.gravar('dia:2026-11-12', { b: 1 }), true);
+    assert.equal(cliente.dias.get('2026-11-12').versao, 1);
+  });
+
+  it('o cadastro continua na tabela documentos (salvar_documento)', async () => {
+    const cliente = clienteFalso();
+    const backend = criarBackendSupabase(cliente);
+    assert.equal(await backend.ler('cadastro'), null);
+    assert.equal(await backend.gravar('cadastro', { ins: [] }), true);
+    assert.equal(cliente.chamadas.at(-1)[0], 'salvar_documento');
+    assert.deepEqual(cliente.banco.get('cadastro'), { conteudo: { ins: [] }, versao: 1 });
+  });
+
+  it('lista as datas de um período em ordem e acha o dia anterior com escala', async () => {
+    const dias = Object.fromEntries(['2026-11-12', '2026-10-30', '2026-11-01', '2026-11-30', '2026-12-01'].map(d => [d, { conteudo: { d }, versao: 1 }]));
+    const backend = criarBackendSupabase(clienteFalso({}, { dias }));
+    assert.deepEqual(await backend.listarDias('2026-11-01', '2026-11-30'), [
+      { data: '2026-11-01', conteudo: { d: '2026-11-01' } },
+      { data: '2026-11-12', conteudo: { d: '2026-11-12' } },
+      { data: '2026-11-30', conteudo: { d: '2026-11-30' } }
+    ]);
+    assert.deepEqual(await backend.diaAnterior('2026-11-12'), { data: '2026-11-01', conteudo: { d: '2026-11-01' } });
+    assert.equal(await backend.diaAnterior('2026-10-30'), null);
+  });
+
+  it('histórico: registra pela função (com o que reverter), lista por data e importa', async () => {
+    const cliente = clienteFalso();
+    const backend = criarBackendSupabase(cliente);
+    const a = await backend.registrar({ data: '2026-11-11', tipo: 'exc', descricao: 'PR-BTB: Manutenção', reverter: { kind: 'setAv' } });
+    const b = await backend.registrar({ data: '2026-11-11', tipo: 'inc', descricao: 'Revertido: PR-BTB', reverte: a });
+    await backend.registrar({ data: '2026-11-12', tipo: 'mod', descricao: 'Outra data' });
+    assert.deepEqual(cliente.chamadas[0], ['registrar_historico', { p_data: '2026-11-11', p_tipo: 'exc', p_descricao: 'PR-BTB: Manutenção', p_reverter: { kind: 'setAv' }, p_reverte: null }]);
+    const lista = await backend.listarHistorico('2026-11-11');
+    assert.deepEqual(lista.map(e => [e.id, e.descricao, e.reverte, e.autor]), [[b, 'Revertido: PR-BTB', a, 'Operador'], [a, 'PR-BTB: Manutenção', null, 'Operador']]);
+    assert.equal(await backend.importarHistorico('2026-11-11', [{ registrado_em: '2026-11-09T10:00:00.000Z', tipo: 'inc', descricao: 'Antiga' }]), 1);
+    assert.equal(await backend.importarHistorico('2026-11-11', []), 0);
+  });
+
+  it('as leituras esperam as gravações em andamento deste navegador (não voltam a um conteúdo anterior)', async () => {
+    const cliente = clienteFalso({ cadastro: { conteudo: { v: 1 }, versao: 1 } }, { atraso: 15, dias: { '2026-11-11': { conteudo: { v: 1 }, versao: 1 } } });
+    const backend = criarBackendSupabase(cliente);
+    await backend.ler('cadastro');
+    await backend.ler('dia:2026-11-11');
+    const gravacoes = [backend.gravar('cadastro', { v: 2 }), backend.gravar('dia:2026-11-11', { v: 2 })];
+    assert.deepEqual(await backend.ler('cadastro'), { v: 2 });
+    assert.deepEqual(await backend.diaAnterior('2026-11-12'), { data: '2026-11-11', conteudo: { v: 2 } });
+    backend.gravar('dia:2026-11-11', { v: 3 });
+    assert.deepEqual((await backend.listarDias('2026-11-01', '2026-11-30')).map(d => d.conteudo), [{ v: 3 }]);
+    assert.deepEqual(await Promise.all(gravacoes), [true, true]);
+    assert.equal(await backend.gravar('cadastro', { v: 4 }), true, 'a versão lida continua a mais recente');
+  });
+
+  it('depois de um conflito, nada mais é gravado: nem outras datas nem o histórico', async () => {
+    const cliente = clienteFalso({}, { dias: { '2026-11-11': { conteudo: {}, versao: 1 } } });
+    const conflitos = [];
+    const backend = criarBackendSupabase(cliente, { aoConflito: d => conflitos.push(d) });
+    await backend.ler('dia:2026-11-11');
+    cliente.dias.set('2026-11-11', { conteudo: { colega: true }, versao: 2 });
+    assert.equal(await backend.gravar('dia:2026-11-11', { meu: true }), false);
+    assert.deepEqual(conflitos, ['dia:2026-11-11']);
+    assert.equal(await backend.gravar('dia:2026-11-12', {}), false);
+    assert.equal(await backend.registrar({ data: '2026-11-11', tipo: 'mod', descricao: 'x' }), null);
+    assert.deepEqual(cliente.chamadas.map(c => c[0]), ['salvar_dia']);
   });
 });

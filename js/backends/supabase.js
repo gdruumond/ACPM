@@ -1,22 +1,30 @@
-// Backend Supabase: documentos compartilhados no banco (tabela documentos), gravados pela função
-// salvar_documento com controle de concorrência otimista (versão lida).
+// Backend Supabase: documentos compartilhados no banco, com controle de concorrência otimista (versão lida).
+// cadastro (e os documentos da fase 2) ficam na tabela documentos e são gravados por salvar_documento;
+// dia:AAAA-MM-DD fica na tabela dias e é gravado por salvar_dia. O histórico é a tabela historico.
 // - Gravações do mesmo documento saem em série, sempre com o conteúdo mais recente
 // - Se outra pessoa gravou antes (conflito), o backend para de gravar e avisa por aoConflito
 // - Erros de rede avisam por aoErro; a próxima alteração tenta gravar de novo (aoGravar avisa quando der certo)
+const DOCUMENTO_DIA = /^dia:(\d{4}-\d{2}-\d{2})$/;
+
 export function criarBackendSupabase(cliente, { aoConflito = () => {}, aoErro = () => {}, aoGravar = () => {} } = {}) {
   const versoes = {};
   const pendentes = {};
   const emAndamento = {};
   let bloqueado = false;
 
+  // As leituras esperam as gravações em andamento deste navegador: nunca voltam a um conteúdo (ou versão) anterior
+  const gravacoesConcluidas = () => Promise.allSettled(Object.values(emAndamento));
+
   async function enviar(documento) {
     try {
       while (!bloqueado && Object.hasOwn(pendentes, documento)) {
         const conteudo = pendentes[documento];
         delete pendentes[documento];
-        const { data, error } = await cliente.rpc('salvar_documento', {
-          p_chave: documento, p_conteudo: conteudo, p_versao_lida: versoes[documento] ?? 0
-        });
+        const dia = DOCUMENTO_DIA.exec(documento);
+        const versaoLida = versoes[documento] ?? 0;
+        const { data, error } = dia
+          ? await cliente.rpc('salvar_dia', { p_data: dia[1], p_conteudo: conteudo, p_versao_lida: versaoLida })
+          : await cliente.rpc('salvar_documento', { p_chave: documento, p_conteudo: conteudo, p_versao_lida: versaoLida });
         if (error) {
           delete pendentes[documento];
           if (error.code === 'PT409') {
@@ -38,7 +46,12 @@ export function criarBackendSupabase(cliente, { aoConflito = () => {}, aoErro = 
 
   return {
     async ler(documento) {
-      const { data, error } = await cliente.from('documentos').select('conteudo, versao').eq('chave', documento).maybeSingle();
+      await gravacoesConcluidas();
+      const dia = DOCUMENTO_DIA.exec(documento);
+      const consulta = dia
+        ? cliente.from('dias').select('conteudo, versao').eq('data', dia[1])
+        : cliente.from('documentos').select('conteudo, versao').eq('chave', documento);
+      const { data, error } = await consulta.maybeSingle();
       if (error) throw new Error(error.message);
       versoes[documento] = data ? data.versao : 0;
       return data ? data.conteudo : null;
@@ -48,6 +61,48 @@ export function criarBackendSupabase(cliente, { aoConflito = () => {}, aoErro = 
       if (bloqueado) return Promise.resolve(false);
       pendentes[documento] = conteudo;
       return (emAndamento[documento] ||= enviar(documento));
+    },
+
+    async listarDias(de, ate) {
+      await gravacoesConcluidas();
+      const { data, error } = await cliente.from('dias').select('data, conteudo').gte('data', de).lte('data', ate).order('data');
+      if (error) throw new Error(error.message);
+      return data;
+    },
+
+    async diaAnterior(data) {
+      await gravacoesConcluidas();
+      const { data: anterior, error } = await cliente.from('dias').select('data, conteudo')
+        .lt('data', data).order('data', { ascending: false }).limit(1).maybeSingle();
+      if (error) throw new Error(error.message);
+      return anterior;
+    },
+
+    // Depois de um conflito nada mais é registrado (a alteração não foi salva)
+    async registrar({ data, tipo, descricao, reverter = null, reverte = null }) {
+      if (bloqueado) return null;
+      const { data: id, error } = await cliente.rpc('registrar_historico', {
+        p_data: data, p_tipo: tipo, p_descricao: descricao, p_reverter: reverter, p_reverte: reverte
+      });
+      if (error) {
+        aoErro(error, 'historico');
+        return null;
+      }
+      return id;
+    },
+
+    async listarHistorico(data) {
+      const { data: entradas, error } = await cliente.from('historico')
+        .select('id, data, registrado_em, autor, tipo, descricao, reverter, reverte, importado')
+        .eq('data', data).order('registrado_em', { ascending: false }).limit(200);
+      if (error) throw new Error(error.message);
+      return entradas;
+    },
+
+    async importarHistorico(data, entradas) {
+      const { data: importadas, error } = await cliente.rpc('importar_historico', { p_data: data, p_entradas: entradas });
+      if (error) throw new Error(error.message);
+      return importadas;
     }
   };
 }

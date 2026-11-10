@@ -1,7 +1,7 @@
 // Exportação da escala do dia em CSV e PDF (jsPDF + AutoTable carregados no index.html).
 import { hm, WLB, fmtH, A } from './format.js';
 import { sumUniqueOperationalHours, consolidateTimelineSlots } from './engine.js';
-import { S, RES } from './state.js';
+import { S, RES, DATA } from './state.js';
 import { $, msg } from './dom.js';
 import { HT } from './views/escala.js';
 
@@ -45,7 +45,7 @@ export async function pdf() {
   const doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const { out, al, tot } = RES;
   const rej = al.filter(a => a.t === 'err').length;
-  const dt = ($('#dt').value || '').split('-').reverse().join('/');
+  const dt = DATA.split('-').reverse().join('/');
   const H = { fillColor: [18, 38, 58] };
   const Y = () => doc.lastAutoTable.finalY + 8;
   const hrs = a => fmtH(sumUniqueOperationalHours(a));

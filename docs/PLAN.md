@@ -103,7 +103,7 @@ Each item was written test-first and has its own commit.
 - [x] **jsPDF 4.2.1 + AutoTable 5.0.9** with SRI (`integrity` + `crossorigin`). `npm audit` is clean. The PDF test now checks content and page count.
 - Moved to Phase 2: taking the instructor roster out of `js/config.js`. Gabriel considers the public names and weights irrelevant, so there is no history rewrite and no private repo.
 
-### Phase 2: Shared storage (built on branch `fase-2`, on top of `fase-1`; live on the preview)
+### Phase 2: Shared storage (merged as PR #4; live in production since 2026-11-10)
 Decisions: email + password accounts created by the admin (no open sign-up, no email service needed); read-only Gestor logins; a separate Supabase project for the preview and the database tests.
 - [x] Supabase projects provisioned: `acpm-escala` (production, still empty) and `acpm-escala-preview` (preview and tests), São Paulo, Free plan.
 - [x] Schema with row-level security (`supabase/migrations`): `perfis` (operador | gestor); `documentos` for the same four keys as `localStorage`, readable by any account with a profile; writes only through `salvar_documento` (Operador only). Covered by 24 pgTAP checks (`npm run test:db`, preview project only).
@@ -118,14 +118,24 @@ Decisions: email + password accounts created by the admin (no open sign-up, no e
 #### Go-live checklist (production: `acpm-escala`)
 1. [x] Schema and auth config applied to production (2026-11-10): migration `20261110191032_documentos_e_perfis`, sign-up off. Pool sizes are left to each project (`config.toml` no longer manages them).
 2. [x] Personal Operador accounts created for Gabriel, Pedro and Rayane, and checked with a real login. Passwords are in Pedro's Keychain; he sends them privately.
-3. [ ] Merge Phase 2. From then on, Gabriel's site asks for a login.
-4. [ ] **Gabriel logs in first**, from the browser that has his data, and chooses "Enviar os dados deste navegador". The first Operador to log in to the empty server gets this offer, so Pedro and Rayane should wait. If that browser has no data, the old roster is still in `js/config.js` at `f462ed7` (merge of PR #3).
+3. [x] Phase 2 merged (PR #4). The site now asks for a login.
+4. [x] First login and upload done by Rayane, the master operator, from her browser (2026-11-10): roster with the real levels, schedule, 100 history entries and 4 BI days.
 
-### Phase 3: Data model that matches the job (about 1 week)
-- [ ] Separate the **master data** (instructors, students, fleet, rules) from **per-date documents** (demand, schedule result, flight statuses, audit). The date picker then loads and saves that date's schedule.
-- [ ] Store audit entries in their own table (append-only, with user and timestamp). This replaces the 100-entry local cap.
-- [ ] Compute BI from stored `flights` rows with SQL views, replacing the `BI_HISTORY` blob. Remove or keep the "simulate 30 days" button as a demo.
-- [ ] Optional: realtime subscription so Gestor screens update live while the Operador edits.
+### Phase 3: Data model that matches the job (built on branch `fase-3`, on top of Phase 2; live on the preview)
+Decisions: a new date starts as a copy of the previous saved day (demand and availability, without flight statuses or the generated schedule); no realtime updates for now; the 100 history entries from Phase 2 are imported.
+- [x] **Roster separate from the day.** The roster (instructors and students: names, levels, weights, blocks) is one shared `cadastro` document. Each date is a row in the new `dias` table with its time windows, aircraft and instructor availability, demand, flight statuses and generated schedule. Operators working on different dates no longer conflict, and the roster is saved only when it changes. Writes go through `salvar_dia`, with the same optimistic concurrency as Phase 2.
+- [x] **The date picker opens that date.** A date without a schedule starts as a copy of the previous saved day; nothing is saved until someone edits it. Edits always go to the date that is open, even while another date is loading. In shared mode the Gestor can browse dates too (read-only).
+- [x] **Append-only history table** (`historico`): date, time, author, type and description, written only by Operadores through `registrar_historico`. Reverting adds an entry that points at the reverted one, so nothing is deleted. This replaces the 100-entry cap. 38 pgTAP checks cover `dias`, `historico` and the guard below.
+- [x] **BI from stored schedules.** The dashboard reads the saved schedule of each date in the period (the month, plus the 7 days before the chosen date). With one row per date the volume is small, so it is computed in the browser, without a separate flights table or SQL views. The "simulate 30 days" demo and the clear buttons stay in local mode only.
+- [x] **One-time conversion of the Phase 2 documents** on the first Operador login after the deploy. The roster becomes `cadastro`. The current schedule and the BI days become `dias` rows; the schedule's date comes from the schedule itself, or from the BI day with the same flights, or else it is tomorrow. The history entries are imported, marked as imported and with their original time when it is known. The old documents stay as a backup. Local mode converts the browser's data the same way.
+- [x] **Old tabs can't lose edits.** After the conversion the Phase 2 documents are read-only: a tab still running the previous version gets the "reload" warning on its next save, instead of saving where nobody reads.
+- Not now: realtime updates for Gestor screens (decided 2026-11-10).
+
+#### Go-live checklist (production: `acpm-escala`)
+1. [x] Migrations applied to the preview (`20261110201618_dias_e_historico`, `20261110202010_historico_autor`, `20261110205345_documentos_antigos_somente_copia`); database tests pass (24 + 38).
+2. [x] The same three migrations applied to production (2026-11-10), before the merge. They only add tables and functions, and the guard only acts once `cadastro` exists, so the Phase 2 site keeps working.
+3. [ ] Merge Phase 3.
+4. [ ] An Operador opens the site (Rayane, as the master operator): the first Operador login converts the production data. Anyone with the site already open gets the "reload" warning on their next save.
 
 ### Phase 4: Nice to have
 - [ ] Track instructor and student qualifications and currency: last flight, medical/CMA expiry, student course phase. The engine then checks these instead of relying on manual levels.

@@ -1,6 +1,8 @@
-import { test, expect, prepararContexto, vigiarErros, irPara, confirmar } from './fixtures.js';
-import { instalarSupabaseFalso, CONTAS } from './supabase-falso.js';
+import { test, expect, prepararContexto, vigiarErros, irPara, confirmar, AMANHA } from './fixtures.js';
+import { instalarSupabaseFalso, documentosFase3, CONTAS } from './supabase-falso.js';
 import { estadoSintetico } from '../helpers/estado.js';
+
+const fase3 = () => documentosFase3(estadoSintetico(), AMANHA);
 
 // Em localhost, ?supabase=teste liga o app ao servidor Supabase falso (supabase-falso.js)
 const URL_APP = './?supabase=teste';
@@ -37,7 +39,7 @@ test.describe('Login e perfis (modo compartilhado)', () => {
   });
 
   test('operador entra, vê os dados do banco e as alterações são gravadas com a versão lida', async ({ page, context }) => {
-    const servidor = await instalarSupabaseFalso(context, { documentos: { estado: estadoSintetico() } });
+    const servidor = await instalarSupabaseFalso(context, fase3());
     await page.goto(URL_APP);
     await entrar(page, CONTAS.operador);
     await expect(page.locator('#s-rec')).toBeVisible();
@@ -47,13 +49,13 @@ test.describe('Login e perfis (modo compartilhado)', () => {
 
     await irPara(page, 'dem');
     await confirmar(page, '#demo');
-    await expect.poll(() => servidor.banco.get('estado').conteudo.stu.length).toBe(20);
-    expect(servidor.gravacoes.find(g => g.chave === 'estado')).toEqual({ chave: 'estado', versaoLida: 1, por: CONTAS.operador.email });
-    await expect.poll(() => servidor.banco.get('historico') && servidor.banco.get('historico').versao).toBe(1);
+    await expect.poll(() => servidor.banco.get('cadastro').conteudo.stu.length).toBe(20);
+    expect(servidor.gravacoes.find(g => g.chave === `dia:${AMANHA}`)).toEqual({ chave: `dia:${AMANHA}`, versaoLida: 1, por: CONTAS.operador.email });
+    await expect.poll(() => servidor.historico.map(h => [h.data, h.autor])).toContainEqual([AMANHA, 'Operador de Teste']);
   });
 
   test('gestor entra somente para leitura e nada é gravado', async ({ page, context }) => {
-    const servidor = await instalarSupabaseFalso(context, { documentos: { estado: estadoSintetico() } });
+    const servidor = await instalarSupabaseFalso(context, fase3());
     await page.goto(URL_APP);
     await entrar(page, CONTAS.gestor);
     await expect(page.locator('#usuario')).toHaveText('Gestor de Teste · Gestor');
@@ -79,7 +81,7 @@ test.describe('Login e perfis (modo compartilhado)', () => {
   });
 
   test('a sessão continua depois de recarregar e "Sair" volta para o login', async ({ page, context }) => {
-    await instalarSupabaseFalso(context, { documentos: { estado: estadoSintetico() } });
+    await instalarSupabaseFalso(context, fase3());
     await page.goto(URL_APP);
     await entrar(page, CONTAS.operador);
     await expect(page.locator('#usuario')).toBeVisible();

@@ -1,5 +1,5 @@
 import { test, expect, irPara } from './fixtures.js';
-import { instalarSupabaseFalso, CONTAS } from './supabase-falso.js';
+import { instalarSupabaseFalso, documentosFase3, CONTAS } from './supabase-falso.js';
 import { estadoSintetico } from '../helpers/estado.js';
 import { aluno } from '../helpers/montar.js';
 
@@ -43,9 +43,10 @@ test.describe('Envio dos dados do navegador para o servidor', () => {
     await page.locator('#btn-enviar-local').click();
 
     await expect(page.locator('#nav')).toBeVisible();
-    await expect.poll(() => servidor.banco.get('estado') && servidor.banco.get('estado').conteudo.stu.length).toBe(3);
-    expect(servidor.banco.get('historico').conteudo).toHaveLength(1);
-    expect(Object.keys(servidor.banco.get('bi').conteudo)).toEqual(['2026-11-09']);
+    await expect.poll(() => servidor.banco.get('cadastro') && servidor.banco.get('cadastro').conteudo.stu.length).toBe(3);
+    expect([...servidor.dias.keys()].sort()).toEqual(['2026-11-09', '2026-11-11']);
+    expect(servidor.historico.filter(h => h.importado).map(h => h.descricao)).toEqual(['Aluno cadastrado: Aluno 1000']);
+    expect(servidor.banco.has('estado'), 'o servidor recebe só o formato por data').toBe(false);
     await irPara(page, 'alu');
     await expect(page.locator('#alu .cd')).toHaveCount(3);
   });
@@ -58,11 +59,11 @@ test.describe('Envio dos dados do navegador para o servidor', () => {
     await expect(page.locator('#nav')).toBeVisible();
     await irPara(page, 'alu');
     await expect(page.locator('#alu .cd')).toHaveCount(0);
-    expect(servidor.banco.has('estado')).toBe(false);
+    expect(servidor.banco.has('cadastro')).toBe(false);
   });
 
   test('servidor que já tem a escala: não pergunta e usa os dados do servidor', async ({ page, context }) => {
-    const servidor = await instalarSupabaseFalso(context, { documentos: { estado: estadoSintetico() } });
+    const servidor = await instalarSupabaseFalso(context, documentosFase3(estadoSintetico(), '2026-11-11'));
     await abrirComDadosLocais(page, dadosLocais());
     await entrar(page, CONTAS.operador);
     await expect(page.locator('#nav')).toBeVisible();

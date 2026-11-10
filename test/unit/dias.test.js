@@ -1,0 +1,140 @@
+// Escala por data: separação entre cadastro (igual em todas as datas) e dia (disponibilidade, demanda e
+// status dos voos), cópia do dia anterior e conversão dos documentos da fase 2.
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { separar, juntar, diaPadrao, diaParaCopiar, inferirDataDaEscala, converterLegado, biDosDias } from '../../js/dias.js';
+import { ApiClient } from '../../js/storage.js';
+import { gerarCenario } from '../helpers/cenarios.js';
+import { aluno, instrutor, missaoExtra } from '../helpers/montar.js';
+import { estadoSintetico } from '../helpers/estado.js';
+
+const goldens = JSON.parse(readFileSync(new URL('../fixtures/motor-goldens.json', import.meta.url), 'utf8'));
+const normalizado = estado => ApiClient.normalizeAndMigrateState(structuredClone(estado));
+
+describe('Separar e juntar', () => {
+  it('juntar(separar(estado)) devolve o mesmo estado em 300 cenários e no exemplo', () => {
+    const estados = [goldens.exemplo.estado, ...Array.from({ length: 300 }, (_, i) => gerarCenario(5001 + i))].map(normalizado);
+    for (const estado of estados) {
+      const { cadastro, dia } = separar(estado);
+      assert.deepEqual(juntar(cadastro, dia), estado);
+    }
+  });
+
+  it('o cadastro não tem dados do dia e o dia não tem nomes nem pesos', () => {
+    const estado = normalizado(goldens.exemplo.estado);
+    const { cadastro, dia } = separar(estado);
+    assert.deepEqual(Object.keys(cadastro).sort(), ['ins', 'nid', 'stu']);
+    assert.deepEqual(Object.keys(cadastro.ins[0]).sort(), ['id', 'kg', 'lv', 'nm']);
+    assert.deepEqual(Object.keys(cadastro.stu[0]).sort(), ['bl', 'id', 'kg', 'nm']);
+    assert.deepEqual(Object.keys(dia).sort(), ['av', 'fStatus', 'ins', 'pedidos', 'win']);
+    assert.deepEqual(Object.keys(dia.ins[estado.ins[0].id]).sort(), ['aw', 'on']);
+    const pedido = dia.pedidos[estado.stu[0].id];
+    assert.equal('nm' in pedido || 'kg' in pedido, false);
+  });
+
+  it('dia vazio: instrutores disponíveis em todas as janelas, alunos sem missão, frota toda disponível', () => {
+    const cadastro = { nid: 1003, ins: [{ id: 1, nm: 'Instrutor 01', lv: 3, kg: 70 }], stu: [{ id: 1000, nm: 'Aluno 1000', kg: 70, bl: [1] }] };
+    const estado = juntar(cadastro, diaPadrao());
+    assert.deepEqual(estado.ins, [{ id: 1, nm: 'Instrutor 01', lv: 3, kg: 70, on: true, aw: Array(9).fill(true) }]);
+    assert.deepEqual(estado.stu[0], { id: 1000, nm: 'Aluno 1000', kg: 70, bl: [1], fly: false, mis: 'Voo Local', eq: 'C152', p1: 1, p2: 2, nb: 1, ss: 1, pr: 3, extra: [] });
+    assert.equal(Object.keys(estado.av).length, 26);
+    assert.ok(Object.values(estado.av).every(Boolean));
+    assert.deepEqual(estado.win, Array(9).fill(true));
+  });
+
+  it('ignora no dia instrutores e alunos que saíram do cadastro', () => {
+    const estado = normalizado({ ...estadoSintetico(), ins: [instrutor(1, 1), instrutor(2, 2)], stu: [aluno(1000), aluno(1001)] });
+    const { cadastro, dia } = separar(estado);
+    cadastro.ins = cadastro.ins.filter(x => x.id !== 2);
+    cadastro.stu = cadastro.stu.filter(s => s.id !== 1001);
+    const junto = juntar(cadastro, dia);
+    assert.deepEqual(junto.ins.map(x => x.id), [1]);
+    assert.deepEqual(junto.stu.map(s => s.id), [1000]);
+  });
+
+  it('juntar não compartilha objetos com o dia (editar o estado não altera o dia guardado)', () => {
+    const estado = normalizado({ ...estadoSintetico(), stu: [aluno(1000, {}, { extra: [missaoExtra(1001)] })] });
+    const { cadastro, dia } = separar(estado);
+    const copia = structuredClone(dia);
+    const junto = juntar(cadastro, dia);
+    junto.ins[0].aw[0] = false;
+    junto.stu[0].extra[0].p1 = 7;
+    junto.win[0] = false;
+    assert.deepEqual(dia, copia);
+  });
+});
+
+describe('Nova data', () => {
+  it('copia do dia anterior a disponibilidade e a demanda, sem status dos voos nem escala gerada', () => {
+    const estado = normalizado({ ...estadoSintetico(), stu: [aluno(1000, {}, { extra: [missaoExtra(1001, { mis: 'IFR', eq: 'C172' })] })] });
+    estado.av['PR-BTB'] = false;
+    estado.fStatus = { '1000_0_1': 'Cancelado' };
+    const anterior = { ...separar(estado).dia, resultado: { out: [{ fKey: '1000_0_1' }], al: [], tot: 1 } };
+    const novo = diaParaCopiar(anterior);
+    assert.deepEqual(Object.keys(novo).sort(), ['av', 'fStatus', 'ins', 'pedidos', 'win']);
+    assert.deepEqual(novo.fStatus, {});
+    assert.equal(novo.av['PR-BTB'], false);
+    assert.deepEqual(novo.pedidos[1000], anterior.pedidos[1000]);
+    novo.pedidos[1000].extra[0].p1 = 7;
+    assert.notEqual(anterior.pedidos[1000].extra[0].p1, 7, 'a cópia é independente');
+  });
+
+  it('dia sem disponibilidade nem demanda (importado do BI) copia como dia padrão', () => {
+    assert.deepEqual(diaParaCopiar({ resultado: { out: [], al: [], tot: 0 }, importado: true }), diaPadrao());
+  });
+});
+
+describe('Conversão dos documentos da fase 2', () => {
+  const escala = { out: [{ fKey: '1000_0_1', h: 1, r: 'PP-LJV' }], al: [], tot: 1 };
+
+  it('data da escala: a gravada na escala, senão o dia do BI com a mesma escala, senão a data padrão', () => {
+    assert.equal(inferirDataDaEscala({ ...escala, data: '2026-11-20' }, {}, '2026-11-11'), '2026-11-20');
+    const bi = { '2026-11-09': { out: [{ fKey: 'outro' }] }, '2026-11-10': { out: escala.out } };
+    assert.equal(inferirDataDaEscala(escala, bi, '2026-11-11'), '2026-11-10');
+    assert.equal(inferirDataDaEscala(escala, { '2026-11-09': { out: [] } }, '2026-11-11'), '2026-11-11');
+    assert.equal(inferirDataDaEscala(null, {}, '2026-11-11'), '2026-11-11');
+  });
+
+  it('gera cadastro, a escala atual, os dias do BI e o histórico para importar', () => {
+    const estado = { ...estadoSintetico(), stu: [aluno(1000)] };
+    const bi = {
+      '2026-10-16': { out: [{ fKey: 'a', h: 2 }], tot: 3, rej: 1 },
+      '2026-11-10': { out: escala.out, tot: 1, rej: 0 }
+    };
+    const id = Date.UTC(2026, 10, 9, 13, 0, 0) + 123;
+    const historico = [{ id, ts: '10:00:00', type: 'exc', desc: 'PR-BTB: Manutenção', revert: { kind: 'setAv' } }, { id: 7, ts: '?', type: 'mod', desc: 'id estranho', revert: null }];
+
+    // Quem chama normaliza o estado antes (como o ApiClient faz ao ler os documentos)
+    const plano = converterLegado({ estado: normalizado(estado), escala, historico, bi }, '2026-11-11');
+    assert.equal(plano.dataAtual, '2026-11-10');
+    assert.deepEqual(plano.cadastro, separar(normalizado(estado)).cadastro);
+    assert.deepEqual(Object.keys(plano.dias).sort(), ['2026-10-16', '2026-11-10']);
+    assert.deepEqual(plano.dias['2026-11-10'], { ...separar(normalizado(estado)).dia, resultado: escala });
+    assert.deepEqual(plano.dias['2026-10-16'], { importado: true, resultado: { out: [{ fKey: 'a', h: 2 }], al: [], tot: 3, rej: 1, data: '2026-10-16' } });
+    assert.deepEqual(plano.historico, [
+      { registrado_em: '2026-11-09T13:00:00.123Z', tipo: 'exc', descricao: 'PR-BTB: Manutenção' },
+      { registrado_em: null, tipo: 'mod', descricao: 'id estranho' }
+    ]);
+  });
+
+  it('sem escala gerada: a data atual é a padrão e o dia não tem resultado', () => {
+    const plano = converterLegado({ estado: normalizado(estadoSintetico()), escala: null, historico: [], bi: {} }, '2026-11-11');
+    assert.equal(plano.dataAtual, '2026-11-11');
+    assert.equal(plano.dias['2026-11-11'].resultado, null);
+  });
+});
+
+describe('BI a partir das escalas guardadas', () => {
+  it('cada data com escala gerada vira um registro do BI (voos, missões e rejeições)', () => {
+    const dias = [
+      { data: '2026-11-10', conteudo: { resultado: { out: [{ fKey: 'x' }], al: [{ t: 'err' }, { t: 'warn' }], tot: 3 } } },
+      { data: '2026-11-11', conteudo: { pedidos: {}, resultado: null } },
+      { data: '2026-10-16', conteudo: { importado: true, resultado: { out: [], al: [], tot: 2, rej: 2 } } }
+    ];
+    assert.deepEqual(biDosDias(dias), {
+      '2026-11-10': { out: [{ fKey: 'x' }], tot: 3, rej: 1 },
+      '2026-10-16': { out: [], tot: 2, rej: 2 }
+    });
+  });
+});

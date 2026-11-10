@@ -72,37 +72,34 @@ describe('Migração de estado', () => {
   });
 });
 
-describe('Persistência local', () => {
-  it('salva e recupera o estado, a escala, o histórico e o BI', async () => {
-    const estado = ApiClient.createFreshState();
-    estado.stu = [aluno(1000)];
-    assert.equal(await ApiClient.saveState(estado), true);
-    assert.deepEqual((await ApiClient.fetchState()).stu[0].nm, 'Aluno 1000');
+describe('Persistência local (escala por data)', () => {
+  beforeEach(() => { ApiClient.cadastroGravado = undefined; });
 
+  it('salva e recupera a escala de uma data, o histórico e o BI', async () => {
+    const estado = ApiClient.normalizeAndMigrateState({ ...ApiClient.createFreshState(), stu: [aluno(1000)] });
     const res = { out: [{ fKey: '1000_0_1' }], al: [], tot: 1 };
-    await ApiClient.saveResult(res);
-    assert.deepEqual(await ApiClient.fetchResult(), res);
+    assert.equal(await ApiClient.salvarDia('2026-11-11', estado, res), true);
+    const lido = await ApiClient.carregarDia('2026-11-11');
+    assert.equal(lido.estado.stu[0].nm, 'Aluno 1000');
+    assert.deepEqual(lido.escala, res);
 
-    await ApiClient.saveAudit([{ id: 1, desc: 'x' }]);
-    assert.deepEqual(await ApiClient.fetchAudit(), [{ id: 1, desc: 'x' }]);
-
-    await ApiClient.saveBI({ '2026-11-11': { out: [], tot: 0, rej: 0 } });
-    assert.deepEqual(Object.keys(await ApiClient.fetchBI()), ['2026-11-11']);
+    await ApiClient.registrarHistorico('2026-11-11', { tipo: 'mod', descricao: 'x' });
+    assert.deepEqual((await ApiClient.historicoDoDia('2026-11-11')).map(e => e.descricao), ['x']);
+    assert.deepEqual(Object.keys(await ApiClient.biDoPeriodo('2026-11-01', '2026-11-30')), ['2026-11-11']);
   });
 
-  it('sem dados salvos: estado inicial, sem escala, histórico e BI vazios', async () => {
-    assert.deepEqual((await ApiClient.fetchState()).ins, []);
-    assert.equal(await ApiClient.fetchResult(), null);
-    assert.deepEqual(await ApiClient.fetchAudit(), []);
-    assert.deepEqual(await ApiClient.fetchBI(), {});
+  it('sem dados salvos: sem cadastro, sem escala, histórico e BI vazios', async () => {
+    const { estado, escala } = await ApiClient.carregarDia('2026-11-11');
+    assert.deepEqual([estado.ins, estado.stu, escala], [[], [], null]);
+    assert.deepEqual(await ApiClient.historicoDoDia('2026-11-11'), []);
+    assert.deepEqual(await ApiClient.biDoPeriodo('2026-11-01', '2026-11-30'), {});
   });
 
   it('dados corrompidos não quebram o carregamento', async () => {
-    for (const k of [ApiClient.KEY_STATE, ApiClient.KEY_RESULT, ApiClient.KEY_AUDIT, ApiClient.KEY_BI]) localStorage.setItem(k, '{corrompido');
-    assert.equal((await ApiClient.fetchState()).schemaVer, 4);
-    assert.equal(await ApiClient.fetchResult(), null);
-    assert.deepEqual(await ApiClient.fetchAudit(), []);
-    assert.deepEqual(await ApiClient.fetchBI(), {});
+    localStorage.setItem('acpm4_cadastro', '{corrompido');
+    localStorage.setItem('acpm4_dia_2026-11-11', '{corrompido');
+    const { estado, escala } = await ApiClient.carregarDia('2026-11-11');
+    assert.deepEqual([estado.schemaVer, estado.ins, escala], [4, [], null]);
   });
 
   it('migra o formato acpm2 (7 janelas) para as 9 janelas atuais', async () => {
@@ -112,7 +109,8 @@ describe('Persistência local', () => {
       ins: [{ id: 1, nm: 'Instrutor 01', on: true, lv: 3, kg: 80, aw: [true, false, true, true, false, true, true] }],
       stu: [{ id: 5, nm: 'Aluno 5', kg: 70, bl: [], fly: true, mis: 'PP Local', eq: 'C152', p1: 3, p2: -1, nb: 1, ss: 2, pr: 3 }]
     }));
-    const x = await ApiClient.fetchState();
+    assert.equal(await ApiClient.migrarDocumentosAntigos('2026-11-11'), '2026-11-11');
+    const { estado: x } = await ApiClient.carregarDia('2026-11-11');
     assert.deepEqual(x.win, [true, true, false, false, true, true, true, true, false]);
     assert.deepEqual(x.ins[0].aw, [true, false, true, true, true, true, false, true, true]);
     assert.deepEqual([x.stu[0].p1, x.stu[0].p2, x.stu[0].ss, x.stu[0].mis], [4, -1, 1, 'Voo Local']);
@@ -120,13 +118,10 @@ describe('Persistência local', () => {
 
   it('modo somente leitura (link compartilhado) não grava nada', async () => {
     ApiClient.readOnly = true;
-    assert.equal(await ApiClient.saveState(ApiClient.createFreshState()), false);
-    await ApiClient.saveResult({ out: [], al: [], tot: 0 });
-    await ApiClient.saveAudit([{ id: 1 }]);
-    await ApiClient.saveBI({ d: {} });
-    for (const k of [ApiClient.KEY_STATE, ApiClient.KEY_RESULT, ApiClient.KEY_AUDIT, ApiClient.KEY_BI]) {
-      assert.equal(localStorage.getItem(k), null, k);
-    }
+    assert.equal(await ApiClient.salvarDia('2026-11-11', ApiClient.createFreshState(), { out: [], al: [], tot: 0 }), false);
+    assert.equal(await ApiClient.registrarHistorico('2026-11-11', { tipo: 'mod', descricao: 'x' }), null);
+    assert.equal(await ApiClient.migrarDocumentosAntigos('2026-11-11'), null);
+    for (const k of ['acpm4_cadastro', 'acpm4_dia_2026-11-11', 'acpm4_historico']) assert.equal(localStorage.getItem(k), null, k);
   });
 });
 

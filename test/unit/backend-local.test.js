@@ -29,28 +29,82 @@ describe('Backend local (localStorage)', () => {
   });
 });
 
+describe('Backend local: escala por data, cadastro e histórico', () => {
+  it('grava e lê o cadastro e a escala de cada data em chaves próprias', async () => {
+    assert.equal(await backendLocal.gravar('cadastro', { ins: [] }), true);
+    assert.deepEqual(JSON.parse(localStorage.getItem('acpm4_cadastro')), { ins: [] });
+    assert.equal(await backendLocal.gravar('dia:2026-11-11', { v: 1 }), true);
+    assert.deepEqual(JSON.parse(localStorage.getItem('acpm4_dia_2026-11-11')), { v: 1 });
+    assert.deepEqual(await backendLocal.ler('dia:2026-11-11'), { v: 1 });
+    assert.equal(await backendLocal.ler('dia:2026-11-12'), null);
+    await assert.rejects(backendLocal.ler('dia:amanhã'), /documento desconhecido/);
+  });
+
+  it('lista as datas de um período em ordem e acha o dia anterior com escala', async () => {
+    for (const d of ['2026-11-12', '2026-10-30', '2026-11-01', '2026-11-30', '2026-12-01']) await backendLocal.gravar(`dia:${d}`, { d });
+    localStorage.setItem('acpm3', '{}');
+    assert.deepEqual((await backendLocal.listarDias('2026-11-01', '2026-11-30')).map(x => x.data), ['2026-11-01', '2026-11-12', '2026-11-30']);
+    assert.deepEqual(await backendLocal.diaAnterior('2026-11-12'), { data: '2026-11-01', conteudo: { d: '2026-11-01' } });
+    assert.deepEqual(await backendLocal.diaAnterior('2027-01-01'), { data: '2026-12-01', conteudo: { d: '2026-12-01' } });
+    assert.equal(await backendLocal.diaAnterior('2026-10-30'), null);
+  });
+
+  it('histórico: registra com data, lista por data (mais recente primeiro) e importa uma vez só', async () => {
+    const a = await backendLocal.registrar({ data: '2026-11-11', tipo: 'exc', descricao: 'PR-BTB: Manutenção', reverter: { kind: 'setAv' } });
+    const b = await backendLocal.registrar({ data: '2026-11-11', tipo: 'inc', descricao: 'Revertido: PR-BTB', reverte: a });
+    await backendLocal.registrar({ data: '2026-11-12', tipo: 'mod', descricao: 'Outra data' });
+    const lista = await backendLocal.listarHistorico('2026-11-11');
+    assert.deepEqual(lista.map(e => [e.id, e.descricao, e.reverte]), [[b, 'Revertido: PR-BTB', a], [a, 'PR-BTB: Manutenção', null]]);
+    assert.deepEqual(lista[1].reverter, { kind: 'setAv' });
+    assert.equal(lista[0].autor, null);
+
+    assert.equal(await backendLocal.importarHistorico('2026-11-11', [{ registrado_em: '2026-11-09T10:00:00.000Z', tipo: 'inc', descricao: 'Antiga' }]), 1);
+    assert.equal(await backendLocal.importarHistorico('2026-11-11', [{ tipo: 'inc', descricao: 'De novo' }]), 0);
+    const depois = await backendLocal.listarHistorico('2026-11-11');
+    assert.deepEqual(depois.map(e => e.descricao), ['Revertido: PR-BTB', 'PR-BTB: Manutenção', 'Antiga']);
+    assert.deepEqual([depois[2].importado, depois[2].registrado_em], [true, '2026-11-09T10:00:00.000Z']);
+  });
+});
+
+describe('Backend local: limpeza (só no modo local)', () => {
+  it('limpa o histórico de uma data sem tocar nas outras', async () => {
+    await backendLocal.registrar({ data: '2026-11-11', tipo: 'mod', descricao: 'Dia 11' });
+    await backendLocal.registrar({ data: '2026-11-12', tipo: 'mod', descricao: 'Dia 12' });
+    await backendLocal.limparHistorico('2026-11-11');
+    assert.deepEqual(await backendLocal.listarHistorico('2026-11-11'), []);
+    assert.deepEqual((await backendLocal.listarHistorico('2026-11-12')).map(e => e.descricao), ['Dia 12']);
+  });
+
+  it('remove só os dias simulados do BI', async () => {
+    await backendLocal.gravar('dia:2026-11-10', { simulado: true });
+    await backendLocal.gravar('dia:2026-11-11', { av: {} });
+    localStorage.setItem('acpm3', '{}');
+    await backendLocal.removerDiasSimulados();
+    assert.deepEqual((await backendLocal.listarDias('2026-11-01', '2026-11-30')).map(x => x.data), ['2026-11-11']);
+    assert.equal(localStorage.getItem('acpm3'), '{}');
+  });
+});
+
 describe('ApiClient com outro backend', () => {
   const original = ApiClient.backend;
-  afterEach(() => { ApiClient.backend = original; ApiClient.readOnly = false; });
+  afterEach(() => { ApiClient.backend = original; ApiClient.readOnly = false; ApiClient.cadastroGravado = undefined; });
 
-  it('lê e grava pelo backend configurado e respeita o modo somente leitura', async () => {
+  it('lê e grava pelo backend configurado (nada vai para o localStorage) e respeita o modo somente leitura', async () => {
     const memoria = new Map();
-    ApiClient.backend = { ler: async chave => memoria.get(chave) ?? null, gravar: async (chave, conteudo) => { memoria.set(chave, conteudo); return true; } };
-
+    ApiClient.backend = {
+      ler: async chave => memoria.get(chave) ?? null,
+      gravar: async (chave, conteudo) => { memoria.set(chave, conteudo); return true; },
+      diaAnterior: async () => null
+    };
     const estado = ApiClient.createFreshState();
-    assert.equal(await ApiClient.saveState(estado), true);
-    await ApiClient.saveResult({ out: [], al: [], tot: 0 });
-    await ApiClient.saveAudit([{ id: 1 }]);
-    await ApiClient.saveBI({ '2026-11-11': { out: [] } });
-    assert.deepEqual([...memoria.keys()], ['estado', 'escala', 'historico', 'bi']);
-    assert.equal((await ApiClient.fetchState()).ins.length, estado.ins.length);
-    assert.deepEqual(await ApiClient.fetchResult(), { out: [], al: [], tot: 0 });
-    assert.equal(localStorage.getItem('acpm3'), null, 'nada vai para o localStorage');
+    assert.equal(await ApiClient.salvarDia('2026-11-11', estado, null), true);
+    assert.deepEqual([...memoria.keys()], ['cadastro', 'dia:2026-11-11']);
+    assert.deepEqual((await ApiClient.carregarDia('2026-11-11')).estado, ApiClient.normalizeAndMigrateState(structuredClone(estado)));
+    assert.equal(localStorage.length, 0, 'nada vai para o localStorage');
 
     ApiClient.readOnly = true;
     memoria.clear();
-    assert.equal(await ApiClient.saveState(estado), false);
-    await ApiClient.saveAudit([{ id: 2 }]);
+    assert.equal(await ApiClient.salvarDia('2026-11-11', estado, null), false);
     assert.equal(memoria.size, 0);
   });
 });

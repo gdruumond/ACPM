@@ -118,16 +118,16 @@ h3 { font: 600 15px 'Barlow Semi Condensed', sans-serif; margin: 10px 0 6px; col
 body[data-role="gestor"] .edit-only { display: none !important; }
 body[data-role="gestor"] #s-rec .chip,
 body[data-role="gestor"] #s-ins .w,
-body[data-role="gestor"] #dt,
+body[data-role="gestor"]:not([data-backend="supabase"]) #dt,
 body[data-role="gestor"] .st-sel,
-body[data-role="gestor"] main input:not(.flt-ctrl):not(#onlyfly):not(#bi-dt),
+body[data-role="gestor"] main input:not(.flt-ctrl):not(#onlyfly):not(#bi-dt):not(#dt),
 body[data-role="gestor"] main select:not(.flt-ctrl) {
   pointer-events: none !important;
   cursor: default !important;
 }
-body[data-role="gestor"] #dt,
+body[data-role="gestor"]:not([data-backend="supabase"]) #dt,
 body[data-role="gestor"] .st-sel,
-body[data-role="gestor"] main input:not(.flt-ctrl):not(#onlyfly):not(#bi-dt),
+body[data-role="gestor"] main input:not(.flt-ctrl):not(#onlyfly):not(#bi-dt):not(#dt),
 body[data-role="gestor"] main select:not(.flt-ctrl) {
   opacity: 0.82;
 }
@@ -668,6 +668,10 @@ body[data-backend="supabase"] #role-sel { display: none; }
 .login .btn { width: 100%; }
 #login-erro { color: var(--er); margin: 10px 0 0; }
 #login-erro:empty { display: none; }
+/* Modo compartilhado: o histórico só cresce e o BI vem das escalas guardadas */
+body[data-backend="supabase"] #btn-clear-log,
+body[data-backend="supabase"] #btn-bi-sim,
+body[data-backend="supabase"] #btn-bi-clr { display: none !important; }
 .hd-usuario { color: var(--hdT); font: 600 13px 'Barlow Semi Condensed', sans-serif; opacity: .9; }
 .aviso-sync {
   display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;

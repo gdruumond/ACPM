@@ -7,12 +7,16 @@ export let RES = null;
 export let AUDIT_LOG = [];
 export let BI_HISTORY = {};
 export let TL_MODE = 'eq'; // 'eq' (Por Aeronave) ou 'ins' (Por Instrutor)
+// Data (AAAA-MM-DD) da escala aberta na tela. O campo de data pode já mostrar outra enquanto ela carrega
+// (ou ficar vazio): as alterações vão sempre para esta data
+export let DATA = '';
 
 export const setS = v => { S = v; };
 export const setRES = v => { RES = v; };
 export const setAuditLog = v => { AUDIT_LOG = v; };
 export const setBIHistory = v => { BI_HISTORY = v; };
 export const setTLMode = v => { TL_MODE = v; };
+export const setData = v => { DATA = v; };
 
 export const isGestor = () => ApiClient.readOnly || document.body.getAttribute('data-role') === 'gestor';
 
