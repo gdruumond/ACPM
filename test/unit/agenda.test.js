@@ -1,0 +1,79 @@
+// Agenda de solicitações: o prazo das 13:00 (horário de São Paulo) e o pedido que cada solicitação vira na demanda.
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { prazoDaAgendaPermite, primeiraDataAberta, disponibilidadeDaSolicitacao, pedidoDaSolicitacao, importarSolicitacoes } from '../../js/agenda.js';
+import { aluno } from '../helpers/montar.js';
+
+const em = iso => new Date(iso);
+
+describe('Agenda de solicitações', () => {
+  it('pedido para o dia seguinte só até as 13:00 de São Paulo; depois, a partir de dois dias', () => {
+    assert.equal(prazoDaAgendaPermite('2026-11-11', em('2026-11-10T12:59:00-03:00')), true);
+    assert.equal(prazoDaAgendaPermite('2026-11-11', em('2026-11-10T13:00:00-03:00')), false);
+    assert.equal(prazoDaAgendaPermite('2026-11-12', em('2026-11-10T13:00:00-03:00')), true);
+    assert.equal(prazoDaAgendaPermite('2026-11-10', em('2026-11-10T08:00:00-03:00')), false, 'o próprio dia nunca');
+    assert.equal(prazoDaAgendaPermite('2026-11-11', em('2026-11-10T15:30:00Z')), true, '15:30 UTC é 12:30 em São Paulo');
+    assert.equal(prazoDaAgendaPermite('2026-11-11', em('2026-11-10T16:30:00Z')), false, '16:30 UTC é 13:30 em São Paulo');
+    assert.equal(prazoDaAgendaPermite('2026-11-11', em('2026-11-11T01:00:00Z')), false, '01:00 UTC do dia 11 ainda é 10/11 22:00 em São Paulo');
+    assert.equal(prazoDaAgendaPermite('2027-01-01', em('2026-12-31T12:00:00-03:00')), true, 'virada de ano');
+  });
+
+  it('primeira data aberta para pedidos: amanhã até as 13:00, depois o dia seguinte a amanhã', () => {
+    assert.equal(primeiraDataAberta(em('2026-11-10T12:00:00-03:00')), '2026-11-11');
+    assert.equal(primeiraDataAberta(em('2026-11-10T13:00:00-03:00')), '2026-11-12');
+    assert.equal(primeiraDataAberta(em('2026-12-31T14:00:00-03:00')), '2027-01-02');
+  });
+
+  it('a disponibilidade da solicitação vira a do pedido (o horário específico vira a janela daquele horário)', () => {
+    assert.deepEqual(['manha', 'tarde', 'noite'].map(janela => disponibilidadeDaSolicitacao({ janela })), ['manha', 'tarde', 'noite']);
+    assert.equal(disponibilidadeDaSolicitacao({ janela: 'horario', horario: '14:30' }), 'h6');
+    assert.equal(disponibilidadeDaSolicitacao({ janela: 'horario', horario: '15:00' }), undefined, 'horário fora das janelas: sem restrição');
+  });
+
+  it('cada solicitação vira um pedido pronto para a escala', () => {
+    assert.deepEqual(pedidoDaSolicitacao({ missao: 'Voo Local', janela: 'tarde' }),
+      { fly: true, mis: 'Voo Local', eq: 'C152', p1: 4, p2: 5, nb: 1, ss: 1, pr: 3, jan: 'tarde' });
+    assert.deepEqual(pedidoDaSolicitacao({ missao: 'IFR', janela: 'horario', horario: '14:30' }),
+      { fly: true, mis: 'IFR', eq: 'C172', p1: 6, p2: 6, nb: 1, ss: 1, pr: 3, jan: 'h6' });
+    assert.deepEqual(pedidoDaSolicitacao({ missao: 'Noturno', janela: 'noite' }),
+      { fly: true, mis: 'Noturno', eq: 'C172', p1: 8, p2: 8, nb: 1, ss: 1, pr: 3, jan: 'noite' });
+    const ground = pedidoDaSolicitacao({ missao: 'Ground C152', janela: 'manha' });
+    assert.deepEqual([ground.eq, ground.nb, ground.p1, ground.p2, ground.jan], ['Sala Ground', 1.5, 0, 1, 'manha']);
+  });
+});
+
+describe('Importar as solicitações da agenda para a demanda', () => {
+  const pedido = (id, alunoId, extra = {}) => ({ id, data: '2026-11-11', aluno: alunoId, aluno_nome: `Aluno ${alunoId}`, missao: 'Voo Local', janela: 'tarde', horario: null, cancelada_em: null, ...extra });
+  const estado = () => ({ nid: 2000, importadas: [], stu: [aluno(1000, { fly: false }), aluno(1001, { mis: 'IFR', eq: 'C172' }), aluno(1002)] });
+
+  it('aluno sem voo no dia: o pedido vira a missão principal', () => {
+    const e = estado();
+    const resumo = importarSolicitacoes(e, [pedido(1, 1000)]);
+    assert.deepEqual(resumo, { novos: 1, atualizados: 0, semAluno: 0 });
+    assert.deepEqual([e.stu[0].fly, e.stu[0].mis, e.stu[0].jan, e.stu[0].p1], [true, 'Voo Local', 'tarde', 4]);
+    assert.deepEqual(e.importadas, [1]);
+  });
+
+  it('aluno já voando outra missão: o pedido entra como missão extra', () => {
+    const e = estado();
+    importarSolicitacoes(e, [pedido(2, 1001)]);
+    assert.equal(e.stu[1].mis, 'IFR', 'a missão que ele já tinha continua');
+    assert.deepEqual(e.stu[1].extra.map(x => [x.mid, x.mis, x.jan]), [[2000, 'Voo Local', 'tarde']]);
+    assert.equal(e.nid, 2001);
+  });
+
+  it('aluno já voando a mesma missão: só atualiza a disponibilidade (sem duplicar)', () => {
+    const e = estado();
+    const resumo = importarSolicitacoes(e, [pedido(3, 1002)]);
+    assert.deepEqual(resumo, { novos: 0, atualizados: 1, semAluno: 0 });
+    assert.deepEqual([e.stu[2].jan, e.stu[2].p1, e.stu[2].extra], ['tarde', 4, []]);
+  });
+
+  it('ignora cancelados e os já importados; conta os alunos que não estão mais no cadastro', () => {
+    const e = { ...estado(), importadas: [5] };
+    const resumo = importarSolicitacoes(e, [pedido(4, 1000, { cancelada_em: '2026-11-10T13:00:00Z' }), pedido(5, 1000), pedido(6, 9999)]);
+    assert.deepEqual(resumo, { novos: 0, atualizados: 0, semAluno: 1 });
+    assert.equal(e.stu[0].fly, false);
+    assert.deepEqual(e.importadas, [5, 6], 'o pedido de quem saiu do cadastro conta como visto');
+  });
+});

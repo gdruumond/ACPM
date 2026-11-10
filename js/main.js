@@ -15,7 +15,7 @@
  */
 import { WIN, NI, T, EQ, GROUND_EQ_TYPE, GROUND_REG, GROUND_DURATION_MIN, GROUND_DURATION_H, ACROBAT_REG, MIS, PRE } from './config.js';
 import { hm, fmtH, fmtDurLabel, pad, amanhaISO, isoMenosDias } from './format.js';
-import { isGroundMission, blank } from './rules.js';
+import { isGroundMission, blank, rotuloDaDisponibilidade } from './rules.js';
 import { habilitacoesDoNivel, normalizarHabilitacoes, nomeDaHabilitacao, podeFazer } from './habilitacoes.js';
 import { ApiClient } from './storage.js';
 import { S, RES, AUDIT_LOG, DATA, setS, setRES, setAuditLog, setTLMode, isGestor, insBy, stuBy, getMissionTarget } from './state.js';
@@ -31,6 +31,8 @@ import { exp, pdf } from './export.js';
 import { projetoSupabase } from './config-supabase.js';
 import { CATEGORIAS_DO_RODIZIO, ajustarFilas } from './rodizio.js';
 import { rRodizio } from './views/rodizio.js';
+import { importarSolicitacoes, disponibilidadeDaSolicitacao } from './agenda.js';
+import { abrirAgenda, carregarMes, mudarMes, escolherDia, diaDaAgenda, lembrarRegistradoPor, podeEditarAgenda } from './views/agenda.js';
 import { ESQUEMA } from './migracoes.js';
 import { iniciarSessaoSupabase } from './sessao.js';
 
@@ -42,6 +44,7 @@ document.addEventListener('click', e => {
     const aba = g.dataset.t || g.dataset.go;
     show(aba);
     if (aba === 'bi') carregarBI();
+    if (aba === 'age') abrirAgenda();
     try { window.scrollTo(0, 0); } catch (x) {}
     return;
   }
@@ -153,6 +156,7 @@ $('#bi-dt').onchange = () => carregarBI();
 $('#bi-flt-eq').onchange = () => rBI();
 $('#flt-dem-mis').onchange = applyDemandFilters;
 preencherFiltroDeHabilitacoes();
+$('#flt-dem-mis').insertAdjacentHTML('beforeend', Object.keys(MIS).map(m => `<option value="${m}">${m}</option>`).join(''));
 $('#flt-ins-hab').onchange = applyInstructorFilters;
 $('#flt-esc-eq').onchange = () => rOut(false);
 
@@ -234,9 +238,94 @@ armed('#btn-bi-clr', 'Confirmar limpeza', async () => {
   showToast('Dias simulados removidos do BI.');
 });
 
+// Agenda: o calendário é livre para navegar (inclusive para o Gestor)
+document.addEventListener('click', e => {
+  const cal = e.target.closest('[data-cal]');
+  if (!cal) return;
+  if (cal.dataset.cal === 'mes') mudarMes(+cal.dataset.delta);
+  else escolherDia(cal.dataset.dia);
+});
+
+// Demanda: traz os pedidos da agenda da secretaria para a data aberta (só acrescenta; não importa o mesmo pedido de novo)
+$('#importar-agenda').onclick = async () => {
+  if (isGestor()) return;
+  let solicitacoes;
+  try {
+    solicitacoes = await ApiClient.agenda(DATA, DATA);
+  } catch (e) {
+    showToast('Não foi possível ler a agenda. Verifique a conexão e tente de novo.');
+    return;
+  }
+  const pendentes = solicitacoes.filter(s => !s.cancelada_em && !S.importadas.includes(s.id));
+  if (!pendentes.length) {
+    showToast(`Nenhum pedido novo na agenda para ${DATA.slice(8, 10)}/${DATA.slice(5, 7)}.`);
+    return;
+  }
+  pushHistory();
+  const resumo = importarSolicitacoes(S, pendentes);
+  pendentes.filter(s => S.stu.some(x => x.id === s.aluno)).forEach(s => {
+    logChange('inc', `Agenda: ${s.aluno_nome} incluído (${s.missao} · ${rotuloDaDisponibilidade(disponibilidadeDaSolicitacao(s))})`);
+  });
+  save(); rDem();
+  if (RES) gen(false);
+  showToast(`${resumo.novos + resumo.atualizados} pedido(s) da agenda na demanda` +
+    (resumo.semAluno ? ` · ${resumo.semAluno} de aluno que não está mais no cadastro` : '') + '.');
+};
+
+// Agenda: registrar um pedido (pela exceção da coordenação, fora do prazo) e cancelar (com confirmação)
+async function registrarPedido(excecao) {
+  if (!podeEditarAgenda()) return;
+  $('#ag-erro').textContent = '';
+  const aluno = S.stu.find(s => s.id === +$('#ag-aluno').value);
+  const por = $('#ag-por').value.trim();
+  if (!aluno || !por) {
+    $('#ag-erro').textContent = 'Escolha o aluno e informe quem anotou o pedido (“Registrado por”).';
+    return;
+  }
+  const janela = $('#ag-janela').value;
+  try {
+    await ApiClient.registrarSolicitacao({
+      data: diaDaAgenda(), aluno: aluno.id, aluno_nome: aluno.nm, missao: $('#ag-missao').value, janela,
+      horario: janela === 'horario' ? $('#ag-horario').value : null, observacao: $('#ag-obs').value, registrado_por: por, excecao
+    });
+  } catch (err) {
+    $('#ag-erro').textContent = {
+      PT403: 'Prazo encerrado: pedido para o dia seguinte só até as 13:00 do dia anterior.',
+      42501: 'Esta conta não pode registrar este pedido (a Exceção da Coordenação é só para operadores).',
+      23514: 'Pedido incompleto: confira aluno, missão, disponibilidade e quem anotou.'
+    }[err.code] || 'Não foi possível registrar o pedido. Verifique a conexão e tente de novo.';
+    return;
+  }
+  lembrarRegistradoPor(por);
+  $('#ag-obs').value = '';
+  $('#ag-aluno').value = '';
+  showToast(excecao ? 'Pedido registrado pela Exceção da Coordenação.' : 'Pedido registrado.');
+  await carregarMes();
+}
+$('#form-agenda').onsubmit = e => { e.preventDefault(); registrarPedido(false); };
+$('#ag-excecao').onclick = () => registrarPedido(true);
+$('#ag-janela').onchange = () => { $('#ag-horario-rotulo').hidden = $('#ag-janela').value !== 'horario'; };
+
+async function cancelarPedido(b) {
+  if (!podeEditarAgenda() || !confirmado(b, 'Confirmar cancelamento')) return;
+  const por = $('#ag-por').value.trim();
+  if (!por) {
+    $('#ag-erro').textContent = 'Informe seu nome em “Registrado por” para cancelar o pedido.';
+    return;
+  }
+  try {
+    await ApiClient.cancelarSolicitacao(+b.dataset.id, por);
+    showToast('Pedido cancelado.');
+  } catch (err) {
+    $('#ag-erro').textContent = 'Não foi possível cancelar o pedido. Verifique a conexão e tente de novo.';
+  }
+  await carregarMes();
+}
+
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]');
   if (!b) return;
+  if (b.dataset.act === 'cancelar-pedido') { cancelarPedido(b); return; }
   if (isGestor()) { e.preventDefault(); return; }
   const a = b.dataset.act, c = b.closest('[data-k]'), id = c ? +c.dataset.id : +b.dataset.id || 0;
   const mid = b.dataset.mid !== undefined ? +b.dataset.mid : (c && c.dataset.mid !== undefined ? +c.dataset.mid : 0);
@@ -517,6 +606,11 @@ document.addEventListener('change', e => {
           `${s.nm} ${target.fly ? 'incluído' : 'retirado'} (${target.mis} · ${target.eq} · ${fmtDurLabel(target.nb)})`,
           { kind: 'setFly', stuId: s.id, mid, val: !target.fly, label: target.fly ? '✕ Excluir' : '↶ Restaurar' }
         );
+      } else if (f === 'jan') {
+        // Disponibilidade do aluno: o voo só começa nessas janelas (vazio: qualquer horário)
+        if (t.value) target.jan = t.value;
+        else delete target.jan;
+        logChange('mod', `Pedido ${s.nm}: disponibilidade ${rotuloDaDisponibilidade(target.jan)} (${target.mis})`);
       } else {
         target[f] = (f === 'mis' || f === 'eq') ? t.value : +t.value;
         if (f === 'mis') {
@@ -604,6 +698,13 @@ document.addEventListener('change', e => {
   }
 
   rRec(); rIns(); rAlu(); rDem(); renderAuditPanel();
+  document.body.dataset.agenda = podeEditarAgenda() ? 'edita' : 'consulta';
+
+  // A Secretaria trabalha na agenda: o app abre nela
+  if (ApiClient.perfil === 'secretaria') {
+    show('age');
+    abrirAgenda();
+  }
 
   if (sharedDate) {
     abrirData(sharedDate);

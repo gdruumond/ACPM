@@ -11,7 +11,7 @@ import { comNomesAntigos } from '../helpers/formato.js';
 
 const DEPOIS = '2026-11-12';
 
-// O campo de data fica na aba 5 · Escala
+// O campo de data fica na aba 6 · Escala
 async function mudarData(page, data) {
   await page.locator('#nav button[data-t="esc"]').click();
   await page.locator('#dt').fill(data);

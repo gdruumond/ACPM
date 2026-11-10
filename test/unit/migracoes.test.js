@@ -75,6 +75,18 @@ describe('Migrações do formato dos dados', () => {
     assert.ok(ESQUEMA >= 8);
   });
 
+  it('versão 9: os pedidos passam a guardar a disponibilidade do aluno (versões anteriores do app não conhecem o campo)', () => {
+    const dia = { pedidos: { 1000: { fly: true, jan: 'tarde' } }, esquema: 8 };
+    assert.deepEqual(migrarDia(dia), { ...dia, esquema: ESQUEMA });
+    assert.ok(ESQUEMA >= 9);
+  });
+
+  it('versão 10: os dias passam a guardar as solicitações da agenda já importadas', () => {
+    const dia = { importadas: [7], esquema: 9 };
+    assert.deepEqual(migrarDia(dia), { ...dia, esquema: ESQUEMA });
+    assert.ok(ESQUEMA >= 10);
+  });
+
   it('os nomes novos são os da frota cadastrada, na mesma ordem', () => {
     assert.deepEqual(EQ['Sim. Mono'], ['SIM-MONO-A', 'SIM-MONO-C']);
     assert.deepEqual(EQ['Sim. Multi'], ['SIM-MLTE-E', 'SIM-MLTE-D']);

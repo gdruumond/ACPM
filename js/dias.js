@@ -5,14 +5,16 @@ import { WIN, EQ, DEFAULT_LIM, AIRCRAFT_EQ_TYPES } from './config.js';
 import { blank } from './rules.js';
 import { filasDoDiaSeguinte } from './rodizio.js';
 
-const CAMPOS_DO_PEDIDO = ['fly', 'mis', 'eq', 'p1', 'p2', 'nb', 'ss', 'pr'];
+// jan: disponibilidade do aluno (só quando o pedido tem uma)
+const CAMPOS_DO_PEDIDO = ['fly', 'mis', 'eq', 'p1', 'p2', 'nb', 'ss', 'pr', 'jan'];
 const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 const avPadrao = () => Object.fromEntries(Object.values(EQ).flat().map(r => [r, true]));
 
 // horas: horas de voo de cada avião desde a última revisão de 50 horas, no início do dia (só dos aviões informados)
 // filas: filas do rodízio (cheque, MLTE, noturno e C172) no início do dia
-export const diaPadrao = () => ({ win: WIN.map(() => true), av: avPadrao(), ins: {}, pedidos: {}, fStatus: {}, horas: {}, filas: {} });
+// importadas: solicitações da agenda já importadas para a demanda do dia
+export const diaPadrao = () => ({ win: WIN.map(() => true), av: avPadrao(), ins: {}, pedidos: {}, fStatus: {}, horas: {}, filas: {}, importadas: [] });
 
 export function separar(estado) {
   return {
@@ -27,12 +29,13 @@ export function separar(estado) {
       av: { ...estado.av },
       ins: Object.fromEntries(estado.ins.map(x => [x.id, { on: x.on, aw: [...x.aw] }])),
       pedidos: Object.fromEntries(estado.stu.map(s => [s.id, {
-        ...Object.fromEntries(CAMPOS_DO_PEDIDO.map(c => [c, s[c]])),
+        ...Object.fromEntries(CAMPOS_DO_PEDIDO.filter(c => s[c] !== undefined).map(c => [c, s[c]])),
         extra: structuredClone(s.extra || [])
       }])),
       fStatus: { ...(estado.fStatus || {}) },
       horas: { ...(estado.horas || {}) },
-      filas: structuredClone(estado.filas || {})
+      filas: structuredClone(estado.filas || {}),
+      importadas: [...(estado.importadas || [])]
     }
   };
 }
@@ -59,7 +62,8 @@ export function juntar(cadastro, dia = diaPadrao()) {
     })),
     fStatus: { ...(dia.fStatus || {}) },
     horas: { ...(dia.horas || {}) },
-    filas: structuredClone(dia.filas || {})
+    filas: structuredClone(dia.filas || {}),
+    importadas: [...(dia.importadas || [])]
   };
 }
 
@@ -68,7 +72,7 @@ export function juntar(cadastro, dia = diaPadrao()) {
 export function diaParaCopiar(anterior, instrutores = []) {
   if (!anterior || !anterior.ins || !anterior.pedidos) return diaPadrao();
   const { win, av, ins, pedidos } = structuredClone(anterior);
-  return { win, av, ins, pedidos, fStatus: {}, horas: horasDoDiaSeguinte(anterior), filas: filasDoDiaSeguinte(anterior, instrutores) };
+  return { win, av, ins, pedidos, fStatus: {}, horas: horasDoDiaSeguinte(anterior), filas: filasDoDiaSeguinte(anterior, instrutores), importadas: [] };
 }
 
 // Horas desde a última revisão no início do dia seguinte: as do dia mais os voos dele que não foram cancelados

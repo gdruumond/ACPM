@@ -2,7 +2,7 @@
 // (localStorage ou Supabase) e o link compartilhável que abre a escala no perfil Gestor.
 import { WIN, NI, EQ, DEFAULT_LIM, FLIGHT_STATUSES } from './config.js';
 import { pad } from './format.js';
-import { blank, normalizeMissionFields } from './rules.js';
+import { blank, normalizeMissionFields, janelasDaDisponibilidade } from './rules.js';
 import { backendLocal, CHAVES_LOCAIS, CHAVE_LEGADA } from './backends/local.js';
 import { separar, juntar, diaPadrao, diaParaCopiar, converterLegado, biDosDias } from './dias.js';
 import { ESQUEMA, migrarCadastro, migrarDia, precisaMigrar, renomearSimulador } from './migracoes.js';
@@ -16,10 +16,11 @@ const numero = (v, min, max, padrao) => (typeof v === 'number' && v >= min && v 
 const texto = (v, max = LIMITE.nome) => (typeof v === 'string' ? v.slice(0, max) : '');
 const lista = (v, max) => (Array.isArray(v) ? v.slice(0, max) : []);
 const id = v => inteiro(v, 1, Number.MAX_SAFE_INTEGER, null);
-const pedido = (mis, eq, p1, p2, nb, ss, pr) => ({
+const pedido = (mis, eq, p1, p2, nb, ss, pr, jan) => ({
   mis: texto(mis), eq: texto(eq),
   p1: inteiro(p1, -1, NI, -1), p2: inteiro(p2, -1, NI, -1),
-  nb: numero(nb, 1, 11, 1), ss: inteiro(ss, 1, 3, 1), pr: inteiro(pr, 1, 5, 3)
+  nb: numero(nb, 1, 11, 1), ss: inteiro(ss, 1, 3, 1), pr: inteiro(pr, 1, 5, 3),
+  ...(janelasDaDisponibilidade(jan) ? { jan } : {})
 });
 
 export const ApiClient = {
@@ -35,6 +36,8 @@ export const ApiClient = {
   autorAtual: null,
   // Link compartilhado: nada é gravado e a interface fica travada no perfil Gestor
   readOnly: false,
+  // Perfil da conta no modo compartilhado (operador, gestor ou secretaria); null no modo local
+  perfil: null,
 
   createFreshState() {
     const state = {
@@ -47,7 +50,8 @@ export const ApiClient = {
       ins: [],
       stu: [],
       fStatus: {},
-      horas: {}
+      horas: {},
+      importadas: []
     };
     Object.values(EQ).flat().forEach(r => state.av[r] = true);
     return state;
@@ -58,6 +62,7 @@ export const ApiClient = {
     x.lim = { ...DEFAULT_LIM };
     if (!x.fStatus) x.fStatus = {};
     if (!x.horas || typeof x.horas !== 'object' || Array.isArray(x.horas)) x.horas = {};
+    if (!Array.isArray(x.importadas)) x.importadas = [];
     if (!x.nid || x.nid < 1000) x.nid = 1000;
 
     if (!x.schemaVer || x.schemaVer < 3) {
@@ -144,6 +149,19 @@ export const ApiClient = {
     return this.backend.listarHistorico(data);
   },
 
+  // Agenda de solicitações (no modo compartilhado, o servidor decide quem registra: secretaria e operadores)
+  agenda(de, ate) {
+    return this.backend.listarSolicitacoes(de, ate);
+  },
+
+  registrarSolicitacao(dados) {
+    return this.backend.registrarSolicitacao(dados);
+  },
+
+  cancelarSolicitacao(id, por) {
+    return this.backend.cancelarSolicitacao(id, por);
+  },
+
   async biDoPeriodo(de, ate) {
     return biDosDias((await this.backend.listarDias(de, ate)).map(d => ({ ...d, conteudo: migrarDia(d.conteudo) })));
   },
@@ -202,7 +220,8 @@ export const ApiClient = {
         .map(s => [
           s.id, s.nm, s.kg, s.bl,
           s.fly ? 1 : 0, s.mis, s.eq, s.p1, s.p2, s.nb, s.ss, s.pr,
-          (s.extra || []).filter(ex => ex.fly).map(ex => [ex.mid, ex.mis, ex.eq, ex.p1, ex.p2, ex.nb, ex.ss, ex.pr])
+          (s.extra || []).filter(ex => ex.fly).map(ex => [ex.mid, ex.mis, ex.eq, ex.p1, ex.p2, ex.nb, ex.ss, ex.pr, ex.jan || '']),
+          s.jan || ''
         ])
     };
     const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(compact))));
@@ -253,9 +272,9 @@ export const ApiClient = {
           state.stu.push(target);
         }
         if (row.length >= 12) {
-          const [, , , , flyFlag, mis, eq, p1, p2, nb, ss, pr, extraArr] = row;
+          const [, , , , flyFlag, mis, eq, p1, p2, nb, ss, pr, extraArr, jan] = row;
           Object.assign(target, cadastro, {
-            fly: Boolean(flyFlag), ...pedido(mis, eq, p1, p2, nb, ss, pr),
+            fly: Boolean(flyFlag), ...pedido(mis, eq, p1, p2, nb, ss, pr, jan),
             extra: lista(extraArr, LIMITE.extras).filter(Array.isArray)
               .map(([mid, ...campos]) => ({ mid: id(mid), fly: true, ...pedido(...campos) }))
               .filter(ex => ex.mid !== null)

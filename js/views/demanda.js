@@ -1,7 +1,7 @@
-// Aba 4 · Demanda: pedidos de missão por aluno (inclusive missões extras) e filtros.
+// Aba 5 · Demanda: pedidos de missão por aluno (inclusive missões extras) e filtros.
 import { NI, T, GROUND_DURATION_MIN, ACROBAT_REG, MIS, GROUND_EQ_TYPE } from '../config.js';
 import { hm, esc, opts, wopt } from '../format.js';
-import { isGroundMission } from '../rules.js';
+import { isGroundMission, DISPONIBILIDADES, rotuloDaDisponibilidade } from '../rules.js';
 import { descreverExigencias } from '../habilitacoes.js';
 import { S } from '../state.js';
 import { $ } from '../dom.js';
@@ -9,6 +9,11 @@ import { renderAuditPanel } from './escala.js';
 
 export const sum = d => {
   if (!d.fly) return '';
+  const disponibilidade = d.jan ? ` · Disponibilidade: ${rotuloDaDisponibilidade(d.jan)}` : '';
+  return resumoDoHorario(d) + disponibilidade;
+};
+
+function resumoDoHorario(d) {
   const isGnd = isGroundMission(d.mis);
   if (isGnd) {
     const lvTag = ` · 01h30 · Turma coletiva · Exige ${descreverExigencias(d.mis, GROUND_EQ_TYPE)}`;
@@ -24,7 +29,7 @@ export const sum = d => {
   if (d.p1 < 0) return `${H} h, livre${lvTag}`;
   const s = T[d.p1], e = s + H * 60;
   return `${hm(s)}–${hm(e)}${lvTag}` + ((nt !== (d.p1 == NI) || e > (nt ? 1440 : T[NI])) ? ' ⚠ horário' : '');
-};
+}
 
 export function allowedEqOptionsForMission(mis, currentEq) {
   const m = MIS[mis] || MIS['Voo Local'];
@@ -54,6 +59,7 @@ export const singleDemandRowHTML = (stu, d, mid = 0) => {
     <td><select data-f="eq"${isGnd ? ' disabled' : ''}>${allowedEqOptionsForMission(d.mis, d.eq)}</select></td>
     <td><select data-f="p1">${wopt(d.p1, 1)}</select></td>
     <td><select data-f="p2">${wopt(d.p2, 1)}</select></td>
+    <td><select data-f="jan" aria-label="Disponibilidade do aluno">${opts(DISPONIBILIDADES, d.jan || '')}</select></td>
     <td>${nbOpts}</td>
     <td>${ssOpts}</td>
     <td><select data-f="pr">${opts([1, 2, 3, 4, 5].map(n => [n, n]), d.pr)}</select></td>
@@ -83,7 +89,7 @@ export const cnt = () => {
 
 export const rDem = () => {
   if (!S.stu.length) {
-    $('#dem').innerHTML = `<tr class="empty-dem"><td colspan="10" class="h" style="padding:16px">Nenhum aluno cadastrado. Cadastre alunos em “3 · Alunos” ou clique em “Preencher exemplo” acima para testar a escala.</td></tr>`;
+    $('#dem').innerHTML = `<tr class="empty-dem"><td colspan="11" class="h" style="padding:16px">Nenhum aluno cadastrado. Cadastre alunos em “3 · Alunos” ou clique em “Preencher exemplo” acima para testar a escala.</td></tr>`;
     cnt();
     renderAuditPanel();
     return;

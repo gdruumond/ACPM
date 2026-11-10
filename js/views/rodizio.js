@@ -1,4 +1,4 @@
-// Aba 6 · Rodízio: as filas de cada categoria (na data aberta), quem já voa nelas na escala e os botões para ajustar.
+// Aba 7 · Rodízio: as filas de cada categoria (na data aberta), quem já voa nelas na escala e os botões para ajustar.
 import { CATEGORIAS_DO_RODIZIO, categoriaDoRodizio, ajustarFilas } from '../rodizio.js';
 import { S, RES } from '../state.js';
 import { $ } from '../dom.js';

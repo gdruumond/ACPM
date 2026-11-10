@@ -1,4 +1,4 @@
-// Aba 6 · Dashboard BI: horas por equipamento, instrutor e missão (dia, semana e mês).
+// Aba 8 · Dashboard BI: horas por equipamento, instrutor e missão (dia, semana e mês).
 import { EQ, GROUND_EQ_TYPE, GROUND_REG, ACROBAT_REG, MIS } from '../config.js';
 import { fmtH, esc } from '../format.js';
 import { isGroundMission, migrateLegacyMissionName } from '../rules.js';

@@ -2,7 +2,7 @@
 // runAllocationEngine é uma função pura: recebe o estado e devolve { out, al, tot } sem alterá-lo.
 import { T, NI, DAY, NIGHT_OK, EQ, MIS, DEFAULT_LIM, ACROBAT_REG, GROUND_EQ_TYPE, GROUND_REG, GROUND_DURATION_MIN, GROUND_DURATION_H, REVISAO_H, MENOR_VOO_H } from './config.js';
 import { hm, fmtH } from './format.js';
-import { isGroundMission, doesGroundGateFlight } from './rules.js';
+import { isGroundMission, doesGroundGateFlight, janelasDaDisponibilidade, rotuloDaDisponibilidade } from './rules.js';
 import { podeFazer, descreverExigencias } from './habilitacoes.js';
 import { categoriaDoRodizio, ajustarFilas } from './rodizio.js';
 
@@ -142,6 +142,9 @@ export function runAllocationEngine(state) {
     const nm = stu.nm;
     const labelStu = mid ? `${nm} (${d.mis})` : nm;
     const isGnd = Boolean(m.isGround);
+    // Disponibilidade do aluno: o voo (ou o Ground) só começa nessas janelas
+    const permitidas = janelasDaDisponibilidade(d.jan);
+    const naDisponibilidade = w => !permitidas || permitidas.includes(w);
 
     // ========================================================================
     // RAMO A: ALOCAÇÃO DE GROUND SCHOOL (01h30 = 90 MIN · TURMA COLETIVA)
@@ -150,7 +153,7 @@ export function runAllocationEngine(state) {
       const habilitado = x => podeFazer(x, d.mis, GROUND_EQ_TYPE);
       const durMin = GROUND_DURATION_MIN; // 90 min (1.5 h)
       const endMax = T[NI]; // 17:30 (1050 min)
-      const starts = DAY.filter(w => state.win[w] && T[w] + durMin <= endMax);
+      const starts = DAY.filter(w => state.win[w] && T[w] + durMin <= endMax && naDisponibilidade(w));
       const pf = [+d.p1, +d.p2];
 
       // Se o aluno também tem um voo dependente hoje com horário preferido, prioriza janelas que terminem antes do voo
@@ -278,7 +281,9 @@ export function runAllocationEngine(state) {
         if (!state.ins.some(x => x.on && habilitado(x))) {
           why = `nenhum instrutor ativo habilitado para ministrar ${d.mis} (${descreverExigencias(d.mis, GROUND_EQ_TYPE)})`;
         } else if (!starts.length) {
-          why = `nenhuma janela diurna habilitada comporta 01h30 de Ground até ${hm(endMax)}`;
+          why = permitidas
+            ? `não há horário habilitado na disponibilidade do aluno (${rotuloDaDisponibilidade(d.jan)}) para 01h30 de Ground`
+            : `nenhuma janela diurna habilitada comporta 01h30 de Ground até ${hm(endMax)}`;
         } else {
           const key = Object.keys(fcGnd).sort((a, b) => fcGnd[b] - fcGnd[a])[0];
           why = {
@@ -330,7 +335,7 @@ export function runAllocationEngine(state) {
     }
     const minStartAfterGround = gatingGrounds.reduce((maxEnd, g) => Math.max(maxEnd, g.allocatedEnd || 0), 0);
 
-    const starts = (night ? NIGHT_OK : DAY).filter(w => state.win[w]);
+    const starts = (night ? NIGHT_OK : DAY).filter(w => state.win[w] && naDisponibilidade(w));
     const endMax = night ? 1440 : T[NI];
     const pf = [+d.p1, +d.p2];
     const len = Array.from({ length: K }, (_, j) => (Math.floor(H / K) + (j < H % K ? 1 : 0)) * 60);
@@ -449,6 +454,8 @@ export function runAllocationEngine(state) {
         why = `nenhum equipamento ${d.eq} compatível disponível (manutenção/indisponível)`;
       } else if (!state.ins.some(x => x.on && podeFazer(x, d.mis, d.eq))) {
         why = `nenhum instrutor ativo habilitado para ${d.mis} em ${d.eq} (${exige})`;
+      } else if (!plans.length && permitidas) {
+        why = `não há horário habilitado na disponibilidade do aluno (${rotuloDaDisponibilidade(d.jan)}) para encaixar ${H} h`;
       } else if (!plans.length) {
         why = minStartAfterGround > 0
           ? `não há janela disponível após o término do Ground School (${hm(minStartAfterGround)}) para encaixar ${H} h antes das ${hm(endMax)}`

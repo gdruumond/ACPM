@@ -120,15 +120,15 @@ body[data-role="gestor"] #s-rec .chip,
 body[data-role="gestor"] #s-ins .w,
 body[data-role="gestor"]:not([data-backend="supabase"]) #dt,
 body[data-role="gestor"] .st-sel,
-body[data-role="gestor"] main input:not(.flt-ctrl):not(#onlyfly):not(#bi-dt):not(#dt),
-body[data-role="gestor"] main select:not(.flt-ctrl) {
+body[data-role="gestor"] main input:not(.flt-ctrl):not(.agenda-campo):not(#onlyfly):not(#bi-dt):not(#dt),
+body[data-role="gestor"] main select:not(.flt-ctrl):not(.agenda-campo) {
   pointer-events: none !important;
   cursor: default !important;
 }
 body[data-role="gestor"]:not([data-backend="supabase"]) #dt,
 body[data-role="gestor"] .st-sel,
-body[data-role="gestor"] main input:not(.flt-ctrl):not(#onlyfly):not(#bi-dt):not(#dt),
-body[data-role="gestor"] main select:not(.flt-ctrl) {
+body[data-role="gestor"] main input:not(.flt-ctrl):not(.agenda-campo):not(#onlyfly):not(#bi-dt):not(#dt),
+body[data-role="gestor"] main select:not(.flt-ctrl):not(.agenda-campo) {
   opacity: 0.82;
 }
 body[data-shared="true"] #role-sel {
@@ -260,6 +260,25 @@ tr.st-Cancelado td { opacity: 0.45; text-decoration: line-through; }
 .fila li { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 4px 0; border-bottom: 1px solid var(--ln); }
 .fila .pos { min-width: 2.2em; color: var(--mu); }
 .fila .acoes { margin-left: auto; display: flex; gap: 4px; }
+
+/* Agenda de Solicitações */
+.agenda { display: grid; gap: 12px; grid-template-columns: minmax(260px, 340px) 1fr; align-items: start; }
+.agenda > * { min-width: 0; }
+@media (max-width: 760px) { .agenda { grid-template-columns: 1fr; } }
+.cal-cab { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal .sem { font-size: 11px; color: var(--mu); text-align: center; }
+.cal .dia { position: relative; border: 1px solid var(--ln); border-radius: 4px; background: var(--pn); color: var(--ink); padding: 8px 0; font: inherit; cursor: pointer; }
+.cal .dia.fora { opacity: .45; }
+.cal .dia.fechado { color: var(--mu); background: transparent; }
+.cal .dia.sel { outline: 2px solid var(--ac); }
+.cal .dia .qtd { position: absolute; top: 1px; right: 2px; font-size: 10px; line-height: 14px; background: var(--ac); color: var(--acT); border-radius: 7px; padding: 0 4px; }
+#form-agenda { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); align-items: end; margin-bottom: 12px; }
+#form-agenda label { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+#ag-erro { color: var(--er); margin: 0; grid-column: 1 / -1; }
+#ag-erro:empty { display: none; }
+body:not([data-agenda="edita"]) #form-agenda,
+body:not([data-agenda="edita"]) .agenda-acao { display: none !important; }
 
 /* Status Operacional do Voo */
 .st-sel {

@@ -141,7 +141,7 @@ describe('Link compartilhável (perfil Gestor)', () => {
     estado.ins[0].on = false;
     estado.fStatus = { '1000_0_1': 'Em Voo' };
     estado.stu = [
-      aluno(1000, {}, { kg: 81, bl: [3] }),
+      aluno(1000, { jan: 'manha' }, { kg: 81, bl: [3] }),
       aluno(1001, { fly: false }),
       aluno(1002, { fly: false }, { extra: [missaoExtra(1003, { mis: 'IFR', eq: 'C172' }), missaoExtra(1004, { fly: false })] })
     ];
@@ -156,6 +156,7 @@ describe('Link compartilhável (perfil Gestor)', () => {
     assert.equal(destino.av['PR-BTB'], false);
     assert.deepEqual(destino.ins, estado.ins.map(({ lv, ...x }) => x), 'o link leva as habilitações (o nível de antes não vai)');
     assert.deepEqual(destino.fStatus, estado.fStatus);
+    assert.equal(destino.stu[0].jan, 'manha', 'a disponibilidade vai no link');
     assert.deepEqual(destino.stu.map(s => [s.id, s.fly, s.kg, s.bl, s.extra.map(ex => [ex.mid, ex.mis])]), [
       [1000, true, 81, [3], []],
       [1002, false, 70, [], [[1003, 'IFR']]]
@@ -184,6 +185,12 @@ describe('Link compartilhável: validação do conteúdo (vem da URL, não é co
     assert.deepEqual(estado.win, [true, false, true, true, true, true, true, true, true]);
     assert.equal(estado.av['PR-BTB'], false);
     assert.equal(ATAQUE in estado.av, false);
+  });
+
+  it('disponibilidade do aluno: só os códigos conhecidos (manhã, tarde, noite ou um horário)', () => {
+    const { estado } = abrir({ fly: [[1000, 'Aluno', 70, [], 1, 'Voo Local', 'C152', 1, 2, 1, 1, 3, [[1001, 'IFR', 'C172', 3, 3, 1, 1, 3, ATAQUE]], 'tarde']] });
+    assert.equal(estado.stu[0].jan, 'tarde');
+    assert.equal(Object.hasOwn(estado.stu[0].extra[0], 'jan'), false);
   });
 
   it('link antigo com simulador em manutenção vale para o nome novo do simulador', () => {

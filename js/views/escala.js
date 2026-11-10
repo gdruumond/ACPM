@@ -1,4 +1,4 @@
-// Aba 5 · Escala: tabela oficial, mapa de ocupação e painel de inclusões e histórico do dia.
+// Aba 6 · Escala: tabela oficial, mapa de ocupação e painel de inclusões e histórico do dia.
 import { FLIGHT_STATUSES } from '../config.js';
 import { hm, WLB, fmtH, fmtDurLabel, esc } from '../format.js';
 import { isGroundMission } from '../rules.js';
@@ -208,7 +208,7 @@ export function renderAuditPanel() {
 
 export function rOut(switchTab = true) {
   if (!RES) {
-    $('#out').innerHTML = `<p class="h">Ainda não há escala para esta data. Marque quem vai voar em “4 · Demanda” e clique em “Gerar escala”.</p>`;
+    $('#out').innerHTML = `<p class="h">Ainda não há escala para esta data. Marque quem vai voar em “5 · Demanda” e clique em “Gerar escala”.</p>`;
     return;
   }
   const { out, al, tot } = RES;
@@ -244,7 +244,7 @@ export function rOut(switchTab = true) {
   h += al.map(a => `<div class="al ${a.t}"><b>${esc(a.s)}</b>${esc(a.m)}</div>`).join('');
 
   if (!filteredOut.length) {
-    h += `<p class="h">${tot ? 'Nenhum voo alocado.' : 'Nenhuma missão marcada em “4 · Demanda”.'}</p>`;
+    h += `<p class="h">${tot ? 'Nenhum voo alocado.' : 'Nenhuma missão marcada em “5 · Demanda”.'}</p>`;
   } else {
     // 1º: Tabela Oficial da Escala do Dia
     h += '<div class="tw" style="margin-top:10px"><table><thead><tr><th>Horário</th><th>Aluno</th><th>Missão</th><th>Equipamento</th><th>Instrutor</th><th>Duração</th><th>Peso</th><th>Encaixe</th><th>Status</th><th class="edit-only">Ação</th></tr></thead><tbody>';

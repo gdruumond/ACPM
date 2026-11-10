@@ -4,13 +4,15 @@
 // 403 sem perfil de operador) e histórico que só cresce (registrar_historico e importar_historico).
 import { separar } from '../../js/dias.js';
 import { migrarCadastro, migrarDia } from '../../js/migracoes.js';
+import { prazoDaAgendaPermite } from '../../js/agenda.js';
 
 export const URL_TESTE = 'https://acpm-teste.supabase.invalid';
 
 export const CONTAS = {
   operador: { email: 'operador@teste.acpm', senha: 'senha-do-operador', id: '00000000-0000-4000-a000-000000000001', perfil: 'operador', nome: 'Operador de Teste' },
   gestor: { email: 'gestor@teste.acpm', senha: 'senha-do-gestor', id: '00000000-0000-4000-a000-000000000002', perfil: 'gestor', nome: 'Gestor de Teste' },
-  semPerfil: { email: 'sem-perfil@teste.acpm', senha: 'senha-sem-perfil', id: '00000000-0000-4000-a000-000000000003', perfil: null, nome: '' }
+  semPerfil: { email: 'sem-perfil@teste.acpm', senha: 'senha-sem-perfil', id: '00000000-0000-4000-a000-000000000003', perfil: null, nome: '' },
+  secretaria: { email: 'secretaria@teste.acpm', senha: 'senha-da-secretaria', id: '00000000-0000-4000-a000-000000000004', perfil: 'secretaria', nome: 'Secretaria de Teste' }
 };
 
 // Documentos no formato por data da fase 3 (sem a versão do formato) a partir de um estado da aplicação
@@ -44,18 +46,21 @@ function consultar(linhas, url) {
   }
   const ordem = url.searchParams.get('order');
   if (ordem) {
-    const [coluna, sentido] = ordem.split('.');
-    resultado = [...resultado].sort((a, b) => (a[coluna] < b[coluna] ? -1 : a[coluna] > b[coluna] ? 1 : 0) * (sentido === 'desc' ? -1 : 1));
+    const criterios = ordem.split(',').map(c => c.split('.'));
+    const comparar = (a, b, [coluna, sentido]) => (a[coluna] < b[coluna] ? -1 : a[coluna] > b[coluna] ? 1 : 0) * (sentido === 'desc' ? -1 : 1);
+    resultado = [...resultado].sort((a, b) => criterios.reduce((r, c) => r || comparar(a, b, c), 0));
   }
   const limite = url.searchParams.get('limit');
   return limite ? resultado.slice(0, Number(limite)) : resultado;
 }
 
 // Um servidor pode atender vários contextos do navegador (ex.: operador e gestor vendo os mesmos dados)
-export function criarSupabaseFalso({ documentos = {}, dias = {} } = {}) {
+// agora: o relógio do servidor para o prazo da agenda (o mesmo instante do relógio fixo das páginas)
+export function criarSupabaseFalso({ documentos = {}, dias = {}, agora = new Date('2026-11-10T12:00:00-03:00') } = {}) {
   const banco = new Map(Object.entries(documentos).map(([chave, conteudo]) => [chave, { conteudo, versao: 1 }]));
   const tabelaDias = new Map(Object.entries(dias).map(([data, conteudo]) => [data, { conteudo, versao: 1 }]));
   const historico = [];
+  const solicitacoes = [];
   const sessoes = new Map();
   const gravacoes = [];
   const saidas = [];
@@ -112,6 +117,7 @@ export function criarSupabaseFalso({ documentos = {}, dias = {} } = {}) {
         return responder(200, consultar([...tabelaDias].map(([data, d]) => ({ data, ...d })), url));
       }
       if (url.pathname === '/rest/v1/historico') return responder(200, consultar(historico, url));
+      if (url.pathname === '/rest/v1/solicitacoes') return responder(200, consultar(solicitacoes, url));
     }
 
     if (req.method() === 'POST' && url.pathname.startsWith('/rest/v1/rpc/')) {
@@ -124,6 +130,26 @@ export function criarSupabaseFalso({ documentos = {}, dias = {} } = {}) {
           falhasDeGravacao--;
           return responder(503, { message: 'Service Unavailable' });
         }
+      }
+      // Agenda: secretaria e operadores registram; fora do prazo, só operadores pela exceção da coordenação
+      if (funcao === 'registrar_solicitacao' || funcao === 'cancelar_solicitacao') {
+        if (!conta || !['secretaria', 'operador'].includes(conta.perfil)) return responder(403, { code: '42501', message: 'sem permissão na agenda' });
+        if (funcao === 'cancelar_solicitacao') {
+          const s = solicitacoes.find(x => x.id === args.p_id && !x.cancelada_em);
+          if (!s) return responder(404, { code: 'P0002', message: 'pedido não encontrado' });
+          Object.assign(s, { cancelada_em: agora.toISOString(), cancelada_por: args.p_cancelada_por.trim() });
+          return responder(204);
+        }
+        const noPrazo = prazoDaAgendaPermite(args.p_data, agora);
+        if (!noPrazo && !args.p_excecao) return responder(403, { code: 'PT403', message: 'prazo encerrado' });
+        if (!noPrazo && conta.perfil !== 'operador') return responder(403, { code: '42501', message: 'exceção só para operadores' });
+        const id = solicitacoes.length + 1;
+        solicitacoes.push({
+          id, data: args.p_data, aluno: args.p_aluno, aluno_nome: args.p_aluno_nome.trim(), missao: args.p_missao, janela: args.p_janela,
+          horario: args.p_horario, observacao: (args.p_observacao || '').trim() || null, registrado_por: args.p_registrado_por.trim(),
+          registrado_em: agora.toISOString(), usuario: conta.id, conta: conta.nome, excecao: !noPrazo, cancelada_em: null, cancelada_por: null
+        });
+        return responder(200, id);
       }
       if (!operador) return responder(403, { code: '42501', message: 'somente operadores podem alterar a escala' });
       if (funcao === 'salvar_documento') {
@@ -154,6 +180,7 @@ export function criarSupabaseFalso({ documentos = {}, dias = {} } = {}) {
     banco,
     dias: tabelaDias,
     historico,
+    solicitacoes,
     gravacoes,
     saidas,
     instalar: context => context.route(`${URL_TESTE}/**`, atender),

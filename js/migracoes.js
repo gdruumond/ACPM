@@ -5,7 +5,7 @@
 // Sem o campo "esquema": formato da fase 3 (versão 4).
 import { habilitacoesDoNivel } from './habilitacoes.js';
 
-export const ESQUEMA = 8;
+export const ESQUEMA = 10;
 
 // Versão 5 (fase 4): simuladores com os nomes usados no aeroclube
 const SIMULADORES_RENOMEADOS = { 'SIM-MONO-1': 'SIM-MONO-A', 'SIM-MONO-2': 'SIM-MONO-C', 'SIM-MULTI-1': 'SIM-MLTE-E', 'SIM-MULTI-2': 'SIM-MLTE-D' };
@@ -41,6 +41,16 @@ const PASSOS = {
   },
   // Versão 8 (fase 4): os dias guardam as filas do rodízio (campo "filas"), pelo mesmo motivo da versão 7
   8: {
+    cadastro: cadastro => cadastro,
+    dia: dia => dia
+  },
+  // Versão 9 (fase 4): os pedidos guardam a disponibilidade do aluno (campo "jan"), pelo mesmo motivo
+  9: {
+    cadastro: cadastro => cadastro,
+    dia: dia => dia
+  },
+  // Versão 10 (fase 4): os dias guardam as solicitações da agenda já importadas (campo "importadas"), pelo mesmo motivo
+  10: {
     cadastro: cadastro => cadastro,
     dia: dia => dia
   }

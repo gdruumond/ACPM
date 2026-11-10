@@ -1,4 +1,4 @@
-// Regras operacionais do motor de alocação, conforme o Manual do Usuário (aba 6 · BI).
+// Regras operacionais do motor de alocação, conforme o Manual do Usuário (aba 8 · BI).
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { runAllocationEngine, sumUniqueOperationalHours, consolidateTimelineSlots } from '../../js/engine.js';
@@ -197,6 +197,28 @@ describe('Peso da tripulação', () => {
     assert.equal(out.length, 1);
     assert.equal(out[0].kg, 0);
     assert.deepEqual(al, [{ t: 'warn', s: 'Aluno 1000', m: 'Peso do aluno não informado (0 kg): verificação de limite (170 kg) no C152 não realizada.' }]);
+  });
+});
+
+describe('Disponibilidade do aluno', () => {
+  it('o voo só começa nas janelas da disponibilidade (a preferência fora dela não vale)', () => {
+    const { out } = alocar({ stu: [aluno(1000, { p1: 1, p2: 2, jan: 'tarde' })] });
+    assert.deepEqual([hm(out[0].a), out[0].tag], ['12:40', 'Próximo livre']);
+  });
+
+  it('horário específico: o voo começa só naquele horário', () => {
+    const { out } = alocar({ stu: [aluno(1000, { p1: 1, p2: 2, jan: 'h6' })] });
+    assert.equal(hm(out[0].a), '14:30');
+  });
+
+  it('sem horário possível na disponibilidade, o pedido é rejeitado dizendo por quê', () => {
+    const { al } = alocar({ stu: [aluno(1000, { jan: 'tarde' })], janelasOff: [4, 5, 6, 7] });
+    assert.deepEqual(al.map(a => a.m), ['Rejeitado: não há horário habilitado na disponibilidade do aluno (Tarde) para encaixar 1 h.']);
+  });
+
+  it('Ground também respeita a disponibilidade', () => {
+    const { out } = alocar({ stu: [aluno(1000, { ...GROUND_C152, p1: 0, p2: 1, jan: 'tarde' })] });
+    assert.equal(hm(out[0].a), '12:40');
   });
 });
 

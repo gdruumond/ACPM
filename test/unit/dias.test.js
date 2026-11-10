@@ -27,7 +27,7 @@ describe('Separar e juntar', () => {
     assert.deepEqual(Object.keys(cadastro).sort(), ['ins', 'nid', 'stu']);
     assert.deepEqual(Object.keys(cadastro.ins[0]).sort(), ['hab', 'id', 'kg', 'lv', 'nm']);
     assert.deepEqual(Object.keys(cadastro.stu[0]).sort(), ['bl', 'id', 'kg', 'nm']);
-    assert.deepEqual(Object.keys(dia).sort(), ['av', 'fStatus', 'filas', 'horas', 'ins', 'pedidos', 'win']);
+    assert.deepEqual(Object.keys(dia).sort(), ['av', 'fStatus', 'filas', 'horas', 'importadas', 'ins', 'pedidos', 'win']);
     assert.deepEqual(Object.keys(dia.ins[estado.ins[0].id]).sort(), ['aw', 'on']);
     const pedido = dia.pedidos[estado.stu[0].id];
     assert.equal('nm' in pedido || 'kg' in pedido, false);
@@ -72,7 +72,7 @@ describe('Nova data', () => {
     estado.fStatus = { '1000_0_1': 'Cancelado' };
     const anterior = { ...separar(estado).dia, resultado: { out: [{ fKey: '1000_0_1' }], al: [], tot: 1 } };
     const novo = diaParaCopiar(anterior);
-    assert.deepEqual(Object.keys(novo).sort(), ['av', 'fStatus', 'filas', 'horas', 'ins', 'pedidos', 'win']);
+    assert.deepEqual(Object.keys(novo).sort(), ['av', 'fStatus', 'filas', 'horas', 'importadas', 'ins', 'pedidos', 'win']);
     assert.deepEqual(novo.fStatus, {});
     assert.equal(novo.av['PR-BTB'], false);
     assert.deepEqual(novo.pedidos[1000], anterior.pedidos[1000]);
@@ -188,5 +188,24 @@ describe('Filas do rodízio por data', () => {
     assert.deepEqual(juntar(cadastro, dia).filas.c172, [1, 2]);
     const anterior = { ...dia, resultado: { out: [{ fKey: 'a', insId: 1, mis: 'Voo Local', eqType: 'C172' }], al: [], tot: 1 } };
     assert.deepEqual(diaParaCopiar(anterior, cadastro.ins).filas.c172, [2, 1]);
+  });
+});
+
+describe('Disponibilidade do aluno nos pedidos', () => {
+  it('a disponibilidade do pedido (e das missões extras) faz parte do dia', () => {
+    const estado = ApiClient.normalizeAndMigrateState({ ...estadoSintetico(), stu: [aluno(1000, { jan: 'tarde' }, { extra: [missaoExtra(1001, { jan: 'h2' })] })] });
+    const { cadastro, dia } = separar(estado);
+    assert.equal(dia.pedidos[1000].jan, 'tarde');
+    const volta = juntar(cadastro, dia).stu[0];
+    assert.deepEqual([volta.jan, volta.extra[0].jan], ['tarde', 'h2']);
+  });
+});
+
+describe('Solicitações da agenda importadas', () => {
+  it('ficam no dia e não passam para a data seguinte', () => {
+    const estado = ApiClient.normalizeAndMigrateState({ ...estadoSintetico(), importadas: [7, 9] });
+    const { cadastro, dia } = separar(estado);
+    assert.deepEqual(juntar(cadastro, dia).importadas, [7, 9]);
+    assert.deepEqual(diaParaCopiar(dia).importadas, []);
   });
 });

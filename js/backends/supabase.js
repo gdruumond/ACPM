@@ -99,6 +99,27 @@ export function criarBackendSupabase(cliente, { aoConflito = () => {}, aoErro = 
       return entradas;
     },
 
+    // Agenda de solicitações: o servidor aplica o prazo das 13:00 e quem pode registrar (o código do erro é repassado)
+    async listarSolicitacoes(de, ate) {
+      const { data, error } = await cliente.from('solicitacoes').select('*').gte('data', de).lte('data', ate).order('data').order('registrado_em');
+      if (error) throw new Error(error.message);
+      return data;
+    },
+
+    async registrarSolicitacao({ data, aluno, aluno_nome, missao, janela, horario = null, observacao = null, registrado_por, excecao = false }) {
+      const { data: id, error } = await cliente.rpc('registrar_solicitacao', {
+        p_data: data, p_aluno: aluno, p_aluno_nome: aluno_nome, p_missao: missao, p_janela: janela, p_horario: horario,
+        p_registrado_por: registrado_por, p_observacao: observacao, p_excecao: excecao
+      });
+      if (error) throw Object.assign(new Error(error.message), { code: error.code });
+      return id;
+    },
+
+    async cancelarSolicitacao(id, por) {
+      const { error } = await cliente.rpc('cancelar_solicitacao', { p_id: id, p_cancelada_por: por });
+      if (error) throw Object.assign(new Error(error.message), { code: error.code });
+    },
+
     async importarHistorico(data, entradas) {
       const { data: importadas, error } = await cliente.rpc('importar_historico', { p_data: data, p_entradas: entradas });
       if (error) throw new Error(error.message);

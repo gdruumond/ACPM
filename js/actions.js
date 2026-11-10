@@ -13,6 +13,7 @@ import { renderAuditPanel, rOut } from './views/escala.js';
 import { rDem } from './views/demanda.js';
 import { rIns, rAlu } from './views/cadastros.js';
 import { rRec, rRevisao } from './views/recursos.js';
+import { podeEditarAgenda } from './views/agenda.js';
 
 const historyStack = [];
 
@@ -44,6 +45,8 @@ export function setRole(role, lockShared = false) {
   // No modo compartilhado o gestor navega entre as datas (somente leitura)
   const dtInput = $('#dt');
   if (dtInput) dtInput.disabled = isGestor() && document.body.dataset.backend !== 'supabase';
+  // Agenda: quem pode registrar pedidos (operadores e secretaria; no modo local, fora do perfil Gestor)
+  document.body.dataset.agenda = podeEditarAgenda() ? 'edita' : 'consulta';
 }
 
 export function limparDesfazer() {

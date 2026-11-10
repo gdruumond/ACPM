@@ -7,7 +7,7 @@ import { setRole } from './actions.js';
 import { $, mostrarAviso, avisoAberto, fecharAviso } from './dom.js';
 import { amanhaISO } from './format.js';
 
-const ROTULO = { operador: 'Operador', gestor: 'Gestor' };
+const ROTULO = { operador: 'Operador', gestor: 'Gestor', secretaria: 'Secretaria' };
 
 function pedirLogin(cliente) {
   document.body.dataset.login = 'sim';
@@ -93,7 +93,9 @@ export async function iniciarSessaoSupabase(projeto) {
   $('#btn-sair').hidden = false;
   $('#btn-sair').onclick = () => sair(cliente);
   ApiClient.autorAtual = perfil.nome || sessao.user.email;
-  setRole(perfil.perfil, perfil.perfil === 'gestor');
+  // Gestor e Secretaria só consultam a escala; a Secretaria registra pedidos na agenda
+  ApiClient.perfil = perfil.perfil;
+  setRole(perfil.perfil === 'operador' ? 'operador' : 'gestor', perfil.perfil !== 'operador');
   if (perfil.perfil === 'operador') await oferecerEnvioDosDadosLocais();
   delete document.body.dataset.login;
   return true;

@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  isGroundMission, doesGroundGateFlight, migrateLegacyMissionName, normalizeMissionFields, blank
+  isGroundMission, doesGroundGateFlight, migrateLegacyMissionName, normalizeMissionFields, blank, janelasDaDisponibilidade, rotuloDaDisponibilidade
 } from '../../js/rules.js';
 import { podeFazer, descreverExigencias } from '../../js/habilitacoes.js';
 
@@ -54,6 +54,21 @@ describe('Regras de missão', () => {
     const pedido = { mis: 'constructor', eq: 'valueOf', p1: 1, p2: 2, nb: 1, ss: 1 };
     normalizeMissionFields(pedido);
     assert.deepEqual([pedido.mis, pedido.eq], ['Voo Local', 'C152']);
+  });
+
+  it('disponibilidade do aluno: em que janelas o voo pode começar', () => {
+    assert.equal(janelasDaDisponibilidade(''), null);
+    assert.equal(janelasDaDisponibilidade(undefined), null);
+    assert.deepEqual(janelasDaDisponibilidade('manha'), [0, 1, 2, 3]);
+    assert.deepEqual(janelasDaDisponibilidade('tarde'), [4, 5, 6, 7]);
+    assert.deepEqual(janelasDaDisponibilidade('noite'), [8]);
+    assert.deepEqual(janelasDaDisponibilidade('h5'), [5]);
+    assert.equal(janelasDaDisponibilidade('h9'), null);
+    assert.equal(janelasDaDisponibilidade('constructor'), null);
+    assert.deepEqual(['manha', 'tarde', 'noite', 'h5'].map(rotuloDaDisponibilidade), ['Manhã', 'Tarde', 'Noite', 'às 13:40']);
+    const pedido = { mis: 'Voo Local', eq: 'C152', p1: 1, p2: 2, nb: 1, ss: 1, jan: 'xyz' };
+    normalizeMissionFields(pedido);
+    assert.equal(Object.hasOwn(pedido, 'jan'), false, 'disponibilidade inválida sai do pedido');
   });
 
   it('pedido em branco é um objeto novo a cada chamada', () => {

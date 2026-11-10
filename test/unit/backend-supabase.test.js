@@ -11,6 +11,7 @@ function clienteFalso(documentos = {}, { atraso = 0, dias = {} } = {}) {
   const banco = new Map(Object.entries(documentos));
   const tabelaDias = new Map(Object.entries(dias));
   const historico = [];
+  const solicitacoes = [];
   const rpcs = [];
   const chamadas = [];
   let falhasDeRede = 0;
@@ -19,6 +20,7 @@ function clienteFalso(documentos = {}, { atraso = 0, dias = {} } = {}) {
     if (tabela === 'documentos') return [...banco].map(([chave, d]) => ({ chave, ...d }));
     if (tabela === 'dias') return [...tabelaDias].map(([data, d]) => ({ data, ...d }));
     if (tabela === 'historico') return historico.map(h => ({ ...h }));
+    if (tabela === 'solicitacoes') return solicitacoes.map(s => ({ ...s }));
     throw new Error(`tabela inesperada: ${tabela}`);
   };
 
@@ -42,20 +44,22 @@ function clienteFalso(documentos = {}, { atraso = 0, dias = {} } = {}) {
     falharProximas(n) { falhasDeRede = n; },
     from(tabela) {
       const filtros = [];
-      let colunas = null, ordem = null, limite = null;
+      let colunas = null, limite = null;
+      const ordens = [];
       const resultado = () => {
         let linhas = linhasDe(tabela).filter(l => filtros.every(f => f(l)));
-        if (ordem) linhas.sort((a, b) => (a[ordem.coluna] < b[ordem.coluna] ? -1 : a[ordem.coluna] > b[ordem.coluna] ? 1 : 0) * (ordem.ascending ? 1 : -1));
+        const comparar = (a, b, { coluna, ascending }) => (a[coluna] < b[coluna] ? -1 : a[coluna] > b[coluna] ? 1 : 0) * (ascending ? 1 : -1);
+        if (ordens.length) linhas.sort((a, b) => ordens.reduce((r, o) => r || comparar(a, b, o), 0));
         if (limite !== null) linhas = linhas.slice(0, limite);
         return structuredClone(colunas ? linhas.map(l => Object.fromEntries(colunas.map(c => [c, l[c] ?? null]))) : linhas);
       };
       const consulta = {
-        select(lista) { colunas = lista.split(',').map(c => c.trim()); return consulta; },
+        select(lista) { colunas = lista === '*' ? null : lista.split(',').map(c => c.trim()); return consulta; },
         eq(c, v) { filtros.push(l => l[c] === v); return consulta; },
         gte(c, v) { filtros.push(l => l[c] >= v); return consulta; },
         lte(c, v) { filtros.push(l => l[c] <= v); return consulta; },
         lt(c, v) { filtros.push(l => l[c] < v); return consulta; },
-        order(coluna, { ascending = true } = {}) { ordem = { coluna, ascending }; return consulta; },
+        order(coluna, { ascending = true } = {}) { ordens.push({ coluna, ascending }); return consulta; },
         limit(n) { limite = n; return consulta; },
         async maybeSingle() { return { data: resultado()[0] ?? null, error: null }; },
         then(ok, erro) { return Promise.resolve({ data: resultado(), error: null }).then(ok, erro); }
@@ -85,6 +89,20 @@ function clienteFalso(documentos = {}, { atraso = 0, dias = {} } = {}) {
           historico.push({ id: historico.length + 1, data: args.p_data, registrado_em: e.registrado_em, autor: null, tipo: e.tipo, descricao: e.descricao, reverter: null, reverte: null, importado: true });
         }
         return { data: args.p_entradas.length, error: null };
+      }
+      if (nome === 'registrar_solicitacao') {
+        if (args.p_data < '2026-11-11') return { data: null, error: { code: 'PT403', message: 'prazo encerrado' } };
+        const id = solicitacoes.length + 1;
+        solicitacoes.push({ id, data: args.p_data, aluno: args.p_aluno, aluno_nome: args.p_aluno_nome, missao: args.p_missao, janela: args.p_janela,
+          horario: args.p_horario, observacao: args.p_observacao, registrado_por: args.p_registrado_por, registrado_em: new Date(Date.UTC(2026, 10, 10, 12, 0, id)).toISOString(),
+          excecao: Boolean(args.p_excecao), cancelada_em: null, cancelada_por: null });
+        return { data: id, error: null };
+      }
+      if (nome === 'cancelar_solicitacao') {
+        const s = solicitacoes.find(x => x.id === args.p_id && !x.cancelada_em);
+        if (!s) return { data: null, error: { code: 'P0002', message: 'não encontrado' } };
+        Object.assign(s, { cancelada_em: '2026-11-10T13:00:00.000Z', cancelada_por: args.p_cancelada_por });
+        return { data: null, error: null };
       }
       throw new Error(`função inesperada: ${nome}`);
     }
@@ -227,6 +245,22 @@ describe('Backend Supabase: escala por data e histórico', () => {
     assert.deepEqual((await backend.listarDias('2026-11-01', '2026-11-30')).map(d => d.conteudo), [{ v: 3 }]);
     assert.deepEqual(await Promise.all(gravacoes), [true, true]);
     assert.equal(await backend.gravar('cadastro', { v: 4 }), true, 'a versão lida continua a mais recente');
+  });
+
+  it('agenda: registra e cancela pelas funções do banco, lista por período e repassa o código do erro', async () => {
+    const cliente = clienteFalso();
+    const backend = criarBackendSupabase(cliente);
+    const id = await backend.registrarSolicitacao({ data: '2026-11-12', aluno: 1000, aluno_nome: 'Aluno 1000', missao: 'IFR', janela: 'horario', horario: '14:30', registrado_por: 'Maria' });
+    assert.deepEqual(cliente.chamadas.at(-1), ['registrar_solicitacao', {
+      p_data: '2026-11-12', p_aluno: 1000, p_aluno_nome: 'Aluno 1000', p_missao: 'IFR', p_janela: 'horario', p_horario: '14:30',
+      p_registrado_por: 'Maria', p_observacao: null, p_excecao: false
+    }]);
+    await backend.registrarSolicitacao({ data: '2026-11-11', aluno: 1001, aluno_nome: 'Aluno 1001', missao: 'Voo Local', janela: 'manha', registrado_por: 'Maria' });
+    assert.deepEqual((await backend.listarSolicitacoes('2026-11-01', '2026-11-30')).map(s => [s.data, s.aluno]), [['2026-11-11', 1001], ['2026-11-12', 1000]]);
+    await assert.rejects(backend.registrarSolicitacao({ data: '2026-11-10', aluno: 1, aluno_nome: 'A', missao: 'Voo Local', janela: 'manha', registrado_por: 'M' }), e => e.code === 'PT403');
+    await backend.cancelarSolicitacao(id, 'Maria');
+    assert.equal(cliente.chamadas.at(-1)[0], 'cancelar_solicitacao');
+    await assert.rejects(backend.cancelarSolicitacao(id, 'Maria'), e => e.code === 'P0002');
   });
 
   it('depois de um conflito, nada mais é gravado: nem outras datas nem o histórico', async () => {

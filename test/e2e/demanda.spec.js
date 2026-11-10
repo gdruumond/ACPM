@@ -8,7 +8,7 @@ const lerDemanda = page => page.locator('#dem tr[data-k="d"]').evaluateAll(linha
     return el.type === 'checkbox' ? (el.checked ? 'voa' : '—') : el.value;
   };
   const texto = td => td.innerText.replace(/\s+/g, ' ').trim();
-  return [texto(tr.cells[0]), valor('fly'), valor('mis'), valor('eq'), valor('p1'), valor('p2'), valor('nb'), valor('ss'), valor('pr'), texto(tr.cells[9])].join(' | ');
+  return [texto(tr.cells[0]), valor('fly'), valor('mis'), valor('eq'), valor('p1'), valor('p2'), valor('jan'), valor('nb'), valor('ss'), valor('pr'), texto(tr.cells[tr.cells.length - 1])].join(' | ');
 }));
 
 const linhaDoAluno = (page, nome) => page.locator(`#dem tr[data-k="d"][data-mid="0"][data-nm="${nome.toLowerCase()}"]`);
@@ -89,6 +89,18 @@ test.describe('Demanda', () => {
     expect(voos).toHaveLength(1);
     expect(voos[0]).toContain('| Cheque PC MNTE IFR |');
     expect(voos[0]).toContain('| Instrutor 02 |');
+  });
+
+  test('disponibilidade do aluno: o voo só começa nas janelas escolhidas', async ({ page }) => {
+    await abrir(page, { estado: cenario({ stu: [aluno(1000, { p1: 1, p2: 2 })] }) });
+    await irPara(page, 'dem');
+    const linha = page.locator('#dem tr[data-k="d"]').first();
+    await linha.locator('[data-f="jan"]').selectOption('tarde');
+    await expect(linha.locator('td').last()).toContainText('Disponibilidade: Tarde');
+    await expect(page.locator('#audit-log-list')).toContainText('Pedido Aluno 1000: disponibilidade Tarde (Voo Local)');
+    await gerarEscala(page);
+    const voos = (await lerEscala(page)).linhas.filter(l => l.includes('Aluno 1000'));
+    expect(voos[0]).toMatch(/^12:40–13:40 \| Aluno 1000/);
   });
 
   test('filtros "Só quem voa", nome e missão', async ({ page }) => {
