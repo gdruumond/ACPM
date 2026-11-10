@@ -8,6 +8,8 @@ export default defineConfig({
   snapshotPathTemplate: '{testDir}/__snapshots__/{testFilePath}/{arg}{ext}',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
+  // No CI um snapshot ausente é falha (localmente ele é criado na primeira execução)
+  updateSnapshots: process.env.CI ? 'none' : 'missing',
   reporter: process.env.CI ? [['github'], ['list']] : 'list',
   use: {
     baseURL: `http://localhost:${PORT}`,

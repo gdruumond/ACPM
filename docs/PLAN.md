@@ -80,11 +80,20 @@ The data is small and document-shaped: one roster (about 50 KB), one schedule pe
 
 ## 4. Plan
 
-### Phase 0: Make the repo workable (about 1 day, no behaviour change)
-- [ ] Agree on a workflow: commits from git with `.gitattributes` (`* text=auto eol=lf`) and branches + PRs, instead of uploading through the web UI.
-- [ ] Split `index.html` into `index.html`, `css/app.css` and ES modules: `js/config.js`, `js/engine.js`, `js/storage.js`, `js/views/*.js`, `js/export.js`. Use native modules, which still need no build step and still deploy to Pages.
-- [ ] Move the rules data (`MIS`, `EQ`, `EQ_MIN_LV`, `DEFAULT_LIM`, time slots) into a single `config.js`, or JSON.
-- [ ] Add `node --test` tests for `runAllocationEngine`: Ground before flight, the level matrix, weight limits, PR-JPL exclusivity, block lists, and the shared Ground class counted once in instructor hours. Use a few real days as golden fixtures.
+### Phase 0: Make the repo workable (done on branch `fase-0`, no behaviour change)
+- [x] Workflow: `.gitattributes` (`* text=auto eol=lf`), `.nojekyll`, a README, and a GitHub Actions workflow that runs every test on each push and PR. Gabriel still needs to agree to branches + PRs instead of uploading through the web UI.
+- [x] Split `index.html` (now markup only) into `css/app.css` and native ES modules with no build step: `js/config.js`, `rules.js`, `format.js`, `engine.js`, `storage.js`, `state.js`, `actions.js`, `dom.js`, `export.js`, `main.js` and `js/views/*.js`.
+- [x] Moved the rules data into `js/config.js`.
+- [x] Tests, written before each extraction:
+  - **Unit (node:test), 123 tests:** scheduler rules from the in-app manual, invariants over 300 random scenarios, and outputs recorded from the original engine for 41 scenarios (golden master). Also the storage layer: schema migrations, persistence and the share link.
+  - **E2E (Playwright), 30 tests:** record the original page's behaviour: navigation, registration, demand, schedule, CSV/PDF, Gestor/Operador, share link, undo, history and BI. They use a synthetic roster and a fixed clock, and need no network.
+
+#### Found during Phase 0 (not changed, because Phase 0 keeps behaviour identical)
+1. **Session/aircraft rotation looks inverted.** `runAllocationEngine` sorts with `(a === prev.r) - (b === prev.r)`, which puts the student's *previous* aircraft and instructor at the **end** of the queue. A student's second session, or their next mission that day, therefore switches aircraft and instructor whenever another is free. If continuity is intended, the comparator should be reversed. Pinned by a test: *"sessão seguinte troca de avião e de instrutor"*.
+2. **One Ground room, no capacity limit.** Different Ground subjects can run at the same time with different instructors, all in `SALA-GROUND`. The example schedule has Ground PA-34 and Ground C152 both at 06:30.
+3. **Unescaped HTML in alert messages.** The schedule alerts (`a.m`) include student names without `esc()`. A crafted share link can therefore inject HTML or script into the Gestor view. Fix in Phase 1.
+4. **jsPDF 2.5.1 from the CDN has published advisories** (ReDoS, PDF/AcroForm injection, among others). The app only writes its own text and tables, so exposure is low, but upgrade to jsPDF 4.x and re-check the PDF.
+5. Dead code: `totF_M` in the BI, and the `window.claude` download path left over from a Claude artifact.
 
 ### Phase 1: Privacy fix (do before or together with Phase 2)
 - [ ] Remove `INS_DATA` names and weights from the source. Seed them from storage, or from a private import file.
@@ -115,3 +124,5 @@ The data is small and document-shaped: one roster (about 50 KB), one schedule pe
 3. Can the repo be made private, or the history rewritten, to remove instructor weights?
 4. Are the instructor levels in someone's browser the real ones, and whose?
 5. Should student and instructor data be linked to any existing school system?
+6. Should a student keep the same aircraft and instructor across sessions on the same day? Today the engine rotates them (see Phase 0 finding 1).
+7. How many Ground School rooms are there? Today any number of Ground classes can share `SALA-GROUND` at the same time.
