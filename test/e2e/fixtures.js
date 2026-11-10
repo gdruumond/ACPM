@@ -22,7 +22,10 @@ export async function prepararContexto(context) {
   await context.route(/^https:\/\/fonts\.(googleapis|gstatic)\.com\//, r => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
   await context.route(/^https:\/\/cdnjs\.cloudflare\.com\//, r => {
     const arquivo = LIBS[new URL(r.request().url()).pathname.split('/').pop()];
-    return arquivo ? r.fulfill({ path: arquivo, contentType: 'text/javascript; charset=utf-8' }) : r.abort();
+    // As tags <script> usam integrity + crossorigin: a resposta precisa do cabeçalho CORS, como no cdnjs
+    return arquivo
+      ? r.fulfill({ path: arquivo, contentType: 'text/javascript; charset=utf-8', headers: { 'Access-Control-Allow-Origin': '*' } })
+      : r.abort();
   });
 }
 

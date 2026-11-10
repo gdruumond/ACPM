@@ -14,7 +14,7 @@
   },
   "devDependencies": {
     "@playwright/test": "1.65.0",
-    "jspdf": "2.5.1",
-    "jspdf-autotable": "3.5.31"
+    "jspdf": "4.2.1",
+    "jspdf-autotable": "5.0.9"
   }
 }

@@ -88,20 +88,26 @@ The data is small and document-shaped: one roster (about 50 KB), one schedule pe
   - **Unit (node:test), 123 tests:** scheduler rules from the in-app manual, invariants over 300 random scenarios, and outputs recorded from the original engine for 41 scenarios (golden master). Also the storage layer: schema migrations, persistence and the share link.
   - **E2E (Playwright), 30 tests:** record the original page's behaviour: navigation, registration, demand, schedule, CSV/PDF, Gestor/Operador, share link, undo, history and BI. They use a synthetic roster and a fixed clock, and need no network.
 
-#### Found during Phase 0 (not changed, because Phase 0 keeps behaviour identical)
-1. **Session/aircraft rotation looks inverted.** `runAllocationEngine` sorts with `(a === prev.r) - (b === prev.r)`, which puts the student's *previous* aircraft and instructor at the **end** of the queue. A student's second session, or their next mission that day, therefore switches aircraft and instructor whenever another is free. If continuity is intended, the comparator should be reversed. Pinned by a test: *"sessão seguinte troca de avião e de instrutor"*.
-2. **One Ground room, no capacity limit.** Different Ground subjects can run at the same time with different instructors, all in `SALA-GROUND`. The example schedule has Ground PA-34 and Ground C152 both at 06:30.
-3. **Unescaped HTML in alert messages.** The schedule alerts (`a.m`) include student names without `esc()`. A crafted share link can therefore inject HTML or script into the Gestor view. Fix in Phase 1.
-4. **jsPDF 2.5.1 from the CDN has published advisories** (ReDoS, PDF/AcroForm injection, among others). The app only writes its own text and tables, so exposure is low, but upgrade to jsPDF 4.x and re-check the PDF.
-5. Dead code: `totF_M` in the BI, and the `window.claude` download path left over from a Claude artifact.
+#### Found during Phase 0 (not changed then, because Phase 0 keeps behaviour identical)
+1. **Session/aircraft rotation.** A student's next session, or next mission that day, switches instructor and aircraft whenever another is free. *Gabriel: intentional, so a student doesn't fly all day with one instructor. But each instructor should stay on the same aircraft for the day.* That second rule was added in Phase 1.
+2. **One Ground room, no capacity limit.** Different Ground subjects could run at the same time, all in `SALA-GROUND`. *Gabriel: there is only one room.* Fixed in Phase 1.
+3. **Unescaped HTML from the share link.** Fixed in Phase 1. It was broader than the alert messages: ids, level, weight, priority and flight status also reached HTML attributes unvalidated.
+4. **jsPDF 2.5.1 advisories.** Upgraded in Phase 1.
+5. Dead code: `totF_M` in the BI, and the `window.claude` download path left over from a Claude artifact. Still open.
 
-### Phase 1: Privacy fix (do before or together with Phase 2)
-- [ ] Remove `INS_DATA` names and weights from the source. Seed them from storage, or from a private import file.
-- [ ] Decide with the repo owner whether to **rewrite git history** (`git filter-repo`) or make the repo private. Pages on a private repo needs a paid plan, or the site can move to Cloudflare Pages or Netlify.
-- [ ] Stop putting personal data in share links. Share links become `?date=YYYY-MM-DD` and are read from the backend behind login.
+### Phase 1: Security fixes and Gabriel's operating rules (done on branch `fase-1`, built on `fase-0`)
+Each item was written test-first and has its own commit.
+- [x] **Share-link validation.** Only these values are accepted from the link: integer ids, levels A01–A09, numeric weights, mission fields within the UI's ranges, known flight statuses, existing registrations and an `AAAA-MM-DD` date. Lists have size caps. Alert messages are escaped. Mission lookups only match real missions, so names like `constructor` no longer break normalisation. Before the fix, a forged link ran script through the id, level, weight, priority and status fields; an E2E test now proves it doesn't.
+- [x] **One Ground room.** A new class opens only when the room is free for the full 1h30; same-subject students still join the open class. In the 41 recorded scenarios, the 27 that had overlapping classes changed. In the example, the Ground C152 class moves from 06:30 to 08:20 and its dependent flights from 08:20 to 10:10.
+- [x] **Instructor keeps the same aircraft all day,** per aircraft type, after the student's instructor rotation. Extra aircraft per instructor per day in the recorded scenarios fell from 114 to 20, with no change in rejections.
+- [x] **jsPDF 4.2.1 + AutoTable 5.0.9** with SRI (`integrity` + `crossorigin`). `npm audit` is clean. The PDF test now checks content and page count.
+- Moved to Phase 2: taking the instructor roster out of `js/config.js`. Gabriel considers the public names and weights irrelevant, so there is no history rewrite and no private repo.
 
 ### Phase 2: Shared storage (about 3–5 days)
-- [ ] Create the Supabase project. Add a `profiles(role: operador|gestor)` table and row-level security: Gestor can only read, Operador can read and write.
+- [x] Supabase project provisioned: org "ACPM", project `acpm-escala`, São Paulo, Free plan, still empty.
+- [ ] Add a `profiles(role: operador|gestor)` table and row-level security: Gestor can only read, Operador can read and write.
+- [ ] Seed the instructor roster from Supabase instead of `INS_DATA` in `js/config.js`.
+- [ ] Share links become `?date=YYYY-MM-DD`, read from the backend behind login, instead of carrying the data in the URL.
 - [ ] Implement a `SupabaseStorage` adapter behind the existing `ApiClient` methods (`fetchState`, `saveState`, `fetchResult` …). Keep `localStorage` as an offline cache and a fallback.
 - [ ] Add **optimistic concurrency**: each document carries a `version`. A save with a stale version is rejected, and the user gets "a colleague changed this, reload" instead of a silent overwrite.
 - [ ] Add login (magic link). Remove the client-side role picker; the role comes from the signed-in profile.
@@ -121,8 +127,8 @@ The data is small and document-shaped: one roster (about 50 KB), one schedule pe
 ## 5. Open questions for the repo owner
 1. Who uses the app daily, and how many operators edit at the same time?
 2. Is the school on Google Workspace? This decides Sheets versus Supabase.
-3. Can the repo be made private, or the history rewritten, to remove instructor weights?
+3. ~~Can the repo be made private, or the history rewritten, to remove instructor weights?~~ *Answered: not needed (Gabriel, PR #2).*
 4. Are the instructor levels in someone's browser the real ones, and whose?
 5. Should student and instructor data be linked to any existing school system?
-6. Should a student keep the same aircraft and instructor across sessions on the same day? Today the engine rotates them (see Phase 0 finding 1).
-7. How many Ground School rooms are there? Today any number of Ground classes can share `SALA-GROUND` at the same time.
+6. ~~Should a student keep the same aircraft and instructor across sessions on the same day?~~ *Answered: the student rotates instructors; the instructor keeps the aircraft (Phase 1).*
+7. ~~How many Ground School rooms are there?~~ *Answered: one (Phase 1).*
