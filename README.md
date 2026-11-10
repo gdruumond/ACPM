@@ -7,8 +7,9 @@ Publicada pelo GitHub Pages em https://gdruumond.github.io/ACPM/ (branch `main`,
 
 - **Compartilhado (site publicado):** login com e-mail e senha; os dados ficam no Supabase e todos veem as mesmas escalas
   (uma por data).
-  O perfil da conta define o acesso: **Operador** edita, **Gestor** só consulta. O cadastro aberto é desligado: as contas
-  são criadas pelo administrador (`scripts/criar-conta.mjs`).
+  O perfil da conta define o acesso: **Operador** edita, **Gestor** só consulta e **Secretaria** registra pedidos na
+  agenda de solicitações (a escala ela só consulta). O cadastro aberto é desligado: as contas são criadas pelo
+  administrador (`scripts/criar-conta.mjs`).
 - **Local (`localhost`):** sem login, dados só no `localStorage` do navegador. Em localhost, `?supabase=previa` usa o
   projeto de prévia (com login).
 
@@ -68,10 +69,13 @@ mais antigo do que o guardado. Nunca apague campos num passo: mantenha o que o p
 
 | Caminho | Conteúdo |
 |---|---|
-| `index.html` | Marcação das seis abas |
+| `index.html` | Marcação das oito abas |
 | `css/app.css` | Estilos e temas claro/escuro |
 | `js/config.js` | Janelas, frota, missões, limites de peso |
 | `js/habilitacoes.js` | Habilitações individuais dos instrutores e o que cada missão exige |
+| `js/rodizio.js` | Filas do rodízio (cheque, MLTE, noturno e C172) e a rotação de uma data para a seguinte |
+| `js/agenda.js` | Prazo da agenda de solicitações (13:00 do dia anterior) e a importação para a demanda |
+| `js/csv.js` | CSV da escala agrupado por avião, para o lançamento no portal do aeroclube |
 | `js/rules.js` | Regras das missões (Ground School, nível mínimo, precedência) |
 | `js/engine.js` | Motor de alocação (função pura) |
 | `js/storage.js` | Escala por data, migrações de dados e link compartilhado, sobre um backend (`js/backends/`: local ou Supabase) |

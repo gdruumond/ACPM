@@ -1,8 +1,8 @@
 // Verificação do site publicado com login real. Não altera os dados, exceto pela conversão única dos documentos da
 // fase 2 no primeiro acesso de um operador (rode com --workers=1: o operador entra antes do gestor).
 // Roda só quando as senhas das contas estão no ambiente; os demais testes E2E usam o modo local.
-//   BASE_URL=https://thephfernandes.github.io/ACPM/ ACPM_SENHA_OPERADOR=... ACPM_SENHA_GESTOR=... \
-//     npx playwright test test/e2e/publicado.spec.js
+//   BASE_URL=https://thephfernandes.github.io/ACPM/ ACPM_SENHA_OPERADOR=... ACPM_SENHA_GESTOR=... ACPM_SENHA_SECRETARIA=... \
+//     npx playwright test test/e2e/publicado.spec.js --workers=1
 import { test, expect, AMANHA } from './fixtures.js';
 
 const CONTAS = {
@@ -26,6 +26,20 @@ test.describe('Site publicado (login real)', () => {
       await expect(page.locator('#form-login')).toBeVisible();
     });
   }
+
+  test('secretaria entra direto na agenda de solicitações (a escala ela só consulta)', async ({ page }) => {
+    test.skip(!process.env.ACPM_SENHA_SECRETARIA, 'defina ACPM_SENHA_SECRETARIA');
+    await page.goto('./');
+    await page.locator('#login-email').fill(process.env.ACPM_EMAIL_SECRETARIA || 'secretaria.previa@example.com');
+    await page.locator('#login-senha').fill(process.env.ACPM_SENHA_SECRETARIA);
+    await page.locator('#btn-entrar').click();
+    await expect(page.locator('#usuario')).toContainText('· Secretaria');
+    await expect(page.locator('#s-age')).toBeVisible();
+    await expect(page.locator('#form-agenda')).toBeVisible();
+    await expect(page.locator('#ag-aluno option')).not.toHaveCount(0);
+    await expect(page.locator('#agenda-prazo')).not.toBeEmpty();
+    await page.locator('#btn-sair').click();
+  });
 
   test('gestor abre uma data sem escala: vê a cópia do dia anterior, sem gravar', async ({ page }) => {
     const conta = CONTAS.gestor;

@@ -152,6 +152,13 @@ Each step is test-first and updates the preview. Delivery in about three PRs (st
 7. [x] **Rodízio:** four queues (Cheque, MLTE PA-34, Noturno, C172; a flight counts in the first that applies). The engine offers each flight following the queue order. Whoever flew a category goes to the end of that queue the next day; cancelled flights don't count. A new tab shows the queues, with buttons to move people.
 8. [x] **Agenda de Solicitações:** a new tab with a calendar for any day. The server enforces the 13:00 rule in São Paulo time: the next day only until 13:00, then two days ahead onwards. Operadores have a flagged "Exceção da Coordenação". Each request records the student, mission, availability (Manhã, Tarde, Noite or a specific time), "Registrado por" (required), the account and the time. "Importar Solicitações da Agenda" in Demanda loads that date's requests, and the availability becomes a hard limit for that flight.
 
+#### Go-live checklist (production: `acpm-escala`)
+1. [x] Migrations applied to the preview: `20261110213600_formato_nao_regride`, `20261110222505_perfil_secretaria` and `20261110222506_agenda_de_solicitacoes`; database tests pass (24 + 28 + 38 + 9).
+2. [x] The same three migrations applied to production (2026-11-10), before the merge. They only add a profile, a table and functions; the format guard only acts on data that already has a format version, so the Phase 3 site keeps working.
+3. [x] Secretaria accounts: none for now (decided 2026-11-10); Operadores register requests in the Agenda. Create them later with `scripts/criar-conta.mjs <email> secretaria "<nome>"`.
+4. [ ] Merge Phase 4. The first Operador login updates the saved data to format version 10: simulators renamed, qualifications from the levels (checker boxes unmarked), and the new per-day fields. Anyone with the site open since before the merge gets the "reload" warning on their next save.
+5. [ ] The operator marks the checkers (and reviews the qualifications) in Instrutores, types each aircraft's hours since the last 50-hour inspection in Recursos, and reviews the Rodízio queues (they start in roster order).
+
 ### Phase 5: Later (nice to have)
 - [ ] Track instructor and student qualifications and currency: last flight, medical/CMA expiry, student course phase. The engine then checks these instead of relying on manual levels.
 - [ ] Integrate with the Google Calendar that students already use, publishing each student's missions.
