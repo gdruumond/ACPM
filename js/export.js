@@ -4,6 +4,7 @@ import { sumUniqueOperationalHours, consolidateTimelineSlots } from './engine.js
 import { S, RES, DATA } from './state.js';
 import { $, msg } from './dom.js';
 import { HT } from './views/escala.js';
+import { montarCsv, nomeDoCsv } from './csv.js';
 
 export async function sv(fn, data) {
   let dl = null;
@@ -22,18 +23,11 @@ export async function sv(fn, data) {
   } catch (e) { return false; }
 }
 
+// CSV para o portal de agendamento: agrupado por avião, em ordem de horário (js/csv.js)
 export async function exp() {
   if (!RES) { msg('Gere a escala antes de exportar.'); return; }
-  const q = v => '"' + String(v).replace(/"/g, '""') + '"';
-  const L = [['Início','Fim','Tempo de instrução','Aluno','Missão','Duração (h)','Sessão','Equipamento','Instrutor','Peso tripulação (kg)','Encaixe','Status'].map(q).join(';')];
-  RES.out.forEach(o => L.push([hm(o.a), hm(o.b), `${o.w + 1}º`, o.s, o.mis, String(o.h).replace('.', ','), o.ss, o.r, o.ins, o.kg || '', o.tag, (S.fStatus && S.fStatus[o.fKey]) || o.status || 'Confirmado'].map(q).join(';')));
-  if (RES.al.length) {
-    L.push('');
-    L.push(['Alertas','Aluno','Mensagem'].map(q).join(';'));
-    RES.al.forEach(a => L.push([a.t === 'err' ? 'Rejeitado' : 'Aviso', a.s, a.m].map(q).join(';')));
-  }
-  const c = '\uFEFF' + L.join('\r\n');
-  if (await sv('escala-acpm.csv', c)) { msg('CSV exportado.'); return; }
+  const c = montarCsv(RES, S.fStatus || {});
+  if (await sv(nomeDoCsv(DATA), c)) { msg('CSV exportado.'); return; }
   $('#csv').value = c;
   $('#csvbox').hidden = false;
 }
