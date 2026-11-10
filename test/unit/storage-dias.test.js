@@ -159,6 +159,19 @@ describe('Migração dos documentos da fase 2', () => {
     assert.equal(backend.docs.has('estado'), false, 'o servidor recebe só o formato novo');
   });
 
+  it('se uma gravação falha no meio, a conversão para com erro sem gravar o cadastro; a próxima abertura termina', async () => {
+    await gravarFase2(backend);
+    const gravar = backend.gravar;
+    backend.gravar = async (doc, conteudo) => (doc === 'dia:2026-11-09' ? false : gravar(doc, conteudo));
+    await assert.rejects(ApiClient.migrarDocumentosAntigos('2026-11-11'), /conversão dos dados não terminou/);
+    assert.equal(backend.docs.has('cadastro'), false, 'sem o cadastro, a conversão continua pendente');
+    backend.gravar = async (doc, conteudo) => (doc === 'cadastro' ? false : gravar(doc, conteudo));
+    await assert.rejects(ApiClient.migrarDocumentosAntigos('2026-11-11'), /conversão dos dados não terminou/);
+    backend.gravar = gravar;
+    assert.equal(await ApiClient.migrarDocumentosAntigos('2026-11-11'), '2026-11-10');
+    assert.ok(backend.docs.has('cadastro'));
+  });
+
   it('não sobrescreve dias que já existem no destino', async () => {
     await gravarFase2(backend);
     await backend.gravar('dia:2026-11-09', { meu: true });

@@ -80,8 +80,8 @@ test.describe('Login e perfis (modo compartilhado)', () => {
     await expect(page.locator('#form-login')).toBeVisible();
   });
 
-  test('a sessão continua depois de recarregar e "Sair" volta para o login', async ({ page, context }) => {
-    await instalarSupabaseFalso(context, fase3());
+  test('a sessão continua depois de recarregar e "Sair" volta para o login (só neste navegador)', async ({ page, context }) => {
+    const servidor = await instalarSupabaseFalso(context, fase3());
     await page.goto(URL_APP);
     await entrar(page, CONTAS.operador);
     await expect(page.locator('#usuario')).toBeVisible();
@@ -90,6 +90,7 @@ test.describe('Login e perfis (modo compartilhado)', () => {
     await expect(page.locator('#form-login')).toBeHidden();
     await page.locator('#btn-sair').click();
     await expect(page.locator('#form-login')).toBeVisible();
+    expect(servidor.saidas, 'as sessões em outros aparelhos continuam').toEqual(['local']);
     await page.reload();
     await expect(page.locator('#form-login')).toBeVisible();
   });

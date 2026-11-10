@@ -134,6 +134,7 @@ export const ApiClient = {
   // Converte os documentos da fase 2 (estado, escala, histórico e BI) para o formato por data, uma vez só.
   // A origem pode ser outro backend (envio dos dados do navegador). Os documentos antigos ficam como cópia;
   // dias que já existem não são sobrescritos e o cadastro é gravado por último (marca a migração como concluída).
+  // Se uma gravação falhar, para com erro antes do cadastro: a conversão é retomada na próxima abertura.
   async migrarDocumentosAntigos(dataPadrao, origem = this.backend) {
     if (this.readOnly || await this.backend.ler('cadastro')) return null;
     const estado = await origem.ler('estado');
@@ -146,10 +147,10 @@ export const ApiClient = {
     }, dataPadrao);
     for (const [data, conteudo] of Object.entries(plano.dias)) {
       if (await this.backend.ler(`dia:${data}`)) continue;
-      if (!await this.backend.gravar(`dia:${data}`, conteudo)) return null;
+      if (!await this.backend.gravar(`dia:${data}`, conteudo)) throw new Error(`A conversão dos dados não terminou (dia ${data}).`);
     }
     if (plano.historico.length) await this.backend.importarHistorico(plano.dataAtual, plano.historico);
-    if (!await this.backend.gravar('cadastro', plano.cadastro)) return null;
+    if (!await this.backend.gravar('cadastro', plano.cadastro)) throw new Error('A conversão dos dados não terminou (cadastro).');
     this.cadastroGravado = JSON.stringify(plano.cadastro);
     return plano.dataAtual;
   },

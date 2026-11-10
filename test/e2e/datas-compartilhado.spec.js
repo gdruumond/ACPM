@@ -1,6 +1,6 @@
 // Escala por data no modo compartilhado: migração dos documentos da fase 2 no servidor, gestor navegando
 // entre as datas sem gravar e autor das alterações no histórico.
-import { test, expect, irPara, AMANHA } from './fixtures.js';
+import { test, expect, prepararContexto, vigiarErros, irPara, AMANHA } from './fixtures.js';
 import { instalarSupabaseFalso, documentosFase3, CONTAS } from './supabase-falso.js';
 import { estadoSintetico } from '../helpers/estado.js';
 import { aluno } from '../helpers/montar.js';
@@ -51,6 +51,30 @@ test.describe('Escala por data (modo compartilhado)', () => {
     expect([...servidor.dias.keys()].sort()).toEqual(['2026-11-03', AMANHA]);
     expect(servidor.historico.map(h => [h.descricao, h.importado])).toEqual([['Alteração antiga', true]]);
     expect(servidor.banco.has('estado'), 'os documentos da fase 2 ficam como cópia').toBe(true);
+  });
+
+  test('se a conversão falhar no meio, o app pede para recarregar em vez de abrir o cadastro vazio', async ({ browser }) => {
+    const contexto = await browser.newContext({ baseURL: test.info().project.use.baseURL, locale: 'pt-BR', timezoneId: 'America/Sao_Paulo' });
+    await prepararContexto(contexto);
+    const estado = ApiClient.normalizeAndMigrateState({ ...estadoSintetico(), stu: [aluno(1000)] });
+    const servidor = await instalarSupabaseFalso(contexto, { documentos: { estado, escala: runAllocationEngine(estado) } });
+    const page = await contexto.newPage();
+    const erros = vigiarErros(page, { statusEsperados: [503] });
+    servidor.falharGravacoes(1);
+    await page.goto(URL_APP);
+    await page.locator('#login-email').fill(CONTAS.operador.email);
+    await page.locator('#login-senha').fill(CONTAS.operador.senha);
+    await page.locator('#btn-entrar').click();
+    await expect(page.locator('#aviso-sync-texto')).toContainText('Não foi possível preparar os dados');
+    await expect(page.locator('#inst .cd')).toHaveCount(0);
+    expect(servidor.banco.has('cadastro')).toBe(false);
+
+    await page.locator('#btn-recarregar').click();
+    await expect(page.locator('#inst .cd').first()).toBeAttached();
+    await expect(page.locator('#aviso-sync')).toBeHidden();
+    expect(servidor.banco.get('cadastro').conteudo).toEqual(separar(estado).cadastro);
+    expect(erros).toEqual([]);
+    await contexto.close();
   });
 
   test('gestor navega entre as datas, sem gravar nada', async ({ page, context }) => {

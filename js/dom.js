@@ -1,4 +1,4 @@
-// Utilitários de DOM: seletor, avisos (toast), mensagem de status e foco no último campo.
+// Utilitários de DOM: seletor, avisos (toast e aviso fixo), mensagem de status e foco no último campo.
 
 export const $ = s => document.querySelector(s);
 
@@ -10,6 +10,22 @@ export function showToast(text) {
   el.textContent = text;
   box.appendChild(el);
   setTimeout(() => { el.remove(); }, 2800);
+}
+
+// Aviso fixo no topo, com o botão "Recarregar". O conflito e a falha ao preparar os dados só saem recarregando;
+// o erro de gravação some quando uma gravação der certo (fecharAviso('erro'))
+let avisoAtual = null;
+export const avisoAberto = () => avisoAtual;
+export function mostrarAviso(tipo, texto) {
+  avisoAtual = tipo;
+  $('#aviso-sync-texto').textContent = texto;
+  $('#aviso-sync').hidden = false;
+  $('#btn-recarregar').onclick = () => window.location.reload();
+}
+export function fecharAviso(tipo) {
+  if (avisoAtual !== tipo) return;
+  avisoAtual = null;
+  $('#aviso-sync').hidden = true;
 }
 
 export const msg = t => { const el = $('#msg'); if (el) el.textContent = t; if (t) showToast(t); };

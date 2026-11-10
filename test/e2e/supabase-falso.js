@@ -51,6 +51,7 @@ export function criarSupabaseFalso({ documentos = {}, dias = {} } = {}) {
   const historico = [];
   const sessoes = new Map();
   const gravacoes = [];
+  const saidas = [];
   const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': '*' };
   let falhasDeGravacao = 0;
   let leiturasDeDiasSeguras = null;
@@ -85,6 +86,7 @@ export function criarSupabaseFalso({ documentos = {}, dias = {} } = {}) {
     }
     if (url.pathname === '/auth/v1/user') return conta ? responder(200, usuario(conta)) : responder(401, { code: 401, msg: 'invalid JWT' });
     if (url.pathname === '/auth/v1/logout') {
+      saidas.push(url.searchParams.get('scope'));
       sessoes.delete((req.headers().authorization || '').replace(/^Bearer /, ''));
       return route.fulfill({ status: 204, headers: cors });
     }
@@ -143,6 +145,7 @@ export function criarSupabaseFalso({ documentos = {}, dias = {} } = {}) {
     dias: tabelaDias,
     historico,
     gravacoes,
+    saidas,
     instalar: context => context.route(`${URL_TESTE}/**`, atender),
     // Simula indisponibilidade do servidor nas próximas gravações
     falharGravacoes(n) { falhasDeGravacao = n; },

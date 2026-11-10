@@ -18,7 +18,7 @@ import { hm, fmtDurLabel, pad, A, amanhaISO, isoMenosDias } from './format.js';
 import { isGroundMission, reqInsLevel, blank } from './rules.js';
 import { ApiClient } from './storage.js';
 import { S, RES, AUDIT_LOG, DATA, setS, setRES, setAuditLog, setTLMode, isGestor, insBy, stuBy, getMissionTarget } from './state.js';
-import { $, showToast, msg, focusLast } from './dom.js';
+import { $, showToast, msg, focusLast, mostrarAviso, avisoAberto } from './dom.js';
 import { show } from './views/tabs.js';
 import { rBI } from './views/bi.js';
 import { renderAuditPanel, rOut } from './views/escala.js';
@@ -517,21 +517,30 @@ document.addEventListener('change', e => {
   const amanha = amanhaISO();
   abrirData(amanha);
 
-  // No site publicado os dados ficam no Supabase, com login; em localhost, no modo local
-  const projeto = projetoSupabase();
-  if (projeto && !(await iniciarSessaoSupabase(projeto))) return;
-
-  // Primeira abertura com a escala por data: converte os documentos da fase 2 (do servidor ou deste navegador)
-  await ApiClient.migrarDocumentosAntigos(amanha);
-
   const params = new URLSearchParams(window.location.search);
   const pedida = params.get('data');
   const data = /^\d{4}-\d{2}-\d{2}$/.test(pedida || '') ? pedida : amanha;
-  abrirData(data);
-  const { estado, escala } = await ApiClient.carregarDia(data);
-  setS(estado);
-  setRES(escala);
-  setAuditLog(await historicoParaPainel(data));
+
+  // Sessão e dados. Se algo falhar (sem conexão, conversão pela metade), o app não abre com dados incompletos:
+  // fica o aviso para recarregar (nada se perde; o que faltou é retomado na próxima abertura)
+  try {
+    // No site publicado os dados ficam no Supabase, com login; em localhost, no modo local
+    const projeto = projetoSupabase();
+    if (projeto && !(await iniciarSessaoSupabase(projeto))) return;
+
+    // Primeira abertura com a escala por data: converte os documentos da fase 2 (do servidor ou deste navegador)
+    await ApiClient.migrarDocumentosAntigos(amanha);
+
+    abrirData(data);
+    const { estado, escala } = await ApiClient.carregarDia(data);
+    setS(estado);
+    setRES(escala);
+    setAuditLog(await historicoParaPainel(data));
+  } catch (e) {
+    console.warn(e);
+    if (avisoAberto() !== 'conflito') mostrarAviso('falha', 'Não foi possível preparar os dados da escala. Verifique a conexão e recarregue a página; nada foi perdido.');
+    return;
+  }
 
   // No modo compartilhado os dados vêm do servidor e o perfil vem da conta: share= e role= da URL não valem
   const compartilhado = modoCompartilhado();
