@@ -1,0 +1,20 @@
+{
+  "name": "acpm-escala",
+  "private": true,
+  "description": "Escala de Voo — ACPM (aplicação estática servida pelo GitHub Pages)",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "serve": "node scripts/serve.mjs",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "node --test \"test/unit/**/*.test.js\"",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0",
+    "jspdf": "2.5.1",
+    "jspdf-autotable": "3.5.31"
+  }
+}

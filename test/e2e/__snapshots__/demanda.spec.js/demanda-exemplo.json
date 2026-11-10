@@ -1,0 +1,30 @@
+{
+  "contagem": "16 / 20 aluno(s) · 21 missão(ões) marcada(s)",
+  "linhas": [
+    "Aluno 01 + Missão | voa | Ground PA-34 | Sala Ground | 0 | 1 | 1.5 | 1 | 5 | 06:30–08:00 · 01h30 · Instrutor A01+ · Turma coletiva",
+    "↳ Aluno 01 (missão extra) ✕ | voa | Multimotor | PA-34 | 1 | 2 | 2 | 1 | 5 | 08:20–10:20 · Mín. A09",
+    "↳ Aluno 01 (missão extra) ✕ | voa | Noturno | C172 | 8 | 8 | 1 | 1 | 5 | 17:30–18:30 · Mín. A07",
+    "Aluno 02 + Missão | voa | Ground C152 | Sala Ground | 0 | 1 | 1.5 | 1 | 4 | 06:30–08:00 · 01h30 · Instrutor A01+ · Turma coletiva",
+    "↳ Aluno 02 (missão extra) ✕ | voa | Voo Local | C152 | 1 | 2 | 1 | 1 | 4 | 08:20–09:20 · Mín. A01",
+    "Aluno 03 + Missão | voa | Ground C152 | Sala Ground | 0 | 1 | 1.5 | 1 | 4 | 06:30–08:00 · 01h30 · Instrutor A01+ · Turma coletiva",
+    "↳ Aluno 03 (missão extra) ✕ | voa | Voo Local | C152 | 1 | 2 | 1 | 1 | 4 | 08:20–09:20 · Mín. A01",
+    "Aluno 04 + Missão | voa | Ground C152 | Sala Ground | 0 | 1 | 1.5 | 1 | 4 | 06:30–08:00 · 01h30 · Instrutor A01+ · Turma coletiva",
+    "↳ Aluno 04 (missão extra) ✕ | voa | Voo Local | C152 | 1 | 2 | 1 | 1 | 4 | 08:20–09:20 · Mín. A01",
+    "Aluno 05 + Missão | voa | Ground C152 | Sala Ground | 0 | 1 | 1.5 | 1 | 4 | 06:30–08:00 · 01h30 · Instrutor A01+ · Turma coletiva",
+    "Aluno 06 + Missão | voa | Ground C152 | Sala Ground | 0 | 1 | 1.5 | 1 | 4 | 06:30–08:00 · 01h30 · Instrutor A01+ · Turma coletiva",
+    "Aluno 07 + Missão | voa | Ground C152 | Sala Ground | 0 | 1 | 1.5 | 1 | 4 | 06:30–08:00 · 01h30 · Instrutor A01+ · Turma coletiva",
+    "Aluno 08 + Missão | voa | Parafuso | C152 | 2 | 5 | 1 | 1 | 4 | 10:10–11:10 · Mín. A06 (PR-JPL)",
+    "Aluno 09 + Missão | — | Voo Local | C152 | 1 | 2 | 1 | 1 | 3 | ",
+    "Aluno 10 + Missão | voa | Voo Local | C152 | 4 | 4 | 2 | 1 | 5 | 12:40–14:40 · Mín. A01",
+    "Aluno 11 + Missão | — | Voo Local | C152 | 1 | 2 | 1 | 1 | 3 | ",
+    "Aluno 12 + Missão | voa | Navegação | C152 | 1 | 2 | 2 | 1 | 2 | 08:20–10:20 · Mín. A04",
+    "Aluno 13 + Missão | — | Voo Local | C152 | 1 | 2 | 1 | 1 | 3 | ",
+    "Aluno 14 + Missão | voa | IFR | C172 | 3 | 3 | 1 | 1 | 3 | 11:30–12:30 · Mín. A08",
+    "Aluno 15 + Missão | voa | Noturno | C172 | 8 | 8 | 1 | 1 | 2 | 17:30–18:30 · Mín. A07",
+    "Aluno 16 + Missão | voa | Voo Solo | C152 | 1 | 2 | 2 | 1 | 2 | 08:20–10:20 · Mín. A05",
+    "Aluno 17 + Missão | voa | Navegação | C152 | 1 | 6 | 1 | 1 | 3 | 08:20–09:20 · Mín. A04",
+    "Aluno 18 + Missão | — | Voo Local | C152 | 1 | 2 | 1 | 1 | 3 | ",
+    "Aluno 19 + Missão | voa | Voo Solo | C152 | 4 | 7 | 2 | 1 | 2 | 12:40–14:40 · Mín. A05",
+    "Aluno 20 + Missão | voa | Voo Local | C152 | 2 | 6 | 1 | 1 | 5 | 10:10–11:10 · Mín. A01"
+  ]
+}
