@@ -1,0 +1,82 @@
+// Agenda de solicitações da secretaria: a regra do prazo (a mesma do servidor, no horário de São Paulo) e o pedido
+// da demanda que cada solicitação vira ao ser importada.
+import { WIN, MIS } from './config.js';
+import { janelasDaDisponibilidade, normalizeMissionFields } from './rules.js';
+
+export const FUSO_DO_AEROCLUBE = 'America/Sao_Paulo';
+
+export const JANELAS_DA_AGENDA = [['manha', 'Manhã'], ['tarde', 'Tarde'], ['noite', 'Noite'], ['horario', 'Horário específico']];
+
+// Data (AAAA-MM-DD) e hora (HH:MM) de um instante no horário de São Paulo
+function emSaoPaulo(instante) {
+  const partes = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+    timeZone: FUSO_DO_AEROCLUBE, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+  }).formatToParts(instante).map(p => [p.type, p.value]));
+  return { data: `${partes.year}-${partes.month}-${partes.day}`, hora: `${partes.hour}:${partes.minute}` };
+}
+
+export const somarDias = (iso, dias) => new Date(Date.parse(iso + 'T12:00:00Z') + dias * 864e5).toISOString().slice(0, 10);
+export const hojeEmSaoPaulo = (agora = new Date()) => emSaoPaulo(agora).data;
+
+// Pedido para o dia seguinte só até as 13:00; depois disso, a partir de dois dias
+export function prazoDaAgendaPermite(data, agora = new Date()) {
+  const { data: hoje, hora } = emSaoPaulo(agora);
+  return data >= somarDias(hoje, 2) || (data === somarDias(hoje, 1) && hora < '13:00');
+}
+
+export const primeiraDataAberta = (agora = new Date()) => {
+  const { data: hoje } = emSaoPaulo(agora);
+  return prazoDaAgendaPermite(somarDias(hoje, 1), agora) ? somarDias(hoje, 1) : somarDias(hoje, 2);
+};
+
+export const horaEmSaoPaulo = (agora = new Date()) => emSaoPaulo(agora).hora;
+
+export function disponibilidadeDaSolicitacao({ janela, horario }) {
+  if (janela !== 'horario') return janelasDaDisponibilidade(janela) ? janela : undefined;
+  const i = WIN.indexOf(horario);
+  return i < 0 ? undefined : `h${i}`;
+}
+
+// Pedido da demanda: a missão com o equipamento padrão, as duas primeiras janelas da disponibilidade como
+// preferências, 1 h (o Ground tem 01h30) e prioridade 3
+export function pedidoDaSolicitacao(solicitacao) {
+  const jan = disponibilidadeDaSolicitacao(solicitacao);
+  const janelas = janelasDaDisponibilidade(jan) || [1, 2];
+  const regra = Object.hasOwn(MIS, solicitacao.missao) ? MIS[solicitacao.missao] : MIS['Voo Local'];
+  const pedido = {
+    fly: true, mis: solicitacao.missao, eq: regra.defEq,
+    p1: janelas[0], p2: janelas[Math.min(1, janelas.length - 1)], nb: 1, ss: 1, pr: 3,
+    ...(jan ? { jan } : {})
+  };
+  normalizeMissionFields(pedido);
+  return pedido;
+}
+
+// Importa para a demanda da data as solicitações ativas ainda não importadas. Só acrescenta: o aluno sem voo no dia
+// recebe o pedido como missão principal; quem já voa a mesma missão só ganha a disponibilidade pedida; senão, o
+// pedido entra como missão extra. As solicitações vistas ficam anotadas no dia (estado.importadas) para não repetir.
+export function importarSolicitacoes(estado, solicitacoes) {
+  const resumo = { novos: 0, atualizados: 0, semAluno: 0 };
+  if (!Array.isArray(estado.importadas)) estado.importadas = [];
+  for (const solicitacao of solicitacoes) {
+    if (solicitacao.cancelada_em || estado.importadas.includes(solicitacao.id)) continue;
+    estado.importadas.push(solicitacao.id);
+    const aluno = estado.stu.find(x => x.id === solicitacao.aluno);
+    if (!aluno) { resumo.semAluno++; continue; }
+    const pedido = pedidoDaSolicitacao(solicitacao);
+    const mesmaMissao = [aluno, ...(aluno.extra || [])].find(m => m.fly && m.mis === pedido.mis);
+    if (mesmaMissao) {
+      Object.assign(mesmaMissao, { p1: pedido.p1, p2: pedido.p2 });
+      if (pedido.jan) mesmaMissao.jan = pedido.jan;
+      else delete mesmaMissao.jan;
+      resumo.atualizados++;
+    } else if (!aluno.fly) {
+      Object.assign(aluno, pedido);
+      resumo.novos++;
+    } else {
+      aluno.extra = [...(aluno.extra || []), { mid: estado.nid++, ...pedido }];
+      resumo.novos++;
+    }
+  }
+  return resumo;
+}

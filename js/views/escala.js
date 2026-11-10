@@ -1,6 +1,6 @@
-// Aba 5 · Escala: tabela oficial, mapa de ocupação e painel de inclusões e histórico do dia.
+// Aba 6 · Escala: tabela oficial, mapa de ocupação e painel de inclusões e histórico do dia.
 import { FLIGHT_STATUSES } from '../config.js';
-import { hm, WLB, fmtH, fmtDurLabel, A, esc } from '../format.js';
+import { hm, WLB, fmtH, fmtDurLabel, esc } from '../format.js';
 import { isGroundMission } from '../rules.js';
 import { sumUniqueOperationalHours, consolidateTimelineSlots } from '../engine.js';
 import { S, RES, AUDIT_LOG, TL_MODE, isGestor } from '../state.js';
@@ -63,7 +63,7 @@ export function buildTimelineGroup(out, groupKey, subLabelFn, barLine1Fn, barLin
           <div class="tl-pop-hd"><span>${hm(o.a)} – ${hm(o.b)}</span><span>${HT(o)}</span></div>
           <div class="tl-pop-grid">
             <span>${isCollective ? 'Turma:' : 'Aluno:'}</span><span>${esc(stuListTxt)}</span>
-            <span>Instrutor:</span><span>${esc(o.ins)} (${A(o.lv)})</span>
+            <span>Instrutor:</span><span>${esc(o.ins)}</span>
             <span>Recurso:</span><span>${esc(o.r)}</span>
             <span>Missão:</span><span>${esc(o.mis)}</span>
             <span>Peso Trip.:</span><span>${pesoTxt}</span>
@@ -97,7 +97,7 @@ export function renderVisualTimeline(out) {
     ? buildTimelineGroup(
         out,
         'ins',
-        (first, totalH) => `${A(first.lv)} · ${fmtH(totalH)}`,
+        (first, totalH) => fmtH(totalH),
         o => o.students.length > 1
           ? `${hm(o.a)}–${hm(o.b)} · Turma (${o.students.length} alunos)`
           : `${hm(o.a)}–${hm(o.b)} · ${esc(o.r)}`,
@@ -115,8 +115,8 @@ export function renderVisualTimeline(out) {
           ? `${hm(o.a)}–${hm(o.b)} · ${esc(o.mis)} (${o.students.length} alunos)`
           : `${hm(o.a)}–${hm(o.b)} · ${esc(o.s)}`,
         o => o.students.length > 1
-          ? `${esc(o.ins)} (${A(o.lv)}) · ${esc(o.students.join(', '))}`
-          : `${esc(o.mis)} · ${esc(o.ins)} (${A(o.lv)})`,
+          ? `${esc(o.ins)} · ${esc(o.students.join(', '))}`
+          : `${esc(o.mis)} · ${esc(o.ins)}`,
         minStart,
         maxEnd
       );
@@ -208,7 +208,7 @@ export function renderAuditPanel() {
 
 export function rOut(switchTab = true) {
   if (!RES) {
-    $('#out').innerHTML = `<p class="h">Ainda não há escala para esta data. Marque quem vai voar em “4 · Demanda” e clique em “Gerar escala”.</p>`;
+    $('#out').innerHTML = `<p class="h">Ainda não há escala para esta data. Marque quem vai voar em “5 · Demanda” e clique em “Gerar escala”.</p>`;
     return;
   }
   const { out, al, tot } = RES;
@@ -244,7 +244,7 @@ export function rOut(switchTab = true) {
   h += al.map(a => `<div class="al ${a.t}"><b>${esc(a.s)}</b>${esc(a.m)}</div>`).join('');
 
   if (!filteredOut.length) {
-    h += `<p class="h">${tot ? 'Nenhum voo alocado.' : 'Nenhuma missão marcada em “4 · Demanda”.'}</p>`;
+    h += `<p class="h">${tot ? 'Nenhum voo alocado.' : 'Nenhuma missão marcada em “5 · Demanda”.'}</p>`;
   } else {
     // 1º: Tabela Oficial da Escala do Dia
     h += '<div class="tw" style="margin-top:10px"><table><thead><tr><th>Horário</th><th>Aluno</th><th>Missão</th><th>Equipamento</th><th>Instrutor</th><th>Duração</th><th>Peso</th><th>Encaixe</th><th>Status</th><th class="edit-only">Ação</th></tr></thead><tbody>';
@@ -264,7 +264,7 @@ export function rOut(switchTab = true) {
         <td><b>${esc(o.s)}</b></td>
         <td>${esc(o.mis)}</td>
         <td>${esc(o.r)}</td>
-        <td>${esc(o.ins)} (${A(o.lv)})</td>
+        <td>${esc(o.ins)}</td>
         <td>${HT(o)}</td>
         <td>${o.kg ? o.kg + ' kg' : '—'}</td>
         <td><span class="tag${tagCls}">${esc(o.tag)}</span></td>

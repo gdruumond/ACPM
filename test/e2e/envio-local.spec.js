@@ -1,5 +1,5 @@
 import { test, expect, irPara } from './fixtures.js';
-import { instalarSupabaseFalso, documentosFase3, CONTAS } from './supabase-falso.js';
+import { instalarSupabaseFalso, documentosAtuais, CONTAS } from './supabase-falso.js';
 import { estadoSintetico } from '../helpers/estado.js';
 import { aluno } from '../helpers/montar.js';
 
@@ -63,7 +63,7 @@ test.describe('Envio dos dados do navegador para o servidor', () => {
   });
 
   test('servidor que já tem a escala: não pergunta e usa os dados do servidor', async ({ page, context }) => {
-    const servidor = await instalarSupabaseFalso(context, documentosFase3(estadoSintetico(), '2026-11-11'));
+    const servidor = await instalarSupabaseFalso(context, documentosAtuais(estadoSintetico(), '2026-11-11'));
     await abrirComDadosLocais(page, dadosLocais());
     await entrar(page, CONTAS.operador);
     await expect(page.locator('#nav')).toBeVisible();

@@ -3,6 +3,7 @@
 import { WIN, NI, GROUND_EQ_TYPE, GROUND_DURATION_H, SIM_EQ_TYPES, MIS, DEFAULT_LIM } from './config.js';
 import { pad, isoMenosDias, fimDoMes } from './format.js';
 import { blank } from './rules.js';
+import { habilitacoesDoNivel } from './habilitacoes.js';
 import { runAllocationEngine } from './engine.js';
 import { ApiClient } from './storage.js';
 import { S, RES, AUDIT_LOG, BI_HISTORY, DATA, setS, setRES, setAuditLog, setBIHistory, setData, isGestor } from './state.js';
@@ -11,7 +12,8 @@ import { rBI } from './views/bi.js';
 import { renderAuditPanel, rOut } from './views/escala.js';
 import { rDem } from './views/demanda.js';
 import { rIns, rAlu } from './views/cadastros.js';
-import { rRec } from './views/recursos.js';
+import { rRec, rRevisao } from './views/recursos.js';
+import { podeEditarAgenda } from './views/agenda.js';
 
 const historyStack = [];
 
@@ -43,6 +45,8 @@ export function setRole(role, lockShared = false) {
   // No modo compartilhado o gestor navega entre as datas (somente leitura)
   const dtInput = $('#dt');
   if (dtInput) dtInput.disabled = isGestor() && document.body.dataset.backend !== 'supabase';
+  // Agenda: quem pode registrar pedidos (operadores e secretaria; no modo local, fora do perfil Gestor)
+  document.body.dataset.agenda = podeEditarAgenda() ? 'edita' : 'consulta';
 }
 
 export function limparDesfazer() {
@@ -175,6 +179,7 @@ export function gen(switchTab = true) {
   setRES({ ...runAllocationEngine(S), data: DATA });
   ApiClient.salvarDia(DATA, S, RES);
   syncBIHistoryForCurrentDate();
+  rRevisao();
   rOut(switchTab);
   renderAuditPanel();
   rBI();
@@ -189,13 +194,13 @@ export const demo = () => {
   const wt = [0,0,1,1,1,2,2,3,4,4,5,6,6,7];
   const poolMis = ['Simulador','Voo Local','Voo Local','Navegação','Navegação','Voo Solo','IFR','Multimotor','Noturno'];
 
-  // Se não houver nenhum instrutor cadastrado, cria 40 instrutores fictícios (níveis A01–A09 em ciclo)
+  // Se não houver nenhum instrutor cadastrado, cria 40 instrutores fictícios (habilitações dos níveis A01–A09 em ciclo)
   if (!S.ins.length) {
     S.ins = Array.from({ length: 40 }, (_, i) => ({
       id: i + 1,
       nm: `Instrutor ${String(i + 1).padStart(2, '0')}`,
       on: true,
-      lv: (i % 9) + 1,
+      hab: habilitacoesDoNivel((i % 9) + 1),
       kg: 55 + ((i * 17) % 45),
       aw: WIN.map(() => true)
     }));

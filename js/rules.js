@@ -1,17 +1,24 @@
-// Regras das missões: Ground School, nível mínimo do instrutor, precedência Ground → voo
+// Regras das missões: Ground School, precedência Ground → voo
 // e normalização de pedidos (inclusive nomes de missão de versões anteriores).
-import { MIS, EQ_MIN_LV, NI, GROUND_EQ_TYPE, GROUND_DURATION_H } from './config.js';
+import { MIS, NI, WIN, PRE, GROUND_EQ_TYPE, GROUND_DURATION_H } from './config.js';
+
+// Disponibilidade do aluno para o pedido (da agenda da secretaria ou escolhida na demanda): o voo só começa nessas
+// janelas. Sem disponibilidade, o voo pode começar em qualquer janela habilitada
+const PERIODOS = { manha: ['Manhã', PRE['Manhã']], tarde: ['Tarde', PRE['Tarde']], noite: ['Noite', PRE['Noturno']] };
+export function janelasDaDisponibilidade(jan) {
+  if (typeof jan !== 'string') return null;
+  if (Object.hasOwn(PERIODOS, jan)) return [...PERIODOS[jan][1]];
+  const horario = /^h([0-8])$/.exec(jan);
+  return horario ? [+horario[1]] : null;
+}
+export const rotuloDaDisponibilidade = jan =>
+  Object.hasOwn(PERIODOS, jan) ? PERIODOS[jan][0] : janelasDaDisponibilidade(jan) ? `às ${WIN[+jan.slice(1)]}` : 'Qualquer horário';
+export const DISPONIBILIDADES = [['', 'Qualquer horário'], ...Object.keys(PERIODOS).map(j => [j, rotuloDaDisponibilidade(j)]), ...WIN.map((w, i) => [`h${i}`, `Só às ${w}`])];
 
 // Regra da missão pelo nome, somente entre as missões cadastradas (nomes como "constructor" não contam)
 export const missionRule = mis => (Object.hasOwn(MIS, mis) ? MIS[mis] : null);
 
 export const isGroundMission = mis => Boolean(missionRule(mis) && missionRule(mis).isGround);
-
-export function reqInsLevel(mis, eq) {
-  const m = missionRule(mis) || MIS['Voo Local'];
-  if (m.isGround) return 1; // Sem restrição de nível para Ground School (qualquer instrutor A01+)
-  return Math.max(m.lv, (Object.hasOwn(EQ_MIN_LV, eq) && EQ_MIN_LV[eq]) || 1);
-}
 
 // Verifica se um voo (d) depende de uma missão de Ground (gMis) agendada para o mesmo aluno no dia
 export function doesGroundGateFlight(gMis, flightReq) {
@@ -40,6 +47,7 @@ export function migrateLegacyMissionName(mis) {
 
 export function normalizeMissionFields(target) {
   target.mis = migrateLegacyMissionName(target.mis);
+  if (Object.hasOwn(target, 'jan') && !janelasDaDisponibilidade(target.jan)) delete target.jan;
   const mRule = missionRule(target.mis) || MIS['Voo Local'];
   if (!mRule.eq.includes(target.eq)) target.eq = mRule.defEq;
   if (mRule.isGround) {

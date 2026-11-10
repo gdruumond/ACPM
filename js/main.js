@@ -14,20 +14,26 @@
  *   js/export.js    Exportação CSV e PDF
  */
 import { WIN, NI, T, EQ, GROUND_EQ_TYPE, GROUND_REG, GROUND_DURATION_MIN, GROUND_DURATION_H, ACROBAT_REG, MIS, PRE } from './config.js';
-import { hm, fmtDurLabel, pad, A, amanhaISO, isoMenosDias } from './format.js';
-import { isGroundMission, reqInsLevel, blank } from './rules.js';
+import { hm, fmtH, fmtDurLabel, pad, amanhaISO, isoMenosDias } from './format.js';
+import { isGroundMission, blank, rotuloDaDisponibilidade } from './rules.js';
+import { habilitacoesDoNivel, normalizarHabilitacoes, nomeDaHabilitacao, podeFazer } from './habilitacoes.js';
 import { ApiClient } from './storage.js';
 import { S, RES, AUDIT_LOG, DATA, setS, setRES, setAuditLog, setTLMode, isGestor, insBy, stuBy, getMissionTarget } from './state.js';
-import { $, showToast, msg, focusLast } from './dom.js';
+import { $, showToast, msg, focusLast, mostrarAviso, avisoAberto } from './dom.js';
 import { show } from './views/tabs.js';
 import { rBI } from './views/bi.js';
 import { renderAuditPanel, rOut } from './views/escala.js';
 import { singleDemandRowHTML, cnt, rDem, applyDemandFilters } from './views/demanda.js';
-import { insHTML, stuHTML, rIns, rAlu, applyInstructorFilters } from './views/cadastros.js';
+import { insHTML, stuHTML, rIns, rAlu, applyInstructorFilters, preencherFiltroDeHabilitacoes } from './views/cadastros.js';
 import { rRec } from './views/recursos.js';
 import { setRole, pushHistory, save, logChange, undoLastAction, syncBIHistoryForCurrentDate, gen, demo, abrirData, historicoParaPainel, carregarData, carregarBI } from './actions.js';
 import { exp, pdf } from './export.js';
 import { projetoSupabase } from './config-supabase.js';
+import { CATEGORIAS_DO_RODIZIO, ajustarFilas } from './rodizio.js';
+import { rRodizio } from './views/rodizio.js';
+import { importarSolicitacoes, disponibilidadeDaSolicitacao } from './agenda.js';
+import { abrirAgenda, carregarMes, mudarMes, escolherDia, diaDaAgenda, lembrarRegistradoPor, podeEditarAgenda } from './views/agenda.js';
+import { ESQUEMA } from './migracoes.js';
 import { iniciarSessaoSupabase } from './sessao.js';
 
 const activeTimers = new WeakMap();
@@ -38,6 +44,7 @@ document.addEventListener('click', e => {
     const aba = g.dataset.t || g.dataset.go;
     show(aba);
     if (aba === 'bi') carregarBI();
+    if (aba === 'age') abrirAgenda();
     try { window.scrollTo(0, 0); } catch (x) {}
     return;
   }
@@ -61,18 +68,22 @@ document.addEventListener('input', e => {
   });
 });
 
+// Botões que pedem confirmação: o primeiro clique troca o texto; o segundo, em até 3,5 s, confirma
+const confirmado = (b, txt) => {
+  const o = b.dataset.o || (b.dataset.o = b.textContent);
+  if (activeTimers.has(b)) clearTimeout(activeTimers.get(b));
+  if (!b.dataset.arm) {
+    b.dataset.arm = 1; b.textContent = txt;
+    activeTimers.set(b, setTimeout(() => { b.dataset.arm = ''; b.textContent = o; activeTimers.delete(b); }, 3500));
+    return false;
+  }
+  b.dataset.arm = ''; b.textContent = o; activeTimers.delete(b);
+  return true;
+};
 const armed = (id, txt, fn) => {
   $(id).onclick = e => {
     if (isGestor()) return;
-    const b = e.target, o = b.dataset.o || (b.dataset.o = b.textContent);
-    if (activeTimers.has(b)) clearTimeout(activeTimers.get(b));
-    if (!b.dataset.arm) {
-      b.dataset.arm = 1; b.textContent = txt;
-      const tid = setTimeout(() => { b.dataset.arm = ''; b.textContent = o; activeTimers.delete(b); }, 3500);
-      activeTimers.set(b, tid);
-      return;
-    }
-    b.dataset.arm = ''; b.textContent = o; activeTimers.delete(b); fn();
+    if (confirmado(e.target, txt)) fn();
   };
 };
 
@@ -144,7 +155,9 @@ $('#dt').onchange = e => {
 $('#bi-dt').onchange = () => carregarBI();
 $('#bi-flt-eq').onchange = () => rBI();
 $('#flt-dem-mis').onchange = applyDemandFilters;
-$('#flt-ins-lv').onchange = applyInstructorFilters;
+preencherFiltroDeHabilitacoes();
+$('#flt-dem-mis').insertAdjacentHTML('beforeend', Object.keys(MIS).map(m => `<option value="${m}">${m}</option>`).join(''));
+$('#flt-ins-hab').onchange = applyInstructorFilters;
 $('#flt-esc-eq').onchange = () => rOut(false);
 
 $('#btn-theme').onclick = () => {
@@ -174,7 +187,8 @@ armed('#btn-bi-sim', 'Confirmar simulação', async () => {
   let seed = 42;
   const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const pick = a => a[Math.floor(rnd() * a.length)];
-  const allMis = Object.keys(MIS);
+  // Só missões que algum instrutor ativo pode fazer (sem checadores cadastrados, não há voo de cheque simulado)
+  const allMis = Object.keys(MIS).filter(m => S.ins.some(x => x.on && MIS[m].eq.some(eq => podeFazer(x, m, eq))));
   const stuPool = S.stu.length ? S.stu : Array.from({ length: 15 }, (_, i) => ({ nm: pad(i) }));
 
   for (let dayOffset = 0; dayOffset < 30; dayOffset++) {
@@ -193,10 +207,10 @@ armed('#btn-bi-sim', 'Confirmar simulação', async () => {
         : (mis === 'Parafuso' && eqType === 'C152')
           ? ACROBAT_REG
           : pick(EQ[eqType].filter(r => r !== ACROBAT_REG));
-      const minLv = reqInsLevel(mis, eqType);
+      // Grounds simulados com os instrutores menos habilitados (como os A01–A02 de antes)
       const qualIns = isGnd
-        ? S.ins.filter(x => x.lv === 1 || x.lv === 2)
-        : S.ins.filter(x => x.lv >= minLv);
+        ? S.ins.filter(x => podeFazer(x, mis, eqType) && x.hab.length <= habilitacoesDoNivel(2).length)
+        : S.ins.filter(x => podeFazer(x, mis, eqType));
       const ins = pick(qualIns.length ? qualIns : S.ins);
       const stu = pick(stuPool);
       const h = isGnd ? GROUND_DURATION_H : 1 + Math.floor(rnd() * 3);
@@ -207,10 +221,10 @@ armed('#btn-bi-sim', 'Confirmar simulação', async () => {
         classKey: isGnd ? `SIM_${iso}_${mis}_${w}_${ins.id}` : `SIM_${iso}_${f}`,
         w, a: T[w], b: T[w] + durMin,
         s: stu.nm, mis, h, ss: '1/1',
-        r: reg, eqType, ins: ins.nm, lv: ins.lv, status: 'Confirmado'
+        r: reg, eqType, ins: ins.nm, status: 'Confirmado'
       });
     }
-    await ApiClient.backend.gravar(`dia:${iso}`, { simulado: true, resultado: { out: flights, al: [], tot: numFlights, rej: 0, data: iso } });
+    await ApiClient.backend.gravar(`dia:${iso}`, { simulado: true, resultado: { out: flights, al: [], tot: numFlights, rej: 0, data: iso }, esquema: ESQUEMA });
   }
   await carregarBI();
   showToast('Histórico de 30 dias simulado.');
@@ -224,9 +238,94 @@ armed('#btn-bi-clr', 'Confirmar limpeza', async () => {
   showToast('Dias simulados removidos do BI.');
 });
 
+// Agenda: o calendário é livre para navegar (inclusive para o Gestor)
+document.addEventListener('click', e => {
+  const cal = e.target.closest('[data-cal]');
+  if (!cal) return;
+  if (cal.dataset.cal === 'mes') mudarMes(+cal.dataset.delta);
+  else escolherDia(cal.dataset.dia);
+});
+
+// Demanda: traz os pedidos da agenda da secretaria para a data aberta (só acrescenta; não importa o mesmo pedido de novo)
+$('#importar-agenda').onclick = async () => {
+  if (isGestor()) return;
+  let solicitacoes;
+  try {
+    solicitacoes = await ApiClient.agenda(DATA, DATA);
+  } catch (e) {
+    showToast('Não foi possível ler a agenda. Verifique a conexão e tente de novo.');
+    return;
+  }
+  const pendentes = solicitacoes.filter(s => !s.cancelada_em && !S.importadas.includes(s.id));
+  if (!pendentes.length) {
+    showToast(`Nenhum pedido novo na agenda para ${DATA.slice(8, 10)}/${DATA.slice(5, 7)}.`);
+    return;
+  }
+  pushHistory();
+  const resumo = importarSolicitacoes(S, pendentes);
+  pendentes.filter(s => S.stu.some(x => x.id === s.aluno)).forEach(s => {
+    logChange('inc', `Agenda: ${s.aluno_nome} incluído (${s.missao} · ${rotuloDaDisponibilidade(disponibilidadeDaSolicitacao(s))})`);
+  });
+  save(); rDem();
+  if (RES) gen(false);
+  showToast(`${resumo.novos + resumo.atualizados} pedido(s) da agenda na demanda` +
+    (resumo.semAluno ? ` · ${resumo.semAluno} de aluno que não está mais no cadastro` : '') + '.');
+};
+
+// Agenda: registrar um pedido (pela exceção da coordenação, fora do prazo) e cancelar (com confirmação)
+async function registrarPedido(excecao) {
+  if (!podeEditarAgenda()) return;
+  $('#ag-erro').textContent = '';
+  const aluno = S.stu.find(s => s.id === +$('#ag-aluno').value);
+  const por = $('#ag-por').value.trim();
+  if (!aluno || !por) {
+    $('#ag-erro').textContent = 'Escolha o aluno e informe quem anotou o pedido (“Registrado por”).';
+    return;
+  }
+  const janela = $('#ag-janela').value;
+  try {
+    await ApiClient.registrarSolicitacao({
+      data: diaDaAgenda(), aluno: aluno.id, aluno_nome: aluno.nm, missao: $('#ag-missao').value, janela,
+      horario: janela === 'horario' ? $('#ag-horario').value : null, observacao: $('#ag-obs').value, registrado_por: por, excecao
+    });
+  } catch (err) {
+    $('#ag-erro').textContent = {
+      PT403: 'Prazo encerrado: pedido para o dia seguinte só até as 13:00 do dia anterior.',
+      42501: 'Esta conta não pode registrar este pedido (a Exceção da Coordenação é só para operadores).',
+      23514: 'Pedido incompleto: confira aluno, missão, disponibilidade e quem anotou.'
+    }[err.code] || 'Não foi possível registrar o pedido. Verifique a conexão e tente de novo.';
+    return;
+  }
+  lembrarRegistradoPor(por);
+  $('#ag-obs').value = '';
+  $('#ag-aluno').value = '';
+  showToast(excecao ? 'Pedido registrado pela Exceção da Coordenação.' : 'Pedido registrado.');
+  await carregarMes();
+}
+$('#form-agenda').onsubmit = e => { e.preventDefault(); registrarPedido(false); };
+$('#ag-excecao').onclick = () => registrarPedido(true);
+$('#ag-janela').onchange = () => { $('#ag-horario-rotulo').hidden = $('#ag-janela').value !== 'horario'; };
+
+async function cancelarPedido(b) {
+  if (!podeEditarAgenda() || !confirmado(b, 'Confirmar cancelamento')) return;
+  const por = $('#ag-por').value.trim();
+  if (!por) {
+    $('#ag-erro').textContent = 'Informe seu nome em “Registrado por” para cancelar o pedido.';
+    return;
+  }
+  try {
+    await ApiClient.cancelarSolicitacao(+b.dataset.id, por);
+    showToast('Pedido cancelado.');
+  } catch (err) {
+    $('#ag-erro').textContent = 'Não foi possível cancelar o pedido. Verifique a conexão e tente de novo.';
+  }
+  await carregarMes();
+}
+
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]');
   if (!b) return;
+  if (b.dataset.act === 'cancelar-pedido') { cancelarPedido(b); return; }
   if (isGestor()) { e.preventDefault(); return; }
   const a = b.dataset.act, c = b.closest('[data-k]'), id = c ? +c.dataset.id : +b.dataset.id || 0;
   const mid = b.dataset.mid !== undefined ? +b.dataset.mid : (c && c.dataset.mid !== undefined ? +c.dataset.mid : 0);
@@ -315,9 +414,38 @@ document.addEventListener('click', e => {
     return;
   }
 
+  // Rodízio: ajusta a posição de um instrutor na fila da categoria (na data aberta)
+  if (a === 'fila-subir' || a === 'fila-descer' || a === 'fila-inicio') {
+    pushHistory();
+    const cat = b.dataset.cat, insId = +b.dataset.id;
+    S.filas = ajustarFilas(S.filas, S.ins);
+    const fila = S.filas[cat].filter(x => x !== insId);
+    const antes = S.filas[cat].indexOf(insId);
+    const depois = a === 'fila-inicio' ? 0 : Math.max(0, Math.min(fila.length, antes + (a === 'fila-subir' ? -1 : 1)));
+    fila.splice(depois, 0, insId);
+    S.filas[cat] = fila;
+    const categoria = CATEGORIAS_DO_RODIZIO.find(c => c.id === cat);
+    logChange('mod', `Rodízio · ${categoria.nome}: ${insBy(insId).nm} passou para ${depois + 1}º`);
+    save();
+    if (RES) gen(false);
+    rRodizio();
+    return;
+  }
+
+  // Revisão de 50 horas feita: as horas do avião desde a última revisão voltam a zero (pede confirmação)
+  if (a === 'revisao') {
+    if (isGestor() || !confirmado(b, 'Confirmar revisão')) return;
+    pushHistory();
+    S.horas[b.dataset.id] = 0;
+    logChange('mod', `${b.dataset.id}: revisão de 50 horas feita (horas zeradas)`);
+    save(); rRec();
+    if (RES) gen(false);
+    return;
+  }
+
   if (a === 'addi') {
     pushHistory();
-    const newIns = { id: S.nid++, nm: 'Novo instrutor', on: true, lv: 1, kg: 0, aw: WIN.map((_, i) => i < 8) };
+    const newIns = { id: S.nid++, nm: 'Novo instrutor', on: true, hab: habilitacoesDoNivel(1), kg: 0, aw: WIN.map((_, i) => i < 8) };
     S.ins.push(newIns);
     save(); rIns(); rAlu(); focusLast('#inst .nm');
     logChange('inc', `Instrutor adicionado: ${newIns.nm}`);
@@ -404,6 +532,13 @@ document.addEventListener('change', e => {
       logChange(t.checked ? 'inc' : 'exc', `${reg}: ${t.checked ? 'Disponível' : 'Manutenção'}`, {
         kind: 'setAv', reg, val: !t.checked, label: '↶ Reverter'
       });
+    } else if (a === 'horas') {
+      // Horas desde a última revisão de 50 horas; vazio: sem controle para o avião
+      const reg = t.dataset.id;
+      const horas = t.value === '' ? null : Math.round(Math.max(0, +t.value) * 10) / 10;
+      if (horas === null || Number.isNaN(horas)) delete S.horas[reg];
+      else S.horas[reg] = horas;
+      logChange('mod', `${reg}: ${horas === null || Number.isNaN(horas) ? 'horas desde a revisão não informadas' : fmtH(horas) + ' desde a última revisão de 50 horas'}`);
     }
     save(); rRec();
     if (RES) gen(false);
@@ -430,9 +565,10 @@ document.addEventListener('change', e => {
     } else if (f === 'kg') {
       x.kg = +t.value || 0;
       logChange('mod', `Peso ${x.nm}: ${x.kg} kg`);
-    } else if (f === 'lv') {
-      x.lv = +t.value;
-      logChange('mod', `Nível ${x.nm}: ${A(x.lv)}`);
+    } else if (f === 'hab') {
+      const h = t.dataset.h;
+      x.hab = normalizarHabilitacoes(t.checked ? [...x.hab, h] : x.hab.filter(k => k !== h));
+      logChange('mod', `Habilitação ${t.checked ? 'incluída' : 'retirada'}: ${x.nm} · ${nomeDaHabilitacao(h)}`);
     } else if (f === 'aw') {
       x.aw[+t.dataset.w] = t.checked;
     } else if (f === 'pre') {
@@ -470,6 +606,11 @@ document.addEventListener('change', e => {
           `${s.nm} ${target.fly ? 'incluído' : 'retirado'} (${target.mis} · ${target.eq} · ${fmtDurLabel(target.nb)})`,
           { kind: 'setFly', stuId: s.id, mid, val: !target.fly, label: target.fly ? '✕ Excluir' : '↶ Restaurar' }
         );
+      } else if (f === 'jan') {
+        // Disponibilidade do aluno: o voo só começa nessas janelas (vazio: qualquer horário)
+        if (t.value) target.jan = t.value;
+        else delete target.jan;
+        logChange('mod', `Pedido ${s.nm}: disponibilidade ${rotuloDaDisponibilidade(target.jan)} (${target.mis})`);
       } else {
         target[f] = (f === 'mis' || f === 'eq') ? t.value : +t.value;
         if (f === 'mis') {
@@ -517,21 +658,32 @@ document.addEventListener('change', e => {
   const amanha = amanhaISO();
   abrirData(amanha);
 
-  // No site publicado os dados ficam no Supabase, com login; em localhost, no modo local
-  const projeto = projetoSupabase();
-  if (projeto && !(await iniciarSessaoSupabase(projeto))) return;
-
-  // Primeira abertura com a escala por data: converte os documentos da fase 2 (do servidor ou deste navegador)
-  await ApiClient.migrarDocumentosAntigos(amanha);
-
   const params = new URLSearchParams(window.location.search);
   const pedida = params.get('data');
   const data = /^\d{4}-\d{2}-\d{2}$/.test(pedida || '') ? pedida : amanha;
-  abrirData(data);
-  const { estado, escala } = await ApiClient.carregarDia(data);
-  setS(estado);
-  setRES(escala);
-  setAuditLog(await historicoParaPainel(data));
+
+  // Sessão e dados. Se algo falhar (sem conexão, conversão pela metade), o app não abre com dados incompletos:
+  // fica o aviso para recarregar (nada se perde; o que faltou é retomado na próxima abertura)
+  try {
+    // No site publicado os dados ficam no Supabase, com login; em localhost, no modo local
+    const projeto = projetoSupabase();
+    if (projeto && !(await iniciarSessaoSupabase(projeto))) return;
+
+    // Primeira abertura com a escala por data: converte os documentos da fase 2 (do servidor ou deste navegador).
+    // Depois de uma mudança no formato dos dados, regrava no formato atual o que estiver num formato anterior
+    await ApiClient.migrarDocumentosAntigos(amanha);
+    await ApiClient.atualizarFormatoGravado();
+
+    abrirData(data);
+    const { estado, escala } = await ApiClient.carregarDia(data);
+    setS(estado);
+    setRES(escala);
+    setAuditLog(await historicoParaPainel(data));
+  } catch (e) {
+    console.warn(e);
+    if (avisoAberto() !== 'conflito') mostrarAviso('falha', 'Não foi possível preparar os dados da escala. Verifique a conexão e recarregue a página; nada foi perdido.');
+    return;
+  }
 
   // No modo compartilhado os dados vêm do servidor e o perfil vem da conta: share= e role= da URL não valem
   const compartilhado = modoCompartilhado();
@@ -546,6 +698,13 @@ document.addEventListener('change', e => {
   }
 
   rRec(); rIns(); rAlu(); rDem(); renderAuditPanel();
+  document.body.dataset.agenda = podeEditarAgenda() ? 'edita' : 'consulta';
+
+  // A Secretaria trabalha na agenda: o app abre nela
+  if (ApiClient.perfil === 'secretaria') {
+    show('age');
+    abrirAgenda();
+  }
 
   if (sharedDate) {
     abrirData(sharedDate);

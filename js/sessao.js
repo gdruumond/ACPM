@@ -4,19 +4,10 @@ import { ApiClient } from './storage.js';
 import { criarBackendSupabase } from './backends/supabase.js';
 import { backendLocal } from './backends/local.js';
 import { setRole } from './actions.js';
-import { $ } from './dom.js';
+import { $, mostrarAviso, avisoAberto, fecharAviso } from './dom.js';
 import { amanhaISO } from './format.js';
 
-const ROTULO = { operador: 'Operador', gestor: 'Gestor' };
-
-// Aviso fixo no topo: o conflito só sai recarregando; o erro de gravação some quando uma gravação der certo
-let avisoAtual = null;
-function mostrarAviso(tipo, texto) {
-  avisoAtual = tipo;
-  $('#aviso-sync-texto').textContent = texto;
-  $('#aviso-sync').hidden = false;
-  $('#btn-recarregar').onclick = () => window.location.reload();
-}
+const ROTULO = { operador: 'Operador', gestor: 'Gestor', secretaria: 'Secretaria' };
 
 function pedirLogin(cliente) {
   document.body.dataset.login = 'sim';
@@ -66,8 +57,9 @@ async function oferecerEnvioDosDadosLocais() {
   await ApiClient.migrarDocumentosAntigos(amanhaISO(), backendLocal);
 }
 
+// Sai só deste navegador (o padrão do Supabase encerra as sessões da conta em todos os aparelhos)
 async function sair(cliente) {
-  await cliente.auth.signOut();
+  await cliente.auth.signOut({ scope: 'local' });
   window.location.reload();
 }
 
@@ -92,8 +84,8 @@ export async function iniciarSessaoSupabase(projeto) {
   delete document.body.dataset.login;
   ApiClient.backend = criarBackendSupabase(cliente, {
     aoConflito: () => mostrarAviso('conflito', 'Outra pessoa alterou a escala enquanto você editava. Recarregue para ver a versão atual; a sua última alteração não foi salva.'),
-    aoErro: () => { if (avisoAtual !== 'conflito') mostrarAviso('erro', 'Não foi possível salvar a última alteração. Verifique a conexão: a próxima alteração tentará salvar de novo.'); },
-    aoGravar: () => { if (avisoAtual === 'erro') { avisoAtual = null; $('#aviso-sync').hidden = true; } }
+    aoErro: () => { if (avisoAberto() !== 'conflito') mostrarAviso('erro', 'Não foi possível salvar a última alteração. Verifique a conexão: a próxima alteração tentará salvar de novo.'); },
+    aoGravar: () => fecharAviso('erro')
   });
   $('#btn-share-link').title = 'Copiar o link da escala desta data (quem abrir entra com a própria conta)';
   $('#usuario').textContent = `${perfil.nome || sessao.user.email} · ${ROTULO[perfil.perfil]}`;
@@ -101,7 +93,9 @@ export async function iniciarSessaoSupabase(projeto) {
   $('#btn-sair').hidden = false;
   $('#btn-sair').onclick = () => sair(cliente);
   ApiClient.autorAtual = perfil.nome || sessao.user.email;
-  setRole(perfil.perfil, perfil.perfil === 'gestor');
+  // Gestor e Secretaria só consultam a escala; a Secretaria registra pedidos na agenda
+  ApiClient.perfil = perfil.perfil;
+  setRole(perfil.perfil === 'operador' ? 'operador' : 'gestor', perfil.perfil !== 'operador');
   if (perfil.perfil === 'operador') await oferecerEnvioDosDadosLocais();
   delete document.body.dataset.login;
   return true;

@@ -33,9 +33,11 @@
     <button data-t="rec" class="on">1 · Recursos</button>
     <button data-t="ins">2 · Instrutores</button>
     <button data-t="alu">3 · Alunos</button>
-    <button data-t="dem">4 · Demanda</button>
-    <button data-t="esc">5 · Escala</button>
-    <button data-t="bi">6 · BI</button>
+    <button data-t="age">4 · Agenda</button>
+    <button data-t="dem">5 · Demanda</button>
+    <button data-t="esc">6 · Escala</button>
+    <button data-t="rod">7 · Rodízio</button>
+    <button data-t="bi">8 · BI</button>
   </nav>
 </header>
 
@@ -75,6 +77,7 @@
       <div class="chips" id="wins"></div>
     </div>
     <div id="eqs"></div>
+    <div id="revisao"></div>
     <div class="bar"><button class="btn" data-go="ins">Próximo: Instrutores →</button></div>
   </section>
 
@@ -84,17 +87,8 @@
     <div class="bar">
       <button class="btn edit-only" data-act="addi">+ Novo instrutor</button>
       <input type="search" class="flt-ctrl" data-flt="inst" placeholder="Buscar instrutor…" aria-label="Buscar instrutor">
-      <select id="flt-ins-lv" class="flt-ctrl" aria-label="Filtrar por nível">
-        <option value="">Todos os níveis</option>
-        <option value="1">A01+ (Local C152 / Todos os Grounds)</option>
-        <option value="2">A02+ (Simulador)</option>
-        <option value="3">A03+ (TGL)</option>
-        <option value="4">A04+ (Navegação)</option>
-        <option value="5">A05+ (Voo Solo)</option>
-        <option value="6">A06+ (Parafuso)</option>
-        <option value="7">A07+ (C172 / Noturno)</option>
-        <option value="8">A08+ (IFR)</option>
-        <option value="9">A09 (PA-34 Sêneca)</option>
+      <select id="flt-ins-hab" class="flt-ctrl" aria-label="Filtrar por habilitação">
+        <option value="">Todas as habilitações</option>
       </select>
     </div>
     <div class="grid g2" id="inst"></div>
@@ -113,28 +107,40 @@
   </section>
 
   <!-- ABA 4: DEMANDA -->
+  <section id="s-age">
+    <h2>Agenda de Solicitações</h2>
+    <p class="h" id="agenda-prazo"></p>
+    <div class="agenda">
+      <div class="pn" id="agenda-cal"></div>
+      <div class="pn">
+        <h3 id="agenda-data"></h3>
+        <form id="form-agenda" autocomplete="off">
+          <label>Aluno<select id="ag-aluno" class="agenda-campo" required></select></label>
+          <label>Fase / missão<select id="ag-missao" class="agenda-campo"></select></label>
+          <label>Disponibilidade<select id="ag-janela" class="agenda-campo"></select></label>
+          <label id="ag-horario-rotulo" hidden>Horário<select id="ag-horario" class="agenda-campo"></select></label>
+          <label>Registrado por<input id="ag-por" class="agenda-campo" maxlength="80" required placeholder="Quem anotou o pedido"></label>
+          <label>Observação<input id="ag-obs" class="agenda-campo" maxlength="300" placeholder="Opcional"></label>
+          <button class="btn" type="submit">Registrar pedido</button>
+          <button class="x" type="button" id="ag-excecao" hidden title="Registra fora do prazo das 13:00 (fica marcado para auditoria)">Exceção da Coordenação</button>
+          <p id="ag-erro" role="alert"></p>
+        </form>
+        <div class="tw" id="agenda-lista"></div>
+      </div>
+    </div>
+  </section>
+
   <section id="s-dem">
     <h2>Demanda</h2>
     <div class="bar">
       <button class="btn edit-only" id="gen">Gerar escala</button>
+      <button class="btn sec edit-only" id="importar-agenda" title="Traz os pedidos da agenda da secretaria para esta data (só acrescenta; não repete)">Importar Solicitações da Agenda</button>
       <button class="btn sec edit-only" id="demo">Preencher exemplo</button>
       <button class="btn sec edit-only" id="clr">Limpar demanda</button>
       <label class="chip"><input type="checkbox" id="onlyfly"> Só quem voa</label>
       <input type="search" id="flt-dem" class="flt-ctrl" placeholder="Buscar aluno…" aria-label="Filtrar aluno na demanda">
       <select id="flt-dem-mis" class="flt-ctrl" aria-label="Filtrar por missão">
         <option value="">Todas as missões</option>
-        <option value="Ground C152">Ground C152</option>
-        <option value="Ground C172">Ground C172</option>
-        <option value="Ground PA-34">Ground PA-34</option>
-        <option value="Ground Navegação">Ground Navegação</option>
-        <option value="Simulador">Simulador</option>
-        <option value="Voo Local">Voo Local</option>
-        <option value="Navegação">Navegação</option>
-        <option value="Voo Solo">Voo Solo</option>
-        <option value="Parafuso">Parafuso</option>
-        <option value="IFR">IFR</option>
-        <option value="Noturno">Noturno</option>
-        <option value="Multimotor">Multimotor</option>
       </select>
       <span id="cnt" class="h"></span>
     </div>
@@ -148,6 +154,7 @@
             <th>Equipamento</th>
             <th>Início pref. 1</th>
             <th>Início pref. 2</th>
+            <th>Disponibilidade</th>
             <th>Horas</th>
             <th>Sessões</th>
             <th>Prioridade</th>
@@ -193,7 +200,7 @@
     </details>
 
     <div id="out">
-      <p class="h">Ainda não há escala. Marque quem vai voar em “4 · Demanda” e clique em “Gerar escala”.</p>
+      <p class="h">Ainda não há escala. Marque quem vai voar em “5 · Demanda” e clique em “Gerar escala”.</p>
     </div>
     <div id="csvbox" hidden>
       <p class="h">Copie o texto abaixo e salve como .csv:</p>
@@ -202,6 +209,12 @@
   </section>
 
   <!-- ABA 6: DASHBOARD BUSINESS INTELLIGENCE (BI) + MANUAL DO USUÁRIO -->
+  <section id="s-rod">
+    <h2>Rodízio</h2>
+    <p class="h">Filas das escalas que remuneram melhor, entre os instrutores habilitados. Cada voo da categoria vai para o primeiro da fila que estiver livre (no mesmo dia, quem ainda não voou nela vem antes de quem já voou). Quem voar na categoria vai para o fim da fila na data seguinte; voo cancelado não conta. Use os botões para ajustar a ordem, por exemplo quando um voo foi cancelado pela meteorologia.</p>
+    <div id="rodizio" class="rodizio"></div>
+  </section>
+
   <section id="s-bi">
     <h2>Dashboard BI</h2>
     <div class="bar">
@@ -282,7 +295,7 @@
         <div class="manual-card">
           <h4>5. Múltiplas Missões no Dia por Aluno</h4>
           <ul>
-            <li><b>Botão “+ Missão”:</b> Na aba <i>4 · Demanda</i>, clique em <b>+ Missão</b> ao lado do nome do aluno para agendar Ground School + Voo(s) no mesmo dia (ex.: <i>Ground Navegação</i> às 06:30 + <i>Navegação</i> de 3h às 08:20 + <i>Noturno</i> às 17:30).</li>
+            <li><b>Botão “+ Missão”:</b> Na aba <i>5 · Demanda</i>, clique em <b>+ Missão</b> ao lado do nome do aluno para agendar Ground School + Voo(s) no mesmo dia (ex.: <i>Ground Navegação</i> às 06:30 + <i>Navegação</i> de 3h às 08:20 + <i>Noturno</i> às 17:30).</li>
             <li><b>Proteção contra Autoconflito:</b> O motor verifica a agenda do próprio aluno no dia para garantir que suas missões não se sobreponham e que o voo ocorra após o Ground correspondente.</li>
           </ul>
         </div>

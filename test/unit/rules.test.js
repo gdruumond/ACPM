@@ -1,8 +1,9 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  isGroundMission, reqInsLevel, doesGroundGateFlight, migrateLegacyMissionName, normalizeMissionFields, blank
+  isGroundMission, doesGroundGateFlight, migrateLegacyMissionName, normalizeMissionFields, blank, janelasDaDisponibilidade, rotuloDaDisponibilidade
 } from '../../js/rules.js';
+import { podeFazer, descreverExigencias } from '../../js/habilitacoes.js';
 
 describe('Regras de missão', () => {
   it('identifica as missões de Ground School', () => {
@@ -12,15 +13,6 @@ describe('Regras de missão', () => {
     );
   });
 
-  it('nível mínimo combina missão e equipamento (Ground sempre A01)', () => {
-    assert.equal(reqInsLevel('Ground PA-34', 'Sala Ground'), 1);
-    assert.equal(reqInsLevel('Voo Local', 'C152'), 1);
-    assert.equal(reqInsLevel('Voo Local', 'C172'), 7);
-    assert.equal(reqInsLevel('Navegação', 'PA-34'), 9);
-    assert.equal(reqInsLevel('Simulador', 'Sim. Multi'), 2);
-    assert.equal(reqInsLevel('IFR', 'C172'), 8);
-    assert.equal(reqInsLevel('Missão desconhecida', 'C152'), 1);
-  });
 
   it('Ground de aeronave libera voos naquele equipamento; Ground Navegação libera Navegação', () => {
     assert.equal(doesGroundGateFlight('Ground C152', { mis: 'Voo Local', eq: 'C152' }), true);
@@ -55,12 +47,28 @@ describe('Regras de missão', () => {
     assert.equal(isGroundMission('constructor'), false);
     assert.equal(migrateLegacyMissionName('constructor'), 'Voo Local');
     assert.equal(migrateLegacyMissionName('__proto__'), 'Voo Local');
-    assert.equal(reqInsLevel('toString', 'C152'), 1);
-    assert.equal(reqInsLevel('Voo Local', 'constructor'), 1);
+    assert.equal(descreverExigencias('toString', 'C152'), 'Voo Local');
+    assert.equal(descreverExigencias('Simulador', 'constructor'), 'Simulador (Mono)');
+    assert.equal(podeFazer({ hab: ['local'] }, 'Voo Local', 'constructor'), true);
     assert.equal(doesGroundGateFlight('constructor', { mis: 'Voo Local', eq: 'C152' }), false);
     const pedido = { mis: 'constructor', eq: 'valueOf', p1: 1, p2: 2, nb: 1, ss: 1 };
     normalizeMissionFields(pedido);
     assert.deepEqual([pedido.mis, pedido.eq], ['Voo Local', 'C152']);
+  });
+
+  it('disponibilidade do aluno: em que janelas o voo pode começar', () => {
+    assert.equal(janelasDaDisponibilidade(''), null);
+    assert.equal(janelasDaDisponibilidade(undefined), null);
+    assert.deepEqual(janelasDaDisponibilidade('manha'), [0, 1, 2, 3]);
+    assert.deepEqual(janelasDaDisponibilidade('tarde'), [4, 5, 6, 7]);
+    assert.deepEqual(janelasDaDisponibilidade('noite'), [8]);
+    assert.deepEqual(janelasDaDisponibilidade('h5'), [5]);
+    assert.equal(janelasDaDisponibilidade('h9'), null);
+    assert.equal(janelasDaDisponibilidade('constructor'), null);
+    assert.deepEqual(['manha', 'tarde', 'noite', 'h5'].map(rotuloDaDisponibilidade), ['Manhã', 'Tarde', 'Noite', 'às 13:40']);
+    const pedido = { mis: 'Voo Local', eq: 'C152', p1: 1, p2: 2, nb: 1, ss: 1, jan: 'xyz' };
+    normalizeMissionFields(pedido);
+    assert.equal(Object.hasOwn(pedido, 'jan'), false, 'disponibilidade inválida sai do pedido');
   });
 
   it('pedido em branco é um objeto novo a cada chamada', () => {

@@ -12,7 +12,6 @@ export const fmtH = v => {
 export const fmtDurLabel = h => (+h === 1.5 ? '01h30 (1,5 h)' : `${h} h`);
 
 export const pad = i => 'Aluno ' + String(i + 1).padStart(2, '0');
-export const A = n => 'A0' + n;
 
 // Datas no formato AAAA-MM-DD
 export const amanhaISO = () => {

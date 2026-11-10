@@ -1,43 +1,49 @@
 {
   "resumo": [
     "22 h No Dia (11/11/2026) 16 voos/aulas ativas",
-    "211,5 h Na Semana (7d) 117 voos/aulas ativas",
-    "314 h No Mês (11/2026) 11 dias registrados",
+    "205,5 h Na Semana (7d) 108 voos/aulas ativas",
+    "343,5 h No Mês (11/2026) 11 dias registrados",
     "26/26 Frota Ativa 40/40 instrutores"
   ],
   "tabelas": [
     [
-      "PR-BUL C172 1 h 17 h 26 h",
-      "PP-ABP C172 1 h 18 h 18 h",
-      "PP-AJS C172 1 h 16 h 18 h",
-      "PR-CPL C172 0 h 5 h 9 h",
-      "PR-HAR C172 0 h 4 h 7 h",
-      "PR-VOY C172 0 h 2 h 2 h"
+      "PR-BUL C172 0 h 18 h 24 h",
+      "PR-HAR C172 0 h 14 h 20 h",
+      "PR-VOY C172 0 h 7 h 18 h",
+      "PP-AJS C172 2 h 14 h 17 h",
+      "PR-CPL C172 0 h 9 h 12 h",
+      "PP-ABP C172 1 h 4 h 10 h"
     ],
     [
-      "Instrutor 09 A09 2 h 25 h 37 h",
-      "Instrutor 01 A01 2,5 h 5,5 h 13 h",
-      "Instrutor 07 A07 1 h 8 h 8 h",
-      "Instrutor 05 A05 2 h 5 h 7 h",
-      "Instrutor 08 A08 1 h 4 h 5 h",
-      "Instrutor 02 A02 0 h 1,5 h 4,5 h",
-      "Instrutor 06 A06 0 h 4 h 4 h",
-      "Instrutor 04 A04 1 h 1 h 2 h",
-      "Instrutor 03 A03 0 h 0 h 0 h"
+      "Instrutor 09 2 h 21 h 40 h",
+      "Instrutor 07 1 h 14 h 16 h",
+      "Instrutor 01 2,5 h 4 h 11,5 h",
+      "Instrutor 08 2 h 6 h 8 h",
+      "Instrutor 05 2 h 5 h 8 h",
+      "Instrutor 02 0 h 4,5 h 6 h",
+      "Instrutor 03 0 h 3 h 3 h",
+      "Instrutor 04 1 h 1 h 1 h",
+      "Instrutor 06 0 h 0 h 0 h"
     ],
     [
-      "Ground C152 Sala Ground A01+ 1,5 h 4,5 h 13,5 h",
-      "Ground C172 Sala Ground A01+ 0 h 9 h 19,5 h",
-      "Ground PA-34 Sala Ground A01+ 1,5 h 13,5 h 18 h",
-      "Ground Navegação Sala Ground A01+ 0 h 10,5 h 18 h",
-      "Simulador Sim. Mono / Sim. Multi A02+ 0 h 9 h 13 h",
-      "Voo Local C152 / C172 / PA-34 A01+ 6 h 39 h 55 h",
-      "Navegação C152 / C172 / PA-34 A04+ 3 h 35 h 50 h",
-      "Voo Solo C152 / C172 / PA-34 A05+ 4 h 12 h 19 h",
-      "Parafuso C152 (PR-JPL) / C172 / PA-34 A06+ 1 h 24 h 31 h",
-      "IFR C172 / PA-34 A08+ 1 h 23 h 40 h",
-      "Noturno C172 A07+ 2 h 16 h 17 h",
-      "Multimotor PA-34 A09+ 2 h 16 h 20 h"
+      "Ground C152 Sala Ground 1,5 h 1,5 h 10,5 h",
+      "Ground C172 Sala Ground 0 h 3 h 10,5 h",
+      "Ground PA-34 Sala Ground 1,5 h 13,5 h 25,5 h",
+      "Ground Navegação Sala Ground 0 h 10,5 h 21 h",
+      "Simulador Sim. Mono / Sim. Multi 0 h 17 h 29 h",
+      "Voo Local C152 / C172 / PA-34 6 h 30 h 50 h",
+      "TGL (TMA) C152 / C172 / PA-34 0 h 13 h 18 h",
+      "Navegação C152 / C172 / PA-34 3 h 33 h 47 h",
+      "Voo Solo C152 / C172 / PA-34 4 h 18 h 31 h",
+      "Parafuso C152 (PR-JPL) / C172 / PA-34 1 h 10 h 16 h",
+      "IFR C172 / PA-34 1 h 31 h 44 h",
+      "Noturno C172 2 h 11 h 16 h",
+      "Multimotor PA-34 2 h 14 h 25 h",
+      "Cheque PP C152 / C172 0 h 0 h 0 h",
+      "Cheque PC MNTE VFR C152 / C172 0 h 0 h 0 h",
+      "Cheque PC MNTE IFR C172 0 h 0 h 0 h",
+      "Cheque PC MLTE VFR PA-34 0 h 0 h 0 h",
+      "Cheque PC MLTE IFR PA-34 0 h 0 h 0 h"
     ]
   ]
 }

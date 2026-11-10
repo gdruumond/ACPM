@@ -1,86 +1,81 @@
 [
   {
-    "rotulo": "Instrutor 01 A01 · 2,5 h",
+    "rotulo": "Instrutor 01 2,5 h",
     "barras": [
       "06:30–08:00 · SALA-GROUND / Aluno 01 · Ground PA-34",
       "10:10–11:10 · PR-MLB / Aluno 03 · Voo Local"
     ]
   },
   {
-    "rotulo": "Instrutor 04 A04 · 1 h",
+    "rotulo": "Instrutor 04 1 h",
     "barras": [
       "08:20–09:20 · PR-THI / Aluno 17 · Navegação"
     ]
   },
   {
-    "rotulo": "Instrutor 05 A05 · 2 h",
+    "rotulo": "Instrutor 05 2 h",
     "barras": [
       "08:20–10:20 · PR-VOC / Aluno 16 · Voo Solo"
     ]
   },
   {
-    "rotulo": "Instrutor 07 A07 · 1 h",
+    "rotulo": "Instrutor 07 1 h",
     "barras": [
       "17:30–18:30 · PP-ABP / Aluno 01 · Noturno"
     ]
   },
   {
-    "rotulo": "Instrutor 08 A08 · 1 h",
+    "rotulo": "Instrutor 08 2 h",
     "barras": [
-      "11:30–12:30 · PP-AJS / Aluno 14 · IFR"
+      "11:30–12:30 · PP-AJS / Aluno 14 · IFR",
+      "17:30–18:30 · PP-AJS / Aluno 15 · Noturno"
     ]
   },
   {
-    "rotulo": "Instrutor 09 A09 · 2 h",
+    "rotulo": "Instrutor 09 2 h",
     "barras": [
       "08:20–10:20 · PR-VOM / Aluno 01 · Multimotor"
     ]
   },
   {
-    "rotulo": "Instrutor 10 A01 · 2,5 h",
+    "rotulo": "Instrutor 10 2,5 h",
     "barras": [
       "08:20–09:50 · Turma (6 alunos) / Ground C152: Aluno 02, Aluno 03, Aluno 04, Aluno 05, Aluno 06, Aluno 07",
       "10:10–11:10 · PR-TBT / Aluno 04 · Voo Local"
     ]
   },
   {
-    "rotulo": "Instrutor 13 A04 · 2 h",
+    "rotulo": "Instrutor 13 2 h",
     "barras": [
       "08:20–10:20 · PR-VOB / Aluno 12 · Navegação"
     ]
   },
   {
-    "rotulo": "Instrutor 15 A06 · 1 h",
+    "rotulo": "Instrutor 15 1 h",
     "barras": [
       "10:10–11:10 · PR-JPL / Aluno 08 · Parafuso"
     ]
   },
   {
-    "rotulo": "Instrutor 16 A07 · 1 h",
-    "barras": [
-      "17:30–18:30 · PR-BUL / Aluno 15 · Noturno"
-    ]
-  },
-  {
-    "rotulo": "Instrutor 19 A01 · 2 h",
+    "rotulo": "Instrutor 19 2 h",
     "barras": [
       "12:40–14:40 · PP-LJV / Aluno 10 · Voo Local"
     ]
   },
   {
-    "rotulo": "Instrutor 23 A05 · 2 h",
+    "rotulo": "Instrutor 23 2 h",
     "barras": [
       "12:40–14:40 · PR-VOI / Aluno 19 · Voo Solo"
     ]
   },
   {
-    "rotulo": "Instrutor 28 A01 · 1 h",
+    "rotulo": "Instrutor 28 1 h",
     "barras": [
       "10:10–11:10 · PR-BTB / Aluno 20 · Voo Local"
     ]
   },
   {
-    "rotulo": "Instrutor 37 A01 · 1 h",
+    "rotulo": "Instrutor 37 1 h",
     "barras": [
       "10:10–11:10 · PR-IGU / Aluno 02 · Voo Local"
     ]

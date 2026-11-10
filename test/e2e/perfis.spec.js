@@ -16,7 +16,7 @@ test.describe('Perfis de acesso', () => {
     await expect(page.locator('#out .st-sel').first()).toBeDisabled();
     await irPara(page, 'ins');
     await expect(page.locator('[data-act="addi"]')).toBeHidden();
-    expect(await page.locator('#inst .cd [data-f="lv"]').first().evaluate(el => getComputedStyle(el).pointerEvents)).toBe('none');
+    expect(await page.locator('#inst .cd [data-f="hab"]').first().evaluate(el => getComputedStyle(el).pointerEvents)).toBe('none');
 
     await page.locator('#role-sel').selectOption('operador');
     await expect(page.locator('[data-act="addi"]')).toBeVisible();

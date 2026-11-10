@@ -1,10 +1,13 @@
 // Camada de acesso a dados: estado inicial, migrações de schema, persistência por um backend
 // (localStorage ou Supabase) e o link compartilhável que abre a escala no perfil Gestor.
-import { WIN, NI, EQ, DEFAULT_LIM, FLIGHT_STATUSES } from './config.js';
+import { WIN, NI, EQ, DEFAULT_LIM, FLIGHT_STATUSES, AIRCRAFT_EQ_TYPES } from './config.js';
 import { pad } from './format.js';
-import { blank, normalizeMissionFields } from './rules.js';
+import { blank, normalizeMissionFields, janelasDaDisponibilidade } from './rules.js';
 import { backendLocal, CHAVES_LOCAIS, CHAVE_LEGADA } from './backends/local.js';
 import { separar, juntar, diaPadrao, diaParaCopiar, converterLegado, biDosDias } from './dias.js';
+import { ESQUEMA, migrarCadastro, migrarDia, precisaMigrar, renomearSimulador } from './migracoes.js';
+import { habilitacoesDoNivel, normalizarHabilitacoes } from './habilitacoes.js';
+import { ajustarFilas, CATEGORIAS_DO_RODIZIO } from './rodizio.js';
 
 // Validação do link compartilhado: o conteúdo vem da URL, então só entram os tipos e as faixas que a interface produz
 const LIMITE = { instrutores: 200, alunos: 500, extras: 10, bloqueios: 50, matriculas: 100, nome: 80 };
@@ -13,10 +16,11 @@ const numero = (v, min, max, padrao) => (typeof v === 'number' && v >= min && v 
 const texto = (v, max = LIMITE.nome) => (typeof v === 'string' ? v.slice(0, max) : '');
 const lista = (v, max) => (Array.isArray(v) ? v.slice(0, max) : []);
 const id = v => inteiro(v, 1, Number.MAX_SAFE_INTEGER, null);
-const pedido = (mis, eq, p1, p2, nb, ss, pr) => ({
+const pedido = (mis, eq, p1, p2, nb, ss, pr, jan) => ({
   mis: texto(mis), eq: texto(eq),
   p1: inteiro(p1, -1, NI, -1), p2: inteiro(p2, -1, NI, -1),
-  nb: numero(nb, 1, 11, 1), ss: inteiro(ss, 1, 3, 1), pr: inteiro(pr, 1, 5, 3)
+  nb: numero(nb, 1, 11, 1), ss: inteiro(ss, 1, 3, 1), pr: inteiro(pr, 1, 5, 3),
+  ...(janelasDaDisponibilidade(jan) ? { jan } : {})
 });
 
 export const ApiClient = {
@@ -32,6 +36,8 @@ export const ApiClient = {
   autorAtual: null,
   // Link compartilhado: nada é gravado e a interface fica travada no perfil Gestor
   readOnly: false,
+  // Perfil da conta no modo compartilhado (operador, gestor ou secretaria); null no modo local
+  perfil: null,
 
   createFreshState() {
     const state = {
@@ -43,7 +49,9 @@ export const ApiClient = {
       // Sem cadastro: no modo compartilhado os instrutores e alunos vêm do servidor
       ins: [],
       stu: [],
-      fStatus: {}
+      fStatus: {},
+      horas: {},
+      importadas: []
     };
     Object.values(EQ).flat().forEach(r => state.av[r] = true);
     return state;
@@ -53,6 +61,8 @@ export const ApiClient = {
     if (!x || !Array.isArray(x.stu) || !Array.isArray(x.ins)) return this.createFreshState();
     x.lim = { ...DEFAULT_LIM };
     if (!x.fStatus) x.fStatus = {};
+    if (!x.horas || typeof x.horas !== 'object' || Array.isArray(x.horas)) x.horas = {};
+    if (!Array.isArray(x.importadas)) x.importadas = [];
     if (!x.nid || x.nid < 1000) x.nid = 1000;
 
     if (!x.schemaVer || x.schemaVer < 3) {
@@ -63,7 +73,8 @@ export const ApiClient = {
         on: old.on !== false,
         lv: old.lv >= 1 && old.lv <= 9 ? old.lv : 1,
         kg: old.kg > 0 ? old.kg : 0,
-        aw: Array.isArray(old.aw) && old.aw.length === WIN.length ? old.aw : WIN.map(() => true)
+        aw: Array.isArray(old.aw) && old.aw.length === WIN.length ? old.aw : WIN.map(() => true),
+        ...(Array.isArray(old.hab) ? { hab: old.hab } : {})
       }));
 
       const isDefaultPlaceholderList =
@@ -75,6 +86,12 @@ export const ApiClient = {
     }
 
     x.schemaVer = 4;
+
+    // Habilitações individuais (fase 4): quem só tem o nível A01–A09 recebe o que o nível permitia
+    x.ins.forEach(i => { i.hab = Array.isArray(i.hab) ? normalizarHabilitacoes(i.hab) : habilitacoesDoNivel(i.lv); });
+
+    // Filas do rodízio só com os instrutores habilitados (quem passou a ser habilitado entra no fim)
+    x.filas = ajustarFilas(x.filas, x.ins);
 
     x.stu.forEach(s => {
       normalizeMissionFields(s);
@@ -92,12 +109,15 @@ export const ApiClient = {
   // JSON do cadastro lido ou gravado por último: o cadastro só é regravado quando muda
   cadastroGravado: undefined,
 
-  // Estado e escala de uma data. Data sem escala começa com uma cópia do dia anterior (nada é gravado)
+  // Estado e escala de uma data. Data sem escala começa com uma cópia do dia anterior (nada é gravado).
+  // Dados num formato anterior chegam já no formato atual (o que está gravado é atualizado na próxima gravação)
   async carregarDia(data) {
-    const cadastro = await this.backend.ler('cadastro');
-    this.cadastroGravado = cadastro ? JSON.stringify(cadastro) : undefined;
-    const dia = await this.backend.ler(`dia:${data}`);
-    const base = dia || diaParaCopiar((await this.backend.diaAnterior(data) || {}).conteudo);
+    const guardado = await this.backend.ler('cadastro');
+    this.cadastroGravado = guardado ? JSON.stringify(guardado) : undefined;
+    const cadastro = migrarCadastro(guardado);
+    const dia = migrarDia(await this.backend.ler(`dia:${data}`));
+    const instrutores = (cadastro && cadastro.ins) || [];
+    const base = dia || diaParaCopiar(migrarDia((await this.backend.diaAnterior(data) || {}).conteudo), instrutores);
     const estado = this.normalizeAndMigrateState(juntar(cadastro || { nid: 1000, ins: [], stu: [] }, base || diaPadrao()));
     const escala = dia && dia.resultado && Array.isArray(dia.resultado.out) ? dia.resultado : null;
     return { estado, escala, novo: !dia };
@@ -105,7 +125,9 @@ export const ApiClient = {
 
   async salvarDia(data, estado, escala) {
     if (this.readOnly) return false;
-    const { cadastro, dia } = separar(estado);
+    const partes = separar(estado);
+    const cadastro = { ...partes.cadastro, esquema: ESQUEMA };
+    const dia = { ...partes.dia, esquema: ESQUEMA };
     const json = JSON.stringify(cadastro);
     const gravacoes = [];
     if (json !== this.cadastroGravado) {
@@ -127,13 +149,27 @@ export const ApiClient = {
     return this.backend.listarHistorico(data);
   },
 
+  // Agenda de solicitações (no modo compartilhado, o servidor decide quem registra: secretaria e operadores)
+  agenda(de, ate) {
+    return this.backend.listarSolicitacoes(de, ate);
+  },
+
+  registrarSolicitacao(dados) {
+    return this.backend.registrarSolicitacao(dados);
+  },
+
+  cancelarSolicitacao(id, por) {
+    return this.backend.cancelarSolicitacao(id, por);
+  },
+
   async biDoPeriodo(de, ate) {
-    return biDosDias(await this.backend.listarDias(de, ate));
+    return biDosDias((await this.backend.listarDias(de, ate)).map(d => ({ ...d, conteudo: migrarDia(d.conteudo) })));
   },
 
   // Converte os documentos da fase 2 (estado, escala, histórico e BI) para o formato por data, uma vez só.
   // A origem pode ser outro backend (envio dos dados do navegador). Os documentos antigos ficam como cópia;
   // dias que já existem não são sobrescritos e o cadastro é gravado por último (marca a migração como concluída).
+  // Se uma gravação falhar, para com erro antes do cadastro: a conversão é retomada na próxima abertura.
   async migrarDocumentosAntigos(dataPadrao, origem = this.backend) {
     if (this.readOnly || await this.backend.ler('cadastro')) return null;
     const estado = await origem.ler('estado');
@@ -146,12 +182,30 @@ export const ApiClient = {
     }, dataPadrao);
     for (const [data, conteudo] of Object.entries(plano.dias)) {
       if (await this.backend.ler(`dia:${data}`)) continue;
-      if (!await this.backend.gravar(`dia:${data}`, conteudo)) return null;
+      if (!await this.backend.gravar(`dia:${data}`, migrarDia(conteudo))) throw new Error(`A conversão dos dados não terminou (dia ${data}).`);
     }
     if (plano.historico.length) await this.backend.importarHistorico(plano.dataAtual, plano.historico);
-    if (!await this.backend.gravar('cadastro', plano.cadastro)) return null;
-    this.cadastroGravado = JSON.stringify(plano.cadastro);
+    const cadastro = migrarCadastro(plano.cadastro);
+    if (!await this.backend.gravar('cadastro', cadastro)) throw new Error('A conversão dos dados não terminou (cadastro).');
+    this.cadastroGravado = JSON.stringify(cadastro);
     return plano.dataAtual;
+  },
+
+  // Regrava no formato atual tudo o que está num formato anterior: todos os dias e, por último, o cadastro (que
+  // marca a atualização como concluída). Se uma gravação falhar, para com erro: é retomada na próxima abertura.
+  async atualizarFormatoGravado() {
+    if (this.readOnly) return false;
+    const cadastro = await this.backend.ler('cadastro');
+    if (!precisaMigrar(cadastro)) return false;
+    for (const { data } of await this.backend.listarDias('0001-01-01', '9999-12-31')) {
+      const dia = await this.backend.ler(`dia:${data}`);
+      if (!precisaMigrar(dia)) continue;
+      if (!await this.backend.gravar(`dia:${data}`, migrarDia(dia))) throw new Error(`A atualização dos dados não terminou (dia ${data}).`);
+    }
+    const novo = migrarCadastro(cadastro);
+    if (!await this.backend.gravar('cadastro', novo)) throw new Error('A atualização dos dados não terminou (cadastro).');
+    this.cadastroGravado = JSON.stringify(novo);
+    return true;
   },
 
   encodeShareableURL(state, dateStr) {
@@ -159,14 +213,18 @@ export const ApiClient = {
       d: dateStr,
       w: state.win.map(v => v ? 1 : 0),
       avOff: Object.keys(state.av).filter(k => !state.av[k]),
-      ins: state.ins.map(x => [x.id, x.nm, x.on ? 1 : 0, x.lv, x.kg, x.aw.map(a => a ? 1 : 0)]),
+      ins: state.ins.map(x => [x.id, x.nm, x.on ? 1 : 0, x.hab, x.kg, x.aw.map(a => a ? 1 : 0)]),
       st: state.fStatus || {},
+      // Revisão de 50 horas e filas do rodízio: quem abre o link gera a mesma escala
+      h: state.horas || {},
+      f: state.filas || {},
       fly: state.stu
         .filter(s => s.fly || (s.extra && s.extra.some(ex => ex.fly)))
         .map(s => [
           s.id, s.nm, s.kg, s.bl,
           s.fly ? 1 : 0, s.mis, s.eq, s.p1, s.p2, s.nb, s.ss, s.pr,
-          (s.extra || []).filter(ex => ex.fly).map(ex => [ex.mid, ex.mis, ex.eq, ex.p1, ex.p2, ex.nb, ex.ss, ex.pr])
+          (s.extra || []).filter(ex => ex.fly).map(ex => [ex.mid, ex.mis, ex.eq, ex.p1, ex.p2, ex.nb, ex.ss, ex.pr, ex.jan || '']),
+          s.jan || ''
         ])
     };
     const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(compact))));
@@ -189,12 +247,23 @@ export const ApiClient = {
         state.fStatus = Object.fromEntries(Object.entries(decoded.st)
           .filter(([fKey, st]) => /^\d+_\d+_\d+$/.test(fKey) && FLIGHT_STATUSES.includes(st)));
       }
+      if (decoded.h && typeof decoded.h === 'object') {
+        const avioes = AIRCRAFT_EQ_TYPES.flatMap(tipo => EQ[tipo]);
+        state.horas = Object.fromEntries(Object.entries(decoded.h)
+          .filter(([r, horas]) => avioes.includes(r) && typeof horas === 'number' && horas >= 0 && horas <= 60));
+      }
+      if (decoded.f && typeof decoded.f === 'object') {
+        state.filas = Object.fromEntries(CATEGORIAS_DO_RODIZIO.map(({ id: cat }) => [cat, lista(decoded.f[cat], LIMITE.instrutores).map(id).filter(x => x !== null)]));
+      }
       Object.keys(state.av).forEach(k => state.av[k] = true);
-      lista(decoded.avOff, LIMITE.matriculas).forEach(k => { if (Object.hasOwn(state.av, k)) state.av[k] = false; });
+      lista(decoded.avOff, LIMITE.matriculas).map(renomearSimulador).forEach(k => { if (Object.hasOwn(state.av, k)) state.av[k] = false; });
 
       if (Array.isArray(decoded.ins)) {
-        state.ins = lista(decoded.ins, LIMITE.instrutores).filter(Array.isArray).map(([insId, nm, on, lv, kg, aw]) => ({
-          id: id(insId), nm: texto(nm), on: Boolean(on), lv: inteiro(lv, 1, 9, 1), kg: numero(kg, 0, 300, 0),
+        // Habilitações: lista conhecida; links antigos trazem o nível A01–A09 no lugar
+        state.ins = lista(decoded.ins, LIMITE.instrutores).filter(Array.isArray).map(([insId, nm, on, hab, kg, aw]) => ({
+          id: id(insId), nm: texto(nm), on: Boolean(on),
+          hab: Array.isArray(hab) ? normalizarHabilitacoes(hab) : habilitacoesDoNivel(inteiro(hab, 1, 9, 1)),
+          kg: numero(kg, 0, 300, 0),
           aw: Array.isArray(aw) ? WIN.map((_, i) => Boolean(aw[i])) : WIN.map(() => true)
         })).filter(x => x.id !== null);
       } else if (Array.isArray(decoded.inOff)) {
@@ -214,9 +283,9 @@ export const ApiClient = {
           state.stu.push(target);
         }
         if (row.length >= 12) {
-          const [, , , , flyFlag, mis, eq, p1, p2, nb, ss, pr, extraArr] = row;
+          const [, , , , flyFlag, mis, eq, p1, p2, nb, ss, pr, extraArr, jan] = row;
           Object.assign(target, cadastro, {
-            fly: Boolean(flyFlag), ...pedido(mis, eq, p1, p2, nb, ss, pr),
+            fly: Boolean(flyFlag), ...pedido(mis, eq, p1, p2, nb, ss, pr, jan),
             extra: lista(extraArr, LIMITE.extras).filter(Array.isArray)
               .map(([mid, ...campos]) => ({ mid: id(mid), fly: true, ...pedido(...campos) }))
               .filter(ex => ex.mid !== null)

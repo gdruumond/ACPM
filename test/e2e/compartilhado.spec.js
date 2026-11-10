@@ -1,8 +1,8 @@
 import { test, expect, prepararContexto, vigiarErros, irPara, preencherExemplo, gerarEscala, lerEscala, AMANHA } from './fixtures.js';
-import { criarSupabaseFalso, instalarSupabaseFalso, documentosFase3, CONTAS } from './supabase-falso.js';
+import { criarSupabaseFalso, instalarSupabaseFalso, documentosAtuais, CONTAS } from './supabase-falso.js';
 import { estadoSintetico } from '../helpers/estado.js';
 
-const fase3 = () => documentosFase3(estadoSintetico(), AMANHA);
+const comDados = () => documentosAtuais(estadoSintetico(), AMANHA);
 
 const URL_APP = './?supabase=teste';
 
@@ -25,7 +25,7 @@ async function novoContexto(browser) {
 test.describe('Modo compartilhado: gravação, conflitos e link da escala', () => {
   test('conflito: aviso fixo, nada mais é enviado e "Recarregar" mostra a versão do colega', async ({ browser }) => {
     const contexto = await novoContexto(browser);
-    const servidor = await instalarSupabaseFalso(contexto, fase3());
+    const servidor = await instalarSupabaseFalso(contexto, comDados());
     const page = await contexto.newPage();
     const erros = vigiarErros(page, { statusEsperados: [409] });
     await entrar(page, CONTAS.operador);
@@ -55,7 +55,7 @@ test.describe('Modo compartilhado: gravação, conflitos e link da escala', () =
 
   test('servidor fora do ar: aviso de erro, que some quando a gravação volta a funcionar', async ({ browser }) => {
     const contexto = await novoContexto(browser);
-    const servidor = await instalarSupabaseFalso(contexto, fase3());
+    const servidor = await instalarSupabaseFalso(contexto, comDados());
     const page = await contexto.newPage();
     const erros = vigiarErros(page, { statusEsperados: [503] });
     await entrar(page, CONTAS.operador);
@@ -72,7 +72,7 @@ test.describe('Modo compartilhado: gravação, conflitos e link da escala', () =
   });
 
   test('a escala gerada guarda a data, o link leva só a data e o gestor vê a mesma escala', async ({ browser }) => {
-    const servidor = criarSupabaseFalso(fase3());
+    const servidor = criarSupabaseFalso(comDados());
 
     const operador = await novoContexto(browser);
     await servidor.instalar(operador);
@@ -103,7 +103,7 @@ test.describe('Modo compartilhado: gravação, conflitos e link da escala', () =
   });
 
   test('link antigo com os dados na URL (share=) é ignorado depois do login', async ({ page, context }) => {
-    await instalarSupabaseFalso(context, fase3());
+    await instalarSupabaseFalso(context, comDados());
     const payload = { d: AMANHA, fly: [[1000, 'Aluno do Link', 70, [], 1, 'Voo Local', 'C152', 1, 2, 1, 1, 3, []]] };
     const share = encodeURIComponent(Buffer.from(JSON.stringify(payload), 'utf8').toString('base64'));
     await entrar(page, CONTAS.operador, `${URL_APP}&share=${share}`);

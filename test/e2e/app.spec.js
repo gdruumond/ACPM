@@ -5,7 +5,7 @@ test.describe('Aplicação', () => {
     await abrir(page);
     await expect(page).toHaveTitle('Escala de Voo — ACPM');
     await expect(page.locator('#nav button')).toHaveText([
-      '1 · Recursos', '2 · Instrutores', '3 · Alunos', '4 · Demanda', '5 · Escala', '6 · BI'
+      '1 · Recursos', '2 · Instrutores', '3 · Alunos', '4 · Agenda', '5 · Demanda', '6 · Escala', '7 · Rodízio', '8 · BI'
     ]);
     await expect(page.locator('#s-rec')).toBeVisible();
     await expect(page.locator('#s-ins')).toBeHidden();

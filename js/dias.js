@@ -1,21 +1,27 @@
 // Escala por data. O estado da aplicação (o mesmo formato usado pelo motor e pelas telas) é guardado em
 // duas partes: o cadastro, igual em todas as datas (instrutores e alunos), e o dia, com o que muda de
 // uma data para outra (janelas, aeronaves, disponibilidade dos instrutores, demanda e status dos voos).
-import { WIN, EQ, DEFAULT_LIM } from './config.js';
+import { WIN, EQ, DEFAULT_LIM, AIRCRAFT_EQ_TYPES } from './config.js';
 import { blank } from './rules.js';
+import { filasDoDiaSeguinte } from './rodizio.js';
 
-const CAMPOS_DO_PEDIDO = ['fly', 'mis', 'eq', 'p1', 'p2', 'nb', 'ss', 'pr'];
+// jan: disponibilidade do aluno (só quando o pedido tem uma)
+const CAMPOS_DO_PEDIDO = ['fly', 'mis', 'eq', 'p1', 'p2', 'nb', 'ss', 'pr', 'jan'];
 const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 const avPadrao = () => Object.fromEntries(Object.values(EQ).flat().map(r => [r, true]));
 
-export const diaPadrao = () => ({ win: WIN.map(() => true), av: avPadrao(), ins: {}, pedidos: {}, fStatus: {} });
+// horas: horas de voo de cada avião desde a última revisão de 50 horas, no início do dia (só dos aviões informados)
+// filas: filas do rodízio (cheque, MLTE, noturno e C172) no início do dia
+// importadas: solicitações da agenda já importadas para a demanda do dia
+export const diaPadrao = () => ({ win: WIN.map(() => true), av: avPadrao(), ins: {}, pedidos: {}, fStatus: {}, horas: {}, filas: {}, importadas: [] });
 
 export function separar(estado) {
   return {
     cadastro: {
       nid: estado.nid,
-      ins: estado.ins.map(({ id, nm, lv, kg }) => ({ id, nm, lv, kg })),
+      // O nível A01–A09 de antes da fase 4 fica só como cópia, em quem já o tinha
+      ins: estado.ins.map(({ id, nm, lv, kg, hab }) => ({ id, nm, ...(lv === undefined ? {} : { lv }), kg, hab: [...(hab || [])] })),
       stu: estado.stu.map(({ id, nm, kg, bl }) => ({ id, nm, kg, bl: [...(bl || [])] }))
     },
     dia: {
@@ -23,10 +29,13 @@ export function separar(estado) {
       av: { ...estado.av },
       ins: Object.fromEntries(estado.ins.map(x => [x.id, { on: x.on, aw: [...x.aw] }])),
       pedidos: Object.fromEntries(estado.stu.map(s => [s.id, {
-        ...Object.fromEntries(CAMPOS_DO_PEDIDO.map(c => [c, s[c]])),
+        ...Object.fromEntries(CAMPOS_DO_PEDIDO.filter(c => s[c] !== undefined).map(c => [c, s[c]])),
         extra: structuredClone(s.extra || [])
       }])),
-      fStatus: { ...(estado.fStatus || {}) }
+      fStatus: { ...(estado.fStatus || {}) },
+      horas: { ...(estado.horas || {}) },
+      filas: structuredClone(estado.filas || {}),
+      importadas: [...(estado.importadas || [])]
     }
   };
 }
@@ -51,15 +60,33 @@ export function juntar(cadastro, dia = diaPadrao()) {
       bl: [...(s.bl || [])],
       ...(pedidos[s.id] ? structuredClone(pedidos[s.id]) : { ...blank(), extra: [] })
     })),
-    fStatus: { ...(dia.fStatus || {}) }
+    fStatus: { ...(dia.fStatus || {}) },
+    horas: { ...(dia.horas || {}) },
+    filas: structuredClone(dia.filas || {}),
+    importadas: [...(dia.importadas || [])]
   };
 }
 
-// Nova data: começa com a disponibilidade e a demanda do dia anterior, sem status dos voos nem escala gerada
-export function diaParaCopiar(anterior) {
+// Nova data: começa com a disponibilidade e a demanda do dia anterior, sem status dos voos nem escala gerada; as horas
+// até a revisão e as filas do rodízio já contam os voos do dia anterior (instrutores: o cadastro, para as filas)
+export function diaParaCopiar(anterior, instrutores = []) {
   if (!anterior || !anterior.ins || !anterior.pedidos) return diaPadrao();
   const { win, av, ins, pedidos } = structuredClone(anterior);
-  return { win, av, ins, pedidos, fStatus: {} };
+  return { win, av, ins, pedidos, fStatus: {}, horas: horasDoDiaSeguinte(anterior), filas: filasDoDiaSeguinte(anterior, instrutores), importadas: [] };
+}
+
+// Horas desde a última revisão no início do dia seguinte: as do dia mais os voos dele que não foram cancelados
+// (avião sem horas informadas continua sem)
+export function horasDoDiaSeguinte(dia) {
+  const horas = { ...(dia.horas || {}) };
+  const out = dia.resultado && Array.isArray(dia.resultado.out) ? dia.resultado.out : [];
+  const status = dia.fStatus || {};
+  for (const o of out) {
+    if (!Object.hasOwn(horas, o.r) || !AIRCRAFT_EQ_TYPES.includes(o.eqType)) continue;
+    if ((status[o.fKey] || o.status) === 'Cancelado') continue;
+    horas[o.r] = Math.round((horas[o.r] + (+o.h || 0)) * 10) / 10;
+  }
+  return horas;
 }
 
 // A escala da fase 2 não guardava a data: usa a gravada (fase 2), senão o dia do BI com a mesma escala

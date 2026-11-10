@@ -66,6 +66,42 @@ describe('Backend local: escala por data, cadastro e histórico', () => {
   });
 });
 
+describe('Backend local: agenda de solicitações', () => {
+  const antesDas13 = new Date('2026-11-10T12:00:00-03:00');
+  const depoisDas13 = new Date('2026-11-10T13:30:00-03:00');
+  const pedido = (extra = {}) => ({ data: '2026-11-11', aluno: 1000, aluno_nome: ' Aluno 1000 ', missao: 'Voo Local', janela: 'manha', registrado_por: ' Maria ', ...extra });
+
+  it('registra no prazo com quem anotou e a hora; lista por período em ordem', async () => {
+    const id = await backendLocal.registrarSolicitacao(pedido(), antesDas13);
+    await backendLocal.registrarSolicitacao(pedido({ data: '2026-11-15', aluno: 1001, janela: 'horario', horario: '14:30', observacao: ' PP-ABP ' }), antesDas13);
+    const lista = await backendLocal.listarSolicitacoes('2026-11-01', '2026-11-30');
+    assert.deepEqual(lista.map(s => [s.data, s.aluno]), [['2026-11-11', 1000], ['2026-11-15', 1001]]);
+    assert.deepEqual([lista[0].id, lista[0].aluno_nome, lista[0].registrado_por, lista[0].excecao, lista[0].registrado_em], [id, 'Aluno 1000', 'Maria', false, antesDas13.toISOString()]);
+    assert.deepEqual([lista[1].horario, lista[1].observacao], ['14:30', 'PP-ABP']);
+    assert.deepEqual(await backendLocal.listarSolicitacoes('2026-11-12', '2026-11-14'), []);
+  });
+
+  it('fora do prazo: recusa (403), a não ser pela exceção da coordenação, que fica marcada', async () => {
+    await assert.rejects(backendLocal.registrarSolicitacao(pedido(), depoisDas13), e => e.code === 'PT403');
+    await backendLocal.registrarSolicitacao(pedido({ excecao: true }), depoisDas13);
+    assert.equal((await backendLocal.listarSolicitacoes('2026-11-11', '2026-11-11'))[0].excecao, true);
+  });
+
+  it('"Registrado por" é obrigatório e a disponibilidade precisa ser válida', async () => {
+    await assert.rejects(backendLocal.registrarSolicitacao(pedido({ registrado_por: '  ' }), antesDas13), e => e.code === '23514');
+    await assert.rejects(backendLocal.registrarSolicitacao(pedido({ janela: 'horario' }), antesDas13), e => e.code === '23514');
+    await assert.rejects(backendLocal.registrarSolicitacao(pedido({ janela: 'madrugada' }), antesDas13), e => e.code === '23514');
+  });
+
+  it('cancela guardando quem cancelou (uma vez só); o pedido continua na agenda', async () => {
+    const id = await backendLocal.registrarSolicitacao(pedido(), antesDas13);
+    await backendLocal.cancelarSolicitacao(id, ' Maria ', antesDas13);
+    const [s] = await backendLocal.listarSolicitacoes('2026-11-11', '2026-11-11');
+    assert.deepEqual([s.cancelada_por, s.cancelada_em], ['Maria', antesDas13.toISOString()]);
+    await assert.rejects(backendLocal.cancelarSolicitacao(id, 'Maria'), e => e.code === 'P0002');
+  });
+});
+
 describe('Backend local: limpeza (só no modo local)', () => {
   it('limpa o histórico de uma data sem tocar nas outras', async () => {
     await backendLocal.registrar({ data: '2026-11-11', tipo: 'mod', descricao: 'Dia 11' });

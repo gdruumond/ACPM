@@ -5,10 +5,13 @@ import { estadoSintetico } from '../helpers/estado.js';
 import { aluno } from '../helpers/montar.js';
 import { runAllocationEngine } from '../../js/engine.js';
 import { ApiClient } from '../../js/storage.js';
+import { separar } from '../../js/dias.js';
+import { ESQUEMA } from '../../js/migracoes.js';
+import { comNomesAntigos } from '../helpers/formato.js';
 
 const DEPOIS = '2026-11-12';
 
-// O campo de data fica na aba 5 · Escala
+// O campo de data fica na aba 6 · Escala
 async function mudarData(page, data) {
   await page.locator('#nav button[data-t="esc"]').click();
   await page.locator('#dt').fill(data);
@@ -89,6 +92,23 @@ test.describe('Escala por data', () => {
     await irPara(page, 'bi');
     await expect(page.locator('#bi-content .st > div').nth(1)).toContainText('44 h');
     await expect(page.locator('#bi-content .st > div').nth(2)).toContainText('2 dias registrados');
+  });
+
+  test('dados no formato anterior neste navegador são regravados no formato atual na abertura', async ({ page }) => {
+    const { cadastro, dia } = separar(ApiClient.normalizeAndMigrateState({ ...estadoSintetico(), stu: [aluno(1000)] }));
+    const fase3 = comNomesAntigos({ acpm4_cadastro: cadastro, [`acpm4_dia_${AMANHA}`]: { ...dia, av: { ...dia.av, 'SIM-MONO-A': false }, resultado: null } });
+    await page.addInitScript(json => {
+      if (sessionStorage.getItem('semeado')) return;
+      sessionStorage.setItem('semeado', '1');
+      for (const [chave, valor] of Object.entries(JSON.parse(json))) localStorage.setItem(chave, JSON.stringify(valor));
+    }, JSON.stringify(fase3));
+    await abrir(page);
+    await irPara(page, 'rec');
+    await expect(page.locator('#eqs input[data-id="SIM-MONO-A"]')).not.toBeChecked();
+    const gravado = await page.evaluate(d => ({ cadastro: JSON.parse(localStorage.getItem('acpm4_cadastro')), dia: JSON.parse(localStorage.getItem(`acpm4_dia_${d}`)) }), AMANHA);
+    expect([gravado.cadastro.esquema, gravado.dia.esquema, gravado.dia.av['SIM-MONO-A']]).toEqual([ESQUEMA, ESQUEMA, false]);
+    expect(Object.keys(gravado.dia.av).filter(r => /^SIM-(MONO|MULTI)-\d$/.test(r))).toEqual([]);
+    expect(gravado.cadastro.ins).toEqual(cadastro.ins);
   });
 
   test('dados da fase 2 neste navegador são convertidos na primeira abertura', async ({ page }) => {

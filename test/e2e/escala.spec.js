@@ -49,7 +49,7 @@ test.describe('Escala', () => {
 
   test('exporta CSV com BOM, separador ";" e quebras CRLF', async ({ page }) => {
     const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#exp').click()]);
-    expect(download.suggestedFilename()).toBe('escala-acpm.csv');
+    expect(download.suggestedFilename()).toBe(`escala-acpm-${AMANHA}.csv`);
     const conteudo = await readFile(await download.path(), 'utf8');
     expect(conteudo[0]).toBe('﻿');
     expect(conteudo).not.toMatch(/[^\r]\n/);

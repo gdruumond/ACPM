@@ -121,7 +121,7 @@ Decisions: email + password accounts created by the admin (no open sign-up, no e
 3. [x] Phase 2 merged (PR #4). The site now asks for a login.
 4. [x] First login and upload done by Rayane, the master operator, from her browser (2026-11-10): roster with the real levels, schedule, 100 history entries and 4 BI days.
 
-### Phase 3: Data model that matches the job (built on branch `fase-3`, on top of Phase 2; live on the preview)
+### Phase 3: Data model that matches the job (merged as PR #5; live in production since 2026-11-10)
 Decisions: a new date starts as a copy of the previous saved day (demand and availability, without flight statuses or the generated schedule); no realtime updates for now; the 100 history entries from Phase 2 are imported.
 - [x] **Roster separate from the day.** The roster (instructors and students: names, levels, weights, blocks) is one shared `cadastro` document. Each date is a row in the new `dias` table with its time windows, aircraft and instructor availability, demand, flight statuses and generated schedule. Operators working on different dates no longer conflict, and the roster is saved only when it changes. Writes go through `salvar_dia`, with the same optimistic concurrency as Phase 2.
 - [x] **The date picker opens that date.** A date without a schedule starts as a copy of the previous saved day; nothing is saved until someone edits it. Edits always go to the date that is open, even while another date is loading. In shared mode the Gestor can browse dates too (read-only).
@@ -134,10 +134,32 @@ Decisions: a new date starts as a copy of the previous saved day (demand and ava
 #### Go-live checklist (production: `acpm-escala`)
 1. [x] Migrations applied to the preview (`20261110201618_dias_e_historico`, `20261110202010_historico_autor`, `20261110205345_documentos_antigos_somente_copia`); database tests pass (24 + 38).
 2. [x] The same three migrations applied to production (2026-11-10), before the merge. They only add tables and functions, and the guard only acts once `cadastro` exists, so the Phase 2 site keeps working.
-3. [ ] Merge Phase 3.
-4. [ ] An Operador opens the site (Rayane, as the master operator): the first Operador login converts the production data. Anyone with the site already open gets the "reload" warning on their next save.
+3. [x] Phase 3 merged (PR #5).
+4. [x] Production data converted on 2026-11-10 by a supervised Operador login: roster (39 instructors, 50 students), the current schedule (2026-11-11), three BI days and the 100 history entries. The old documents stay as a backup.
 
-### Phase 4: Nice to have
+### Phase 4: Field feedback from the operator and Gabriel (branch `fase-4`)
+Source: field tests with the master operator at the aeroclub. **Hard rule: no change may reset, delete or corrupt saved data.**
+Decisions (2026-11-10): the qualifications get a "C172" box (migrated from A07+); "Voo de Parafuso" and "Parafuso (SPIN)" are one box; each aircraft's 50-hour balance carries over automatically and stays editable; a new "Secretaria" profile writes only in the Agenda, and only Operadores can use the 13:00 exception.
+
+Each step is test-first and updates the preview. Delivery in about three PRs (steps 0–2, 3–5, 6–8), opened when Pedro says.
+0. [x] **Phase 3 follow-ups.** A conversion that fails halfway stops the app with a reload message, instead of opening an empty roster that the next edit would save. "Sair" signs out only this browser (Supabase signs out every device by default).
+1. [x] **Versioned data migration at startup.** The saved roster and each day carry a format version. Reads upgrade any older format in memory, so the app never works with an old shape. On an Operador's first start, every saved day and then the roster are rewritten in the new format, with the roster last as the completion marker. The server refuses a document in an older format than the stored one, so a tab running the previous version asks to reload instead of overwriting. First change: the simulators are renamed (SIM-MONO-1/2 → SIM-MONO-A/C, SIM-MULTI-1/2 → SIM-MLTE-E/D) in availability, schedules and BI days.
+2. [x] **CSV for the booking portal**, grouped by aircraft and in time order within each: Avião/Equipamento, Horário, Aluno, Fase/Missão, Instrutor and Observações (crew weight against the aircraft limit, missing weights, 50-hour stop).
+3. [x] **Individual qualifications replace the cumulative levels A01–A09.** A checkbox grid: Grounds (C152, C172, Navegação), Ground PA-34, Simulador Mono, Simulador Multi, TGL (TMA), Voo Local, Navegação, Liberação de Solo, Parafuso (SPIN), IFR, Noturno, C172, MLTE (PA-34) and the three checker boxes. The migration gives each instructor exactly what their level allowed (A03+ also gets TGL), so schedules don't change; the checker boxes start unmarked. Ground classes go to the least-qualified free instructor.
+4. [x] **New missions:** TGL (TMA) and five check flights (Cheque PP, PC MNTE VFR, PC MNTE IFR, PC MLTE VFR, PC MLTE IFR), each requiring the matching checker boxes.
+5. [x] **Aircraft continuity:** after allocation, each aircraft type's tail numbers are redistributed with the instructor as the unit. An instructor gets one tail number free at all their times whenever one exists; only the tail number changes, never the student, instructor or time. In the recorded scenarios, same-type aircraft switches fell from 18 to 9, with the same flights and rejections. The 9 left are unavoidable: 3 are spin flights, which must use PR-JPL, and an exhaustive search shows the other 6 (PA-34) cannot be reduced without changing who flies when. An invariant over 300 random days guards the rule.
+6. [x] **50-hour inspection:** hours since the last inspection for each aircraft in Recursos. They carry over from the previous day minus its flights that weren't cancelled, stay editable, and "Revisão feita" resets them. The engine never plans more than the remaining balance; an aircraft that runs out stops for the rest of the day, with "Aeronave parou para revisão de 50 horas" in the schedule, Recursos and the CSV.
+7. [x] **Rodízio:** four queues (Cheque, MLTE PA-34, Noturno, C172; a flight counts in the first that applies). The engine offers each flight following the queue order. Whoever flew a category goes to the end of that queue the next day; cancelled flights don't count. A new tab shows the queues, with buttons to move people.
+8. [x] **Agenda de Solicitações:** a new tab with a calendar for any day. The server enforces the 13:00 rule in São Paulo time: the next day only until 13:00, then two days ahead onwards. Operadores have a flagged "Exceção da Coordenação". Each request records the student, mission, availability (Manhã, Tarde, Noite or a specific time), "Registrado por" (required), the account and the time. "Importar Solicitações da Agenda" in Demanda loads that date's requests, and the availability becomes a hard limit for that flight.
+
+#### Go-live checklist (production: `acpm-escala`)
+1. [x] Migrations applied to the preview: `20261110213600_formato_nao_regride`, `20261110222505_perfil_secretaria` and `20261110222506_agenda_de_solicitacoes`; database tests pass (24 + 28 + 38 + 9).
+2. [x] The same three migrations applied to production (2026-11-10), before the merge. They only add a profile, a table and functions; the format guard only acts on data that already has a format version, so the Phase 3 site keeps working.
+3. [x] Secretaria accounts: none for now (decided 2026-11-10); Operadores register requests in the Agenda. Create them later with `scripts/criar-conta.mjs <email> secretaria "<nome>"`.
+4. [ ] Merge Phase 4. The first Operador login updates the saved data to format version 10: simulators renamed, qualifications from the levels (checker boxes unmarked), and the new per-day fields. Anyone with the site open since before the merge gets the "reload" warning on their next save.
+5. [ ] The operator marks the checkers (and reviews the qualifications) in Instrutores, types each aircraft's hours since the last 50-hour inspection in Recursos, and reviews the Rodízio queues (they start in roster order).
+
+### Phase 5: Later (nice to have)
 - [ ] Track instructor and student qualifications and currency: last flight, medical/CMA expiry, student course phase. The engine then checks these instead of relying on manual levels.
 - [ ] Integrate with the Google Calendar that students already use, publishing each student's missions.
 - [ ] Make the app installable (PWA) for use on the apron with poor connectivity.

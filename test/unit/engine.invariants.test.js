@@ -3,7 +3,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { runAllocationEngine } from '../../js/engine.js';
 import { EQ, GROUND_REG, ACROBAT_REG, T, NI, DEFAULT_LIM } from '../../js/config.js';
-import { isGroundMission, reqInsLevel, doesGroundGateFlight } from '../../js/rules.js';
+import { isGroundMission, doesGroundGateFlight } from '../../js/rules.js';
+import { podeFazer } from '../../js/habilitacoes.js';
 import { gerarCenario } from '../helpers/cenarios.js';
 
 const SEEDS = Array.from({ length: 300 }, (_, i) => 1001 + i);
@@ -60,12 +61,12 @@ describe('Invariantes do motor de alocação', () => {
     }
   }));
 
-  it('instrutor ativo, com nível suficiente, disponível em todo o período e não bloqueado', () => emTodos(({ estado, out }) => {
+  it('instrutor ativo, habilitado para a missão no equipamento, disponível em todo o período e não bloqueado', () => emTodos(({ estado, out }) => {
     for (const o of out) {
       const x = estado.ins.find(i => i.id === o.insId);
       const { stu } = pedidoDe(estado, o);
       assert.ok(x.on, `${o.fKey}: instrutor inativo`);
-      assert.ok(x.lv >= reqInsLevel(o.mis, o.eqType), `${o.fKey}: ${o.mis}/${o.eqType} com A0${x.lv}`);
+      assert.ok(podeFazer(x, o.mis, o.eqType), `${o.fKey}: ${o.mis}/${o.eqType} sem habilitação (${x.hab})`);
       assert.ok(!stu.bl.includes(x.id), `${o.fKey}: instrutor bloqueado`);
       T.forEach((ini, k) => {
         const fim = k < NI ? T[k + 1] : 1440;
@@ -151,6 +152,34 @@ describe('Invariantes do motor de alocação', () => {
       assert.ok(isGroundMission(membros[0].mis));
     }
   }));
+
+  it('instrutor em duas matrículas do mesmo tipo só quando nenhuma estava livre em todos os horários dele', () => emTodos(({ estado, out }) => {
+    for (const tipo of ['C152', 'C172', 'PA-34']) {
+      const voos = out.filter(o => o.eqType === tipo && o.r !== ACROBAT_REG);
+      for (const insId of new Set(voos.map(o => o.insId))) {
+        const meus = voos.filter(o => o.insId === insId);
+        if (new Set(meus.map(o => o.r)).size < 2) continue;
+        const livre = EQ[tipo].find(r => r !== ACROBAT_REG && estado.av[r] &&
+          meus.every(f => !voos.some(o => o.insId !== insId && o.r === r && sobrepoe(o, f))));
+        assert.equal(livre, undefined, `instrutor ${insId} usou ${[...new Set(meus.map(o => o.r))]} com ${livre} livre o dia todo`);
+      }
+    }
+  }));
+
+  it('nenhum avião passa das 50 horas desde a última revisão (aviões perto do limite em 100 cenários)', () => {
+    const falhas = [];
+    for (const seed of SEEDS.slice(0, 100)) {
+      const estado = gerarCenario(seed);
+      const avioes = ['C152', 'C172', 'PA-34'].flatMap(t => EQ[t]);
+      estado.horas = Object.fromEntries(avioes.filter((r, i) => i % 2 === 0).map((r, i) => [r, 46 + (i % 8) * 0.5]));
+      const { out } = runAllocationEngine(estado);
+      for (const [r, inicio] of Object.entries(estado.horas)) {
+        const voadas = out.filter(o => o.r === r).reduce((t, o) => t + o.h, 0);
+        if (inicio + voadas > 50 + 1e-9) falhas.push(`seed ${seed}: ${r} com ${inicio} + ${voadas} h`);
+      }
+    }
+    assert.deepEqual(falhas.slice(0, 5), []);
+  });
 
   it('é determinístico e não altera o estado recebido', () => {
     for (const seed of SEEDS.slice(0, 50)) {

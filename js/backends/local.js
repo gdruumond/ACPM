@@ -1,9 +1,12 @@
 // Backend local: os documentos da escala ficam no localStorage deste navegador (modo sem login).
 // cadastro e dia:AAAA-MM-DD são o formato por data (fase 3); estado, escala, historico e bi, o da fase 2.
+import { prazoDaAgendaPermite } from '../agenda.js';
+
 export const CHAVES_LOCAIS = { cadastro: 'acpm4_cadastro', estado: 'acpm3', escala: 'acpm3_res', historico: 'acpm3_audit', bi: 'acpm3_bi' };
 export const CHAVE_LEGADA = 'acpm2';
 const PREFIXO_DIA = 'acpm4_dia_';
 const CHAVE_HISTORICO = 'acpm4_historico';
+const CHAVE_AGENDA = 'acpm4_agenda';
 const DOCUMENTO_DIA = /^dia:(\d{4}-\d{2}-\d{2})$/;
 
 const chaveLocal = documento => {
@@ -28,6 +31,11 @@ function datasGuardadas() {
 
 // Ids crescentes para o histórico local (o modo local não tem servidor para numerar as entradas)
 const proximoId = lista => Math.max(Date.now(), ...lista.map(e => e.id + 1));
+
+// Erros da agenda com o mesmo código do servidor (PT403: fora do prazo; 23514: dado inválido; P0002: não achado)
+const erroDaAgenda = (code, message) => Object.assign(new Error(message), { code });
+const textoObrigatorio = (valor, max) => typeof valor === 'string' && valor.trim().length >= 1 && valor.trim().length <= max;
+const JANELAS = ['manha', 'tarde', 'noite', 'horario'];
 
 // Formato acpm2 (7 janelas) convertido para as 9 janelas atuais
 function converterAcpm2(o) {
@@ -99,6 +107,40 @@ export const backendLocal = {
       const dia = lerJson(PREFIXO_DIA + d);
       if (dia && dia.simulado) localStorage.removeItem(PREFIXO_DIA + d);
     }
+  },
+
+  // Agenda de solicitações neste navegador. Sem login, quem usa tem os direitos de operador (inclusive a exceção)
+  async listarSolicitacoes(de, ate) {
+    const ordem = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+    return (lerJson(CHAVE_AGENDA) || []).filter(s => s.data >= de && s.data <= ate)
+      .sort((a, b) => ordem(a.data, b.data) || ordem(a.registrado_em, b.registrado_em));
+  },
+
+  async registrarSolicitacao({ data, aluno, aluno_nome, missao, janela, horario = null, observacao = null, registrado_por, excecao = false }, agora = new Date()) {
+    const noPrazo = prazoDaAgendaPermite(data, agora);
+    if (!noPrazo && !excecao) throw erroDaAgenda('PT403', 'prazo encerrado: pedido para o dia seguinte só até as 13:00');
+    if (!textoObrigatorio(registrado_por, 80) || !textoObrigatorio(aluno_nome, 80) || !textoObrigatorio(missao, 60) ||
+        !JANELAS.includes(janela) || (janela === 'horario') !== /^[0-2][0-9]:[0-5][0-9]$/.test(horario || '')) {
+      throw erroDaAgenda('23514', 'pedido incompleto: confira aluno, missão, disponibilidade e quem anotou');
+    }
+    const lista = lerJson(CHAVE_AGENDA) || [];
+    const id = proximoId(lista);
+    lista.push({
+      id, data, aluno, aluno_nome: aluno_nome.trim(), missao, janela, horario: janela === 'horario' ? horario : null,
+      observacao: (observacao || '').trim().slice(0, 300) || null, registrado_por: registrado_por.trim(),
+      registrado_em: agora.toISOString(), conta: null, excecao: !noPrazo, cancelada_em: null, cancelada_por: null
+    });
+    localStorage.setItem(CHAVE_AGENDA, JSON.stringify(lista));
+    return id;
+  },
+
+  async cancelarSolicitacao(id, por, agora = new Date()) {
+    const lista = lerJson(CHAVE_AGENDA) || [];
+    const solicitacao = lista.find(s => s.id === id && !s.cancelada_em);
+    if (!solicitacao) throw erroDaAgenda('P0002', `pedido ${id} não encontrado ou já cancelado`);
+    if (!textoObrigatorio(por, 80)) throw erroDaAgenda('23514', 'informe quem cancelou');
+    Object.assign(solicitacao, { cancelada_em: agora.toISOString(), cancelada_por: por.trim() });
+    localStorage.setItem(CHAVE_AGENDA, JSON.stringify(lista));
   },
 
   async importarHistorico(data, entradas) {
