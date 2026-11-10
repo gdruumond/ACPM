@@ -24,14 +24,24 @@ test.describe('Aplicação', () => {
     await expect(page.locator('#s-alu')).toBeVisible();
   });
 
-  test('aplica a folha de estilos', async ({ page }) => {
+  test('aplica a folha de estilos (tokens de cor, layout e fontes)', async ({ page }) => {
+    const fontes = [];
+    page.on('request', r => { if (r.url().startsWith('https://fonts.googleapis.com/css2?family=Barlow')) fontes.push(r.url()); });
     await abrir(page);
-    const estilos = await page.evaluate(() => ({
+    const estilos = () => page.evaluate(() => ({
+      tinta: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim(),
+      fundo: getComputedStyle(document.body).backgroundColor,
       fonte: getComputedStyle(document.body).fontFamily,
       secaoInativa: getComputedStyle(document.querySelector('#s-bi')).display,
       principalMax: getComputedStyle(document.querySelector('main')).maxWidth
     }));
-    expect(estilos).toEqual({ fonte: expect.stringContaining('Barlow'), secaoInativa: 'none', principalMax: '1280px' });
+    expect(await estilos()).toEqual({
+      tinta: '#12263A', fundo: 'rgb(232, 237, 241)', fonte: expect.stringContaining('Barlow'), secaoInativa: 'none', principalMax: '1280px'
+    });
+    expect(fontes).toHaveLength(1);
+
+    await page.locator('#btn-theme').click();
+    expect((await estilos()).fundo).not.toBe('rgb(232, 237, 241)');
   });
 
   test('alterna o tema e lembra a escolha após recarregar', async ({ page }) => {
