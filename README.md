@@ -5,7 +5,8 @@ Publicada pelo GitHub Pages em https://gdruumond.github.io/ACPM/ (branch `main`,
 
 ## Modos de uso
 
-- **Compartilhado (site publicado):** login com e-mail e senha; os dados ficam no Supabase e todos veem a mesma escala.
+- **Compartilhado (site publicado):** login com e-mail e senha; os dados ficam no Supabase e todos veem as mesmas escalas
+  (uma por data).
   O perfil da conta define o acesso: **Operador** edita, **Gestor** só consulta. O cadastro aberto é desligado: as contas
   são criadas pelo administrador (`scripts/criar-conta.mjs`).
 - **Local (`localhost`):** sem login, dados só no `localStorage` do navegador. Em localhost, `?supabase=previa` usa o
@@ -54,7 +55,7 @@ npm run test:e2e       # aplicação no navegador (Playwright)
   `SUPABASE_DB_PASSWORD=... npm run test:db` (cada teste roda numa transação desfeita no final).
 - Aplicar migrações: `supabase db push --remote` (prévia) ou `--remote=<ref de produção>`.
 - Contas: `SUPABASE_DB_PASSWORD=... SENHA_NOVA=... node scripts/criar-conta.mjs <email> <operador|gestor> "<nome>"`.
-- Dados fictícios na prévia: `node scripts/semear-previa.mjs`.
+- Dados fictícios na prévia (só num banco sem dados): `node scripts/semear-previa.mjs`.
 
 ## Estrutura
 
@@ -65,7 +66,8 @@ npm run test:e2e       # aplicação no navegador (Playwright)
 | `js/config.js` | Janelas, frota, missões, níveis A01–A09, limites de peso |
 | `js/rules.js` | Regras das missões (Ground School, nível mínimo, precedência) |
 | `js/engine.js` | Motor de alocação (função pura) |
-| `js/storage.js` | Migrações de dados e link compartilhado, sobre um backend (`js/backends/`: local ou Supabase) |
+| `js/storage.js` | Escala por data, migrações de dados e link compartilhado, sobre um backend (`js/backends/`: local ou Supabase) |
+| `js/dias.js` | Cadastro separado do dia, cópia do dia anterior, conversão dos dados da fase 2 e BI das escalas |
 | `js/sessao.js`, `js/config-supabase.js` | Login, perfil de acesso e projeto Supabase de cada endereço |
 | `js/state.js`, `js/actions.js` | Estado da aplicação e ações (perfil, desfazer, histórico, gerar escala) |
 | `js/views/` | Renderização de cada aba |
