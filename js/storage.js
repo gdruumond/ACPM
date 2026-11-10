@@ -1,8 +1,9 @@
-// Camada de acesso a dados: estado inicial, migrações de schema, persistência (localStorage hoje,
-// REMOTE_ENDPOINT opcional) e o link compartilhável que abre a escala no perfil Gestor.
+// Camada de acesso a dados: estado inicial, migrações de schema, persistência por um backend
+// (localStorage ou Supabase) e o link compartilhável que abre a escala no perfil Gestor.
 import { WIN, NI, EQ, DEFAULT_LIM, INS_DATA, FLIGHT_STATUSES } from './config.js';
 import { pad } from './format.js';
 import { blank, normalizeMissionFields } from './rules.js';
+import { backendLocal, CHAVES_LOCAIS, CHAVE_LEGADA } from './backends/local.js';
 
 // Validação do link compartilhado: o conteúdo vem da URL, então só entram os tipos e as faixas que a interface produz
 const LIMITE = { instrutores: 200, alunos: 500, extras: 10, bloqueios: 50, matriculas: 100, nome: 80 };
@@ -18,13 +19,14 @@ const pedido = (mis, eq, p1, p2, nb, ss, pr) => ({
 });
 
 export const ApiClient = {
-  KEY_STATE: 'acpm3',
-  KEY_LEGACY: 'acpm2',
-  KEY_RESULT: 'acpm3_res',
-  KEY_AUDIT: 'acpm3_audit',
-  KEY_BI: 'acpm3_bi',
+  KEY_STATE: CHAVES_LOCAIS.estado,
+  KEY_LEGACY: CHAVE_LEGADA,
+  KEY_RESULT: CHAVES_LOCAIS.escala,
+  KEY_AUDIT: CHAVES_LOCAIS.historico,
+  KEY_BI: CHAVES_LOCAIS.bi,
   KEY_THEME: 'acpm3_theme',
-  REMOTE_ENDPOINT: null,
+  // Onde os documentos ficam: backend local (localStorage) ou Supabase (login)
+  backend: backendLocal,
   // Link compartilhado: nada é gravado e a interface fica travada no perfil Gestor
   readOnly: false,
 
@@ -95,87 +97,43 @@ export const ApiClient = {
   },
 
   async fetchState() {
-    if (this.REMOTE_ENDPOINT) {
-      try {
-        const res = await fetch(`${this.REMOTE_ENDPOINT}/state`);
-        if (res.ok) return this.normalizeAndMigrateState(await res.json());
-      } catch (e) {}
-    }
-    try {
-      let x = JSON.parse(localStorage.getItem(this.KEY_STATE));
-      if (!x) {
-        const o = JSON.parse(localStorage.getItem(this.KEY_LEGACY));
-        const OLD = [0,1,2,2,3,3,4,5,6], NEW = [0,1,2,4,6,7,8];
-        if (o && o.stu && o.ins && o.lim) {
-          o.win = OLD.map(k => o.win[k]);
-          o.ins.forEach(i => i.aw = OLD.map(k => i.aw[k]));
-          o.stu.forEach(d => {
-            d.p1 = d.p1 < 0 ? -1 : NEW[d.p1];
-            d.p2 = d.p2 < 0 ? -1 : NEW[d.p2];
-            d.ss = 1;
-          });
-          x = o;
-        }
-      }
-      if (x && Array.isArray(x.stu) && Array.isArray(x.ins)) {
-        return this.normalizeAndMigrateState(x);
-      }
-    } catch (e) {}
-    return this.createFreshState();
+    const x = await this.backend.ler('estado');
+    return x && Array.isArray(x.stu) && Array.isArray(x.ins) ? this.normalizeAndMigrateState(x) : this.createFreshState();
   },
 
   async saveState(state) {
     if (this.readOnly) return false;
-    try {
-      localStorage.setItem(this.KEY_STATE, JSON.stringify(state));
-      if (this.REMOTE_ENDPOINT) {
-        await fetch(`${this.REMOTE_ENDPOINT}/state`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(state)
-        });
-      }
-      return true;
-    } catch (e) { return false; }
+    return this.backend.gravar('estado', state);
   },
 
   async fetchResult() {
-    try {
-      const r = JSON.parse(localStorage.getItem(this.KEY_RESULT));
-      if (r && Array.isArray(r.out) && Array.isArray(r.al)) return r;
-    } catch (e) {}
-    return null;
+    const r = await this.backend.ler('escala');
+    return r && Array.isArray(r.out) && Array.isArray(r.al) ? r : null;
   },
 
   async saveResult(res) {
     if (this.readOnly) return;
-    try { localStorage.setItem(this.KEY_RESULT, JSON.stringify(res)); } catch (e) {}
+    await this.backend.gravar('escala', res);
   },
 
   async fetchAudit() {
-    try {
-      const a = JSON.parse(localStorage.getItem(this.KEY_AUDIT));
-      if (Array.isArray(a)) return a;
-    } catch (e) {}
-    return [];
+    const a = await this.backend.ler('historico');
+    return Array.isArray(a) ? a : [];
   },
 
   async saveAudit(list) {
     if (this.readOnly) return;
-    try { localStorage.setItem(this.KEY_AUDIT, JSON.stringify(list)); } catch (e) {}
+    await this.backend.gravar('historico', list);
   },
 
   async fetchBI() {
-    try {
-      const b = JSON.parse(localStorage.getItem(this.KEY_BI));
-      if (b && typeof b === 'object') return b;
-    } catch (e) {}
-    return {};
+    const b = await this.backend.ler('bi');
+    return b && typeof b === 'object' ? b : {};
   },
 
   async saveBI(biMap) {
     if (this.readOnly) return;
-    try { localStorage.setItem(this.KEY_BI, JSON.stringify(biMap)); } catch (e) {}
+    await this.backend.gravar('bi', biMap);
   },
 
   encodeShareableURL(state, dateStr) {
