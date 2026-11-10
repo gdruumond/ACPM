@@ -153,6 +153,19 @@ describe('Invariantes do motor de alocação', () => {
     }
   }));
 
+  it('instrutor em duas matrículas do mesmo tipo só quando nenhuma estava livre em todos os horários dele', () => emTodos(({ estado, out }) => {
+    for (const tipo of ['C152', 'C172', 'PA-34']) {
+      const voos = out.filter(o => o.eqType === tipo && o.r !== ACROBAT_REG);
+      for (const insId of new Set(voos.map(o => o.insId))) {
+        const meus = voos.filter(o => o.insId === insId);
+        if (new Set(meus.map(o => o.r)).size < 2) continue;
+        const livre = EQ[tipo].find(r => r !== ACROBAT_REG && estado.av[r] &&
+          meus.every(f => !voos.some(o => o.insId !== insId && o.r === r && sobrepoe(o, f))));
+        assert.equal(livre, undefined, `instrutor ${insId} usou ${[...new Set(meus.map(o => o.r))]} com ${livre} livre o dia todo`);
+      }
+    }
+  }));
+
   it('é determinístico e não altera o estado recebido', () => {
     for (const seed of SEEDS.slice(0, 50)) {
       const estado = gerarCenario(seed);

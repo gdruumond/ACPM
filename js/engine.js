@@ -8,6 +8,70 @@ import { podeFazer, descreverExigencias } from './habilitacoes.js';
 // Entre os instrutores possíveis, primeiro os que têm menos habilitações: os mais versáteis ficam livres
 const qtdHabilitacoes = x => (Array.isArray(x.hab) ? x.hab.length : 0);
 
+// Continuidade de avião (eficiência de pátio): a alocação segue a prioridade dos pedidos, não o horário, e às vezes
+// deixa um instrutor em duas matrículas do mesmo tipo. Depois de alocar, as matrículas de cada tipo de avião são
+// redistribuídas com o instrutor como unidade: quem tem mais voos escolhe primeiro e fica com uma matrícula livre em
+// todos os seus horários; se não houver, voo a voo, primeiro nas matrículas que ele já usa. Só a matrícula muda
+// (aluno, instrutor e horário continuam); o PR-JPL continua só para o Parafuso e aviões em manutenção não entram.
+// A redistribuição só vale quando diminui as trocas de avião (senão, ou se algum voo não couber, fica a original).
+// Por último, quem ainda estiver em duas matrículas passa para uma que esteja livre em todos os horários dele.
+const TIPOS_DE_AVIAO = ['C152', 'C172', 'PA-34'];
+
+// Matrículas a mais (do mesmo tipo) por instrutor no dia
+function trocasDeAviao(voos, matricula) {
+  const porInstrutor = new Map();
+  voos.forEach(o => (porInstrutor.get(o.insId) || porInstrutor.set(o.insId, new Set()).get(o.insId)).add(matricula(o)));
+  return [...porInstrutor.values()].reduce((total, regs) => total + regs.size - 1, 0);
+}
+
+function redistribuirTipo(voos, matriculas) {
+  const ocupacao = new Map(matriculas.map(r => [r, []]));
+  const cabe = (r, f) => !ocupacao.get(r).some(([a, b]) => f.a < b && f.b > a);
+  const blocos = new Map();
+  voos.forEach(o => (blocos.get(o.insId) || blocos.set(o.insId, []).get(o.insId)).push(o));
+  const ordem = [...blocos.values()].sort((x, y) => y.length - x.length || Math.min(...x.map(o => o.a)) - Math.min(...y.map(o => o.a)));
+  const nova = new Map();
+  for (const bloco of ordem) {
+    const inteira = matriculas.find(r => bloco.every(f => cabe(r, f)));
+    for (const f of [...bloco].sort((x, y) => x.a - y.a)) {
+      const jaUsadas = [...new Set(bloco.filter(o => nova.has(o)).map(o => nova.get(o)))];
+      const r = inteira || [...jaUsadas, ...matriculas.filter(m => !jaUsadas.includes(m))].find(m => cabe(m, f));
+      if (!r) return null;
+      ocupacao.get(r).push([f.a, f.b]);
+      nova.set(f, r);
+    }
+  }
+  return nova;
+}
+
+function manterInstrutorNoMesmoAviao(out, state) {
+  for (const tipo of TIPOS_DE_AVIAO) {
+    const voos = out.filter(o => o.eqType === tipo && o.r !== ACROBAT_REG);
+    const matriculas = EQ[tipo].filter(r => r !== ACROBAT_REG && state.av[r]);
+    const nova = redistribuirTipo(voos, matriculas);
+    if (nova && trocasDeAviao(voos, o => nova.get(o)) < trocasDeAviao(voos, o => o.r)) voos.forEach(o => { o.r = nova.get(o); });
+
+    // Cada mudança tira uma troca do dia, então a repetição termina; uma mudança pode liberar outra
+    const livreEmTodos = (r, meus) => meus.every(f => !voos.some(o => !meus.includes(o) && o.r === r && o.a < f.b && o.b > f.a));
+    let mudou = true;
+    while (mudou) {
+      mudou = false;
+      for (const insId of new Set(voos.map(o => o.insId))) {
+        const meus = voos.filter(o => o.insId === insId);
+        const usadas = [...new Set(meus.map(o => o.r))];
+        if (usadas.length < 2) continue;
+        const voosEm = r => meus.filter(o => o.r === r).length;
+        const destino = [...usadas.sort((a, b) => voosEm(b) - voosEm(a)), ...matriculas.filter(r => !usadas.includes(r))]
+          .find(r => livreEmTodos(r, meus));
+        if (destino) {
+          meus.forEach(o => { o.r = destino; });
+          mudou = true;
+        }
+      }
+    }
+  }
+}
+
 export function runAllocationEngine(state) {
   const used = {}, busy = {}, stuBusy = {}, stuLastPick = {}, load = {}, eu = {}, out = [], al = [];
   // Aeronaves/simuladores que cada instrutor já usou no dia, na ordem em que foram escalados
@@ -381,6 +445,8 @@ export function runAllocationEngine(state) {
       al.push({ t: 'err', s: labelStu, m: `Rejeitado: ${why}.` });
     }
   }
+
+  manterInstrutorNoMesmoAviao(out, state);
 
   // Atualiza a tag das turmas coletivas de Ground com a quantidade de alunos na mesma sala/horário
   const classCounts = {};
