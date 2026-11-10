@@ -12,7 +12,7 @@ import { rBI } from './views/bi.js';
 import { renderAuditPanel, rOut } from './views/escala.js';
 import { rDem } from './views/demanda.js';
 import { rIns, rAlu } from './views/cadastros.js';
-import { rRec } from './views/recursos.js';
+import { rRec, rRevisao } from './views/recursos.js';
 
 const historyStack = [];
 
@@ -176,6 +176,7 @@ export function gen(switchTab = true) {
   setRES({ ...runAllocationEngine(S), data: DATA });
   ApiClient.salvarDia(DATA, S, RES);
   syncBIHistoryForCurrentDate();
+  rRevisao();
   rOut(switchTab);
   renderAuditPanel();
   rBI();

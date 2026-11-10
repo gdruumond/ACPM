@@ -44,6 +44,13 @@ describe('CSV da escala por avião', () => {
     assert.equal(obs(voo('SALA-GROUND', 'Sala Ground', 390, { isGround: true, groupSize: 6, limKg: 0 })), 'Turma de Ground com 6 alunos');
   });
 
+  it('observações: avião que para para a revisão de 50 horas naquele dia', () => {
+    const res = { ...escala([voo('PR-BTB', 'C152', 390), voo('PR-VOB', 'C152', 390)]), revisao: { 'PR-BTB': { inicio: 49, voadas: 1, fim: 50, paraAs: 450 }, 'PR-VOB': { inicio: 10, voadas: 1, fim: 11, paraAs: null } } };
+    const [btb, vob] = linhasDoCsv(res);
+    assert.match(btb[5], / · Avião para para a revisão de 50 horas às 07:30$/);
+    assert.doesNotMatch(vob[5], /revisão/);
+  });
+
   it('formato do Excel: BOM, ";" como separador, aspas escapadas, quebras de linha do Windows e os alertas no fim', () => {
     const csv = montarCsv(escala([voo('PR-BTB', 'C152', 390, { s: 'Ana "Aninha"' })], [{ t: 'err', s: 'Bia', m: 'Rejeitado: sem avião.' }]));
     assert.ok(csv.startsWith('﻿"Avião / Equipamento";"Horário";'));

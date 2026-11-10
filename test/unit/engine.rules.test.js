@@ -2,6 +2,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { runAllocationEngine, sumUniqueOperationalHours, consolidateTimelineSlots } from '../../js/engine.js';
+import { hm } from '../../js/format.js';
 import { aluno, apenas, cenario, instrutor, missaoExtra, GROUND_C152 } from '../helpers/montar.js';
 
 const alocar = opts => runAllocationEngine(cenario(opts));
@@ -196,6 +197,42 @@ describe('Peso da tripulação', () => {
     assert.equal(out.length, 1);
     assert.equal(out[0].kg, 0);
     assert.deepEqual(al, [{ t: 'warn', s: 'Aluno 1000', m: 'Peso do aluno não informado (0 kg): verificação de limite (170 kg) no C152 não realizada.' }]);
+  });
+});
+
+describe('Revisão de 50 horas', () => {
+  const ins = [instrutor(1, 1), instrutor(2, 1), instrutor(3, 1)];
+  const tresVoos = [aluno(1000, { p1: 1, p2: 1 }), aluno(1001, { p1: 2, p2: 2 }), aluno(1002, { p1: 4, p2: 4 })];
+
+  it('avião sem saldo para o voo não é escalado: o voo vai para outro avião', () => {
+    const { out, al } = alocar({ ins, stu: [aluno(1000)], semAeronaves: apenas('C152', 'PP-LJV', 'PR-BTB'), horas: { 'PP-LJV': 49.5 } });
+    assert.equal(out[0].r, 'PR-BTB');
+    assert.deepEqual(al, [{ t: 'warn', s: 'PP-LJV', m: 'Aeronave parou para revisão de 50 horas: sem saldo para voar hoje (49,5 h desde a última revisão).' }]);
+  });
+
+  it('o avião voa até completar as 50 horas e para no meio do dia; os horários seguintes ficam sem esse avião', () => {
+    const { out, al, revisao } = alocar({ ins, stu: tresVoos, semAeronaves: SO_PP_LJV, horas: { 'PP-LJV': 48, 'PR-BTB': 10 } });
+    assert.deepEqual(out.map(o => [o.s, o.r, hm(o.a)]), [['Aluno 1000', 'PP-LJV', '08:20'], ['Aluno 1001', 'PP-LJV', '10:10']]);
+    assert.deepEqual(al, [
+      { t: 'err', s: 'Aluno 1002', m: 'Rejeitado: os C152 livres estão sem saldo até a revisão de 50 horas.' },
+      { t: 'warn', s: 'PP-LJV', m: 'Aeronave parou para revisão de 50 horas às 11:10 (50 h desde a última revisão).' }
+    ]);
+    assert.deepEqual(revisao, {
+      'PP-LJV': { inicio: 48, voadas: 2, fim: 50, paraAs: 670 },
+      'PR-BTB': { inicio: 10, voadas: 0, fim: 10, paraAs: null }
+    }, 'o PR-BTB está em manutenção: tem as horas, mas não voa');
+  });
+
+  it('sem as horas informadas não há limite', () => {
+    const { out, al, revisao } = alocar({ ins, stu: tresVoos, semAeronaves: SO_PP_LJV });
+    assert.equal(out.length, 3);
+    assert.deepEqual([al, revisao], [[], {}]);
+  });
+
+  it('as sessões do mesmo pedido somam no saldo do avião', () => {
+    const { out, al } = alocar({ ins, stu: [aluno(1000, { nb: 2, ss: 2 })], semAeronaves: SO_PP_LJV, horas: { 'PP-LJV': 49 } });
+    assert.equal(out.length, 0, 'só havia saldo para 1 das 2 h');
+    assert.equal(al[0].m, 'Rejeitado: os C152 livres estão sem saldo até a revisão de 50 horas.');
   });
 });
 

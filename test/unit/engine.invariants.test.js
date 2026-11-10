@@ -166,6 +166,21 @@ describe('Invariantes do motor de alocação', () => {
     }
   }));
 
+  it('nenhum avião passa das 50 horas desde a última revisão (aviões perto do limite em 100 cenários)', () => {
+    const falhas = [];
+    for (const seed of SEEDS.slice(0, 100)) {
+      const estado = gerarCenario(seed);
+      const avioes = ['C152', 'C172', 'PA-34'].flatMap(t => EQ[t]);
+      estado.horas = Object.fromEntries(avioes.filter((r, i) => i % 2 === 0).map((r, i) => [r, 46 + (i % 8) * 0.5]));
+      const { out } = runAllocationEngine(estado);
+      for (const [r, inicio] of Object.entries(estado.horas)) {
+        const voadas = out.filter(o => o.r === r).reduce((t, o) => t + o.h, 0);
+        if (inicio + voadas > 50 + 1e-9) falhas.push(`seed ${seed}: ${r} com ${inicio} + ${voadas} h`);
+      }
+    }
+    assert.deepEqual(falhas.slice(0, 5), []);
+  });
+
   it('é determinístico e não altera o estado recebido', () => {
     for (const seed of SEEDS.slice(0, 50)) {
       const estado = gerarCenario(seed);

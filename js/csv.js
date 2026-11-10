@@ -12,9 +12,9 @@ export const CABECALHO = ['Avião / Equipamento', 'Horário', 'Aluno', 'Fase / M
 
 export const nomeDoCsv = data => `escala-acpm-${data}.csv`;
 
-// Observações pertinentes ao lançamento: status diferente de confirmado, turma de Ground e o peso da tripulação
-// (aluno + instrutor) contra o limite do avião
-function observacoes(o, status) {
+// Observações pertinentes ao lançamento: status diferente de confirmado, turma de Ground, o peso da tripulação
+// (aluno + instrutor) contra o limite do avião e o avião que para para a revisão de 50 horas naquele dia
+function observacoes(o, status, revisao) {
   const notas = [];
   if (status !== 'Confirmado') notas.push(`Status: ${status}`);
   if (o.isGround && o.groupSize > 1) notas.push(`Turma de Ground com ${o.groupSize} alunos`);
@@ -26,6 +26,8 @@ function observacoes(o, status) {
       notas.push(`Peso aluno + instrutor: ${total} kg (limite do ${o.eqType}: ${o.limKg} kg) · ${total <= o.limKg ? 'dentro do envelope' : 'ACIMA DO LIMITE'}`);
     }
   }
+  const parada = revisao && Object.hasOwn(revisao, o.r) ? revisao[o.r].paraAs : null;
+  if (parada !== null && parada !== undefined) notas.push(`Avião para para a revisão de 50 horas às ${hm(parada)}`);
   return notas.join(' · ');
 }
 
@@ -35,7 +37,7 @@ export function linhasDoCsv(res, fStatus = {}) {
     .map(o => {
       const status = fStatus[o.fKey] || o.status || 'Confirmado';
       const missao = o.ss && o.ss !== '1/1' ? `${o.mis} (sessão ${o.ss})` : o.mis;
-      return [o.r, `${hm(o.a)}–${hm(o.b)}`, o.s, missao, o.ins, observacoes(o, status)];
+      return [o.r, `${hm(o.a)}–${hm(o.b)}`, o.s, missao, o.ins, observacoes(o, status, res.revisao)];
     });
 }
 

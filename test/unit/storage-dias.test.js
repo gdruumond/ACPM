@@ -104,6 +104,16 @@ describe('Carregar e salvar uma data', () => {
   });
 });
 
+describe('Horas até a revisão de 50 horas', () => {
+  it('ficam no dia e a nova data começa com as horas mais os voos do dia anterior', async () => {
+    const estado = ApiClient.normalizeAndMigrateState(estadoSintetico());
+    estado.horas = { 'PR-BTB': 40 };
+    await ApiClient.salvarDia('2026-11-11', estado, { out: [{ fKey: '1000_0_1', r: 'PR-BTB', eqType: 'C152', h: 2 }], al: [], tot: 1 });
+    assert.deepEqual((await ApiClient.carregarDia('2026-11-11')).estado.horas, { 'PR-BTB': 40 });
+    assert.deepEqual((await ApiClient.carregarDia('2026-11-12')).estado.horas, { 'PR-BTB': 42 });
+  });
+});
+
 describe('Histórico e BI por data', () => {
   it('registra e lista o histórico da data', async () => {
     await ApiClient.registrarHistorico('2026-11-11', { tipo: 'exc', descricao: 'PR-BTB: Manutenção', reverter: { kind: 'setAv' } });

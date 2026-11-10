@@ -253,6 +253,8 @@ tr.st-Cancelado td { opacity: 0.45; text-decoration: line-through; }
 }
 .tag.fb { color: var(--wa); border-color: var(--wa); }
 .tag.grp { color: var(--ok); border-color: var(--ok); }
+.tag.er { color: var(--er); border-color: var(--er); }
+.revisao input { width: 6em; }
 
 /* Status Operacional do Voo */
 .st-sel {

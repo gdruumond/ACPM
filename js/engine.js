@@ -1,7 +1,7 @@
 // Motor de alocação determinístico da escala do dia e utilitários de horas e de ocupação.
 // runAllocationEngine é uma função pura: recebe o estado e devolve { out, al, tot } sem alterá-lo.
-import { T, NI, DAY, NIGHT_OK, EQ, MIS, DEFAULT_LIM, ACROBAT_REG, GROUND_EQ_TYPE, GROUND_REG, GROUND_DURATION_MIN, GROUND_DURATION_H } from './config.js';
-import { hm } from './format.js';
+import { T, NI, DAY, NIGHT_OK, EQ, MIS, DEFAULT_LIM, ACROBAT_REG, GROUND_EQ_TYPE, GROUND_REG, GROUND_DURATION_MIN, GROUND_DURATION_H, REVISAO_H, MENOR_VOO_H } from './config.js';
+import { hm, fmtH } from './format.js';
 import { isGroundMission, doesGroundGateFlight } from './rules.js';
 import { podeFazer, descreverExigencias } from './habilitacoes.js';
 
@@ -24,35 +24,40 @@ function trocasDeAviao(voos, matricula) {
   return [...porInstrutor.values()].reduce((total, regs) => total + regs.size - 1, 0);
 }
 
-function redistribuirTipo(voos, matriculas) {
+function redistribuirTipo(voos, matriculas, saldo) {
   const ocupacao = new Map(matriculas.map(r => [r, []]));
-  const cabe = (r, f) => !ocupacao.get(r).some(([a, b]) => f.a < b && f.b > a);
+  const horas = new Map(matriculas.map(r => [r, 0]));
+  const cabe = (r, f) => !ocupacao.get(r).some(([a, b]) => f.a < b && f.b > a) && horas.get(r) + f.h <= saldo(r) + 1e-9;
   const blocos = new Map();
   voos.forEach(o => (blocos.get(o.insId) || blocos.set(o.insId, []).get(o.insId)).push(o));
   const ordem = [...blocos.values()].sort((x, y) => y.length - x.length || Math.min(...x.map(o => o.a)) - Math.min(...y.map(o => o.a)));
   const nova = new Map();
   for (const bloco of ordem) {
-    const inteira = matriculas.find(r => bloco.every(f => cabe(r, f)));
+    const horasDoBloco = bloco.reduce((total, f) => total + f.h, 0);
+    const inteira = matriculas.find(r => bloco.every(f => cabe(r, f)) && horas.get(r) + horasDoBloco <= saldo(r) + 1e-9);
     for (const f of [...bloco].sort((x, y) => x.a - y.a)) {
       const jaUsadas = [...new Set(bloco.filter(o => nova.has(o)).map(o => nova.get(o)))];
       const r = inteira || [...jaUsadas, ...matriculas.filter(m => !jaUsadas.includes(m))].find(m => cabe(m, f));
       if (!r) return null;
       ocupacao.get(r).push([f.a, f.b]);
+      horas.set(r, horas.get(r) + f.h);
       nova.set(f, r);
     }
   }
   return nova;
 }
 
-function manterInstrutorNoMesmoAviao(out, state) {
+function manterInstrutorNoMesmoAviao(out, state, saldo) {
   for (const tipo of TIPOS_DE_AVIAO) {
     const voos = out.filter(o => o.eqType === tipo && o.r !== ACROBAT_REG);
     const matriculas = EQ[tipo].filter(r => r !== ACROBAT_REG && state.av[r]);
-    const nova = redistribuirTipo(voos, matriculas);
+    const nova = redistribuirTipo(voos, matriculas, saldo);
     if (nova && trocasDeAviao(voos, o => nova.get(o)) < trocasDeAviao(voos, o => o.r)) voos.forEach(o => { o.r = nova.get(o); });
 
     // Cada mudança tira uma troca do dia, então a repetição termina; uma mudança pode liberar outra
-    const livreEmTodos = (r, meus) => meus.every(f => !voos.some(o => !meus.includes(o) && o.r === r && o.a < f.b && o.b > f.a));
+    const horasDe = lista => lista.reduce((total, o) => total + o.h, 0);
+    const livreEmTodos = (r, meus) => meus.every(f => !voos.some(o => !meus.includes(o) && o.r === r && o.a < f.b && o.b > f.a)) &&
+      horasDe(voos.filter(o => o.r === r && !meus.includes(o))) + horasDe(meus) <= saldo(r) + 1e-9;
     let mudou = true;
     while (mudou) {
       mudou = false;
@@ -121,6 +126,9 @@ export function runAllocationEngine(state) {
   });
 
   const free = (mp, id, s, e) => !(mp[id] || []).some(([a, b]) => s < b && e > a);
+  // Revisão de 50 horas: horas que o avião ainda pode voar hoje (sem as horas informadas, não há limite)
+  const horas = state.horas || {};
+  const saldo = r => (typeof horas[r] === 'number' ? REVISAO_H - horas[r] : Infinity);
   const cover = (aw, s, e) => T.every((c, k) => !(s < (k < NI ? T[k + 1] : 1440) && e > c) || aw[k]);
 
   for (const item of act) {
@@ -332,18 +340,21 @@ export function runAllocationEngine(state) {
       return r !== ACROBAT_REG;
     });
 
-    const fc = { stu_busy: 0, eq: 0, disp: 0, busy: 0, bloq: 0, peso: 0 };
+    const fc = { stu_busy: 0, eq: 0, revisao: 0, disp: 0, busy: 0, bloq: 0, peso: 0 };
     let ch = null;
 
     for (const pl of plans) {
       const pick = [];
+      const horasNoPlano = {};
       let prev = stuLastPick[stuId] || null, bad = null;
 
-      for (const p of pl) {
+      for (const [j, p] of pl.entries()) {
         if (!free(stuBusy, stuId, p.a, p.b)) { bad = 'stu_busy'; break; }
 
-        const eqs = fleetPool.filter(r => state.av[r] && free(used, r, p.a, p.b));
-        if (!eqs.length) { bad = 'eq'; break; }
+        const livres = fleetPool.filter(r => state.av[r] && free(used, r, p.a, p.b));
+        if (!livres.length) { bad = 'eq'; break; }
+        const eqs = livres.filter(r => (eu[r] || 0) + (horasNoPlano[r] || 0) + len[j] / 60 <= saldo(r) + 1e-9);
+        if (!eqs.length) { bad = 'revisao'; break; }
 
         const q = state.ins.filter(x => x.on && podeFazer(x, d.mis, d.eq) && cover(x.aw, p.a, p.b));
         if (!q.length) { bad = 'disp'; break; }
@@ -367,6 +378,7 @@ export function runAllocationEngine(state) {
 
         prev = { r: eqs[0], x };
         pick.push(prev);
+        horasNoPlano[eqs[0]] = (horasNoPlano[eqs[0]] || 0) + len[j] / 60;
       }
 
       if (bad) { fc[bad]++; continue; }
@@ -436,6 +448,7 @@ export function runAllocationEngine(state) {
           eq: isParafuso && d.eq === 'C152'
             ? `a aeronave acrobática ${ACROBAT_REG} (exclusiva para Parafuso) já está ocupada nos horários testados`
             : `falta de ${d.eq} livre nos horários testados (ocupado por voos de maior prioridade)`,
+          revisao: `os ${d.eq} livres estão sem saldo até a revisão de 50 horas`,
           disp: `nenhum instrutor habilitado (${exige}) disponível durante todo o voo nos horários testados`,
           busy: `instrutores habilitados (${exige}) já ocupados em algum trecho do voo (conflito de horário)`,
           bloq: `os instrutores habilitados (${exige}) livres estão bloqueados por este aluno`,
@@ -446,7 +459,27 @@ export function runAllocationEngine(state) {
     }
   }
 
-  manterInstrutorNoMesmoAviao(out, state);
+  manterInstrutorNoMesmoAviao(out, state, saldo);
+
+  // Revisão de 50 horas: horas de cada avião controlado e onde ele para (sem saldo para mais uma missão de 1 h)
+  const revisao = {};
+  for (const r of Object.keys(horas)) {
+    if (typeof horas[r] !== 'number') continue;
+    const meus = out.filter(o => o.r === r);
+    const voadas = Math.round(meus.reduce((total, o) => total + o.h, 0) * 10) / 10;
+    const fim = Math.round((horas[r] + voadas) * 10) / 10;
+    const para = state.av[r] !== false && REVISAO_H - fim < MENOR_VOO_H;
+    const paraAs = !para ? null : meus.length ? Math.max(...meus.map(o => o.b)) : T[0];
+    revisao[r] = { inicio: horas[r], voadas, fim, paraAs };
+    if (para) {
+      al.push({
+        t: 'warn', s: r,
+        m: meus.length
+          ? `Aeronave parou para revisão de 50 horas às ${hm(paraAs)} (${fmtH(fim)} desde a última revisão).`
+          : `Aeronave parou para revisão de 50 horas: sem saldo para voar hoje (${fmtH(fim)} desde a última revisão).`
+      });
+    }
+  }
 
   // Atualiza a tag das turmas coletivas de Ground com a quantidade de alunos na mesma sala/horário
   const classCounts = {};
@@ -464,7 +497,7 @@ export function runAllocationEngine(state) {
   });
 
   out.sort((a, b) => a.a - b.a || (b.isGround ? 1 : 0) - (a.isGround ? 1 : 0) || a.o - b.o);
-  return { out, al, tot: act.length };
+  return { out, al, tot: act.length, revisao };
 }
 
 // Calcula horas operacionais deduplicando turmas coletivas de Ground School

@@ -45,7 +45,8 @@ export const ApiClient = {
       // Sem cadastro: no modo compartilhado os instrutores e alunos vêm do servidor
       ins: [],
       stu: [],
-      fStatus: {}
+      fStatus: {},
+      horas: {}
     };
     Object.values(EQ).flat().forEach(r => state.av[r] = true);
     return state;
@@ -55,6 +56,7 @@ export const ApiClient = {
     if (!x || !Array.isArray(x.stu) || !Array.isArray(x.ins)) return this.createFreshState();
     x.lim = { ...DEFAULT_LIM };
     if (!x.fStatus) x.fStatus = {};
+    if (!x.horas || typeof x.horas !== 'object' || Array.isArray(x.horas)) x.horas = {};
     if (!x.nid || x.nid < 1000) x.nid = 1000;
 
     if (!x.schemaVer || x.schemaVer < 3) {

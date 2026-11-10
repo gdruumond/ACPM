@@ -14,7 +14,7 @@
  *   js/export.js    Exportação CSV e PDF
  */
 import { WIN, NI, T, EQ, GROUND_EQ_TYPE, GROUND_REG, GROUND_DURATION_MIN, GROUND_DURATION_H, ACROBAT_REG, MIS, PRE } from './config.js';
-import { hm, fmtDurLabel, pad, amanhaISO, isoMenosDias } from './format.js';
+import { hm, fmtH, fmtDurLabel, pad, amanhaISO, isoMenosDias } from './format.js';
 import { isGroundMission, blank } from './rules.js';
 import { habilitacoesDoNivel, normalizarHabilitacoes, nomeDaHabilitacao, podeFazer } from './habilitacoes.js';
 import { ApiClient } from './storage.js';
@@ -63,18 +63,22 @@ document.addEventListener('input', e => {
   });
 });
 
+// Botões que pedem confirmação: o primeiro clique troca o texto; o segundo, em até 3,5 s, confirma
+const confirmado = (b, txt) => {
+  const o = b.dataset.o || (b.dataset.o = b.textContent);
+  if (activeTimers.has(b)) clearTimeout(activeTimers.get(b));
+  if (!b.dataset.arm) {
+    b.dataset.arm = 1; b.textContent = txt;
+    activeTimers.set(b, setTimeout(() => { b.dataset.arm = ''; b.textContent = o; activeTimers.delete(b); }, 3500));
+    return false;
+  }
+  b.dataset.arm = ''; b.textContent = o; activeTimers.delete(b);
+  return true;
+};
 const armed = (id, txt, fn) => {
   $(id).onclick = e => {
     if (isGestor()) return;
-    const b = e.target, o = b.dataset.o || (b.dataset.o = b.textContent);
-    if (activeTimers.has(b)) clearTimeout(activeTimers.get(b));
-    if (!b.dataset.arm) {
-      b.dataset.arm = 1; b.textContent = txt;
-      const tid = setTimeout(() => { b.dataset.arm = ''; b.textContent = o; activeTimers.delete(b); }, 3500);
-      activeTimers.set(b, tid);
-      return;
-    }
-    b.dataset.arm = ''; b.textContent = o; activeTimers.delete(b); fn();
+    if (confirmado(e.target, txt)) fn();
   };
 };
 
@@ -319,6 +323,17 @@ document.addEventListener('click', e => {
     return;
   }
 
+  // Revisão de 50 horas feita: as horas do avião desde a última revisão voltam a zero (pede confirmação)
+  if (a === 'revisao') {
+    if (isGestor() || !confirmado(b, 'Confirmar revisão')) return;
+    pushHistory();
+    S.horas[b.dataset.id] = 0;
+    logChange('mod', `${b.dataset.id}: revisão de 50 horas feita (horas zeradas)`);
+    save(); rRec();
+    if (RES) gen(false);
+    return;
+  }
+
   if (a === 'addi') {
     pushHistory();
     const newIns = { id: S.nid++, nm: 'Novo instrutor', on: true, hab: habilitacoesDoNivel(1), kg: 0, aw: WIN.map((_, i) => i < 8) };
@@ -408,6 +423,13 @@ document.addEventListener('change', e => {
       logChange(t.checked ? 'inc' : 'exc', `${reg}: ${t.checked ? 'Disponível' : 'Manutenção'}`, {
         kind: 'setAv', reg, val: !t.checked, label: '↶ Reverter'
       });
+    } else if (a === 'horas') {
+      // Horas desde a última revisão de 50 horas; vazio: sem controle para o avião
+      const reg = t.dataset.id;
+      const horas = t.value === '' ? null : Math.round(Math.max(0, +t.value) * 10) / 10;
+      if (horas === null || Number.isNaN(horas)) delete S.horas[reg];
+      else S.horas[reg] = horas;
+      logChange('mod', `${reg}: ${horas === null || Number.isNaN(horas) ? 'horas desde a revisão não informadas' : fmtH(horas) + ' desde a última revisão de 50 horas'}`);
     }
     save(); rRec();
     if (RES) gen(false);

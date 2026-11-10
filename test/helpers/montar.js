@@ -21,11 +21,12 @@ export const GROUND_C152 = { mis: 'Ground C152', eq: 'Sala Ground', nb: 1.5 };
 // Somente as aeronaves informadas ficam disponíveis no tipo (as demais entram em manutenção)
 export const apenas = (tipo, ...manter) => FROTA_POR_TIPO[tipo].filter(r => !manter.includes(r));
 
-export function cenario({ ins = [instrutor(1, 9)], stu = [], semAeronaves = [], janelasOff = [], fStatus = {} } = {}) {
+export function cenario({ ins = [instrutor(1, 9)], stu = [], semAeronaves = [], janelasOff = [], fStatus = {}, horas = {} } = {}) {
   const estado = estadoSintetico();
   estado.ins = ins;
   estado.stu = stu;
   estado.fStatus = fStatus;
+  estado.horas = horas;
   semAeronaves.forEach(r => { estado.av[r] = false; });
   janelasOff.forEach(w => { estado.win[w] = false; });
   return estado;

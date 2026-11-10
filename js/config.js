@@ -68,6 +68,10 @@ export const MIS = {
   'Cheque PC MLTE IFR': { defEq: 'PA-34', eq: ['PA-34'] }
 };
 
+// Revisão obrigatória dos aviões a cada 50 horas de voo (o avião para quando não tem saldo para mais 1 h)
+export const REVISAO_H = 50;
+export const MENOR_VOO_H = 1;
+
 // Limites máximos de peso implícitos ao equipamento (fixos na regra operacional)
 export const DEFAULT_LIM = { 'C152': 170, 'C172': 222, 'PA-34': 250 };
 
