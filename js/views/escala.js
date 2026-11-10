@@ -232,7 +232,7 @@ export function rOut(switchTab = true) {
     <div><strong style="color:${al.length ? 'var(--er)' : 'var(--ok)'}">${al.length}</strong>alertas</div>
   </div>`;
 
-  h += al.map(a => `<div class="al ${a.t}"><b>${esc(a.s)}</b>${a.m}</div>`).join('');
+  h += al.map(a => `<div class="al ${a.t}"><b>${esc(a.s)}</b>${esc(a.m)}</div>`).join('');
 
   if (!filteredOut.length) {
     h += `<p class="h">${tot ? 'Nenhum voo alocado.' : 'Nenhuma missão marcada em “4 · Demanda”.'}</p>`;
