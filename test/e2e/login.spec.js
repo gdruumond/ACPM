@@ -1,8 +1,8 @@
 import { test, expect, prepararContexto, vigiarErros, irPara, confirmar, AMANHA } from './fixtures.js';
-import { instalarSupabaseFalso, documentosFase3, CONTAS } from './supabase-falso.js';
+import { instalarSupabaseFalso, documentosAtuais, CONTAS } from './supabase-falso.js';
 import { estadoSintetico } from '../helpers/estado.js';
 
-const fase3 = () => documentosFase3(estadoSintetico(), AMANHA);
+const comDados = () => documentosAtuais(estadoSintetico(), AMANHA);
 
 // Em localhost, ?supabase=teste liga o app ao servidor Supabase falso (supabase-falso.js)
 const URL_APP = './?supabase=teste';
@@ -39,7 +39,7 @@ test.describe('Login e perfis (modo compartilhado)', () => {
   });
 
   test('operador entra, vê os dados do banco e as alterações são gravadas com a versão lida', async ({ page, context }) => {
-    const servidor = await instalarSupabaseFalso(context, fase3());
+    const servidor = await instalarSupabaseFalso(context, comDados());
     await page.goto(URL_APP);
     await entrar(page, CONTAS.operador);
     await expect(page.locator('#s-rec')).toBeVisible();
@@ -55,7 +55,7 @@ test.describe('Login e perfis (modo compartilhado)', () => {
   });
 
   test('gestor entra somente para leitura e nada é gravado', async ({ page, context }) => {
-    const servidor = await instalarSupabaseFalso(context, fase3());
+    const servidor = await instalarSupabaseFalso(context, comDados());
     await page.goto(URL_APP);
     await entrar(page, CONTAS.gestor);
     await expect(page.locator('#usuario')).toHaveText('Gestor de Teste · Gestor');
@@ -81,7 +81,7 @@ test.describe('Login e perfis (modo compartilhado)', () => {
   });
 
   test('a sessão continua depois de recarregar e "Sair" volta para o login (só neste navegador)', async ({ page, context }) => {
-    const servidor = await instalarSupabaseFalso(context, fase3());
+    const servidor = await instalarSupabaseFalso(context, comDados());
     await page.goto(URL_APP);
     await entrar(page, CONTAS.operador);
     await expect(page.locator('#usuario')).toBeVisible();

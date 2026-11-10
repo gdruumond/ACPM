@@ -28,6 +28,7 @@ import { rRec } from './views/recursos.js';
 import { setRole, pushHistory, save, logChange, undoLastAction, syncBIHistoryForCurrentDate, gen, demo, abrirData, historicoParaPainel, carregarData, carregarBI } from './actions.js';
 import { exp, pdf } from './export.js';
 import { projetoSupabase } from './config-supabase.js';
+import { ESQUEMA } from './migracoes.js';
 import { iniciarSessaoSupabase } from './sessao.js';
 
 const activeTimers = new WeakMap();
@@ -210,7 +211,7 @@ armed('#btn-bi-sim', 'Confirmar simulação', async () => {
         r: reg, eqType, ins: ins.nm, lv: ins.lv, status: 'Confirmado'
       });
     }
-    await ApiClient.backend.gravar(`dia:${iso}`, { simulado: true, resultado: { out: flights, al: [], tot: numFlights, rej: 0, data: iso } });
+    await ApiClient.backend.gravar(`dia:${iso}`, { simulado: true, resultado: { out: flights, al: [], tot: numFlights, rej: 0, data: iso }, esquema: ESQUEMA });
   }
   await carregarBI();
   showToast('Histórico de 30 dias simulado.');
@@ -528,8 +529,10 @@ document.addEventListener('change', e => {
     const projeto = projetoSupabase();
     if (projeto && !(await iniciarSessaoSupabase(projeto))) return;
 
-    // Primeira abertura com a escala por data: converte os documentos da fase 2 (do servidor ou deste navegador)
+    // Primeira abertura com a escala por data: converte os documentos da fase 2 (do servidor ou deste navegador).
+    // Depois de uma mudança no formato dos dados, regrava no formato atual o que estiver num formato anterior
     await ApiClient.migrarDocumentosAntigos(amanha);
+    await ApiClient.atualizarFormatoGravado();
 
     abrirData(data);
     const { estado, escala } = await ApiClient.carregarDia(data);

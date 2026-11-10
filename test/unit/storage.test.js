@@ -179,6 +179,11 @@ describe('Link compartilhável: validação do conteúdo (vem da URL, não é co
     assert.equal(ATAQUE in estado.av, false);
   });
 
+  it('link antigo com simulador em manutenção vale para o nome novo do simulador', () => {
+    const { estado } = abrir({ d: '2026-11-11', avOff: ['SIM-MONO-1', 'SIM-MULTI-2'] });
+    assert.deepEqual([estado.av['SIM-MONO-A'], estado.av['SIM-MONO-C'], estado.av['SIM-MLTE-E'], estado.av['SIM-MLTE-D']], [false, true, true, false]);
+  });
+
   it('status de voo: somente chaves aluno_missão_sessão e valores conhecidos', () => {
     const { estado } = abrir({ st: { '1000_0_1': ATAQUE, '1000_0_2': 'Em Voo', [ATAQUE]: 'Pendente' } });
     assert.deepEqual(estado.fStatus, { '1000_0_2': 'Em Voo' });

@@ -30,10 +30,10 @@
       "PR-VOZ C152 0 h 0 h 0 h",
       "PT-JOB PA-34 0 h 0 h 0 h",
       "PT-KIW PA-34 0 h 0 h 0 h",
-      "SIM-MONO-1 Sim. Mono 0 h 0 h 0 h",
-      "SIM-MONO-2 Sim. Mono 0 h 0 h 0 h",
-      "SIM-MULTI-1 Sim. Multi 0 h 0 h 0 h",
-      "SIM-MULTI-2 Sim. Multi 0 h 0 h 0 h"
+      "SIM-MLTE-D Sim. Multi 0 h 0 h 0 h",
+      "SIM-MLTE-E Sim. Multi 0 h 0 h 0 h",
+      "SIM-MONO-A Sim. Mono 0 h 0 h 0 h",
+      "SIM-MONO-C Sim. Mono 0 h 0 h 0 h"
     ],
     [
       "Instrutor 01 A01 2,5 h 2,5 h 2,5 h",

@@ -22,8 +22,11 @@ function clienteFalso(documentos = {}, { atraso = 0, dias = {} } = {}) {
     throw new Error(`tabela inesperada: ${tabela}`);
   };
 
+  // Versão do formato do conteúdo (campo esquema); o servidor não aceita voltar a um formato mais antigo
+  const esquema = conteudo => (conteudo && typeof conteudo.esquema === 'number' ? Math.floor(conteudo.esquema) : 0);
   const salvar = (mapa, chave, conteudo, versaoLida) => {
     const atual = mapa.get(chave);
+    if (atual && esquema(conteudo) < esquema(atual.conteudo)) return { data: null, error: { code: 'PT409', message: 'formato mais novo' } };
     const versaoAtual = atual ? atual.versao : 0;
     if (versaoLida !== versaoAtual) return { data: null, error: { code: 'PT409', message: 'alterado por outra pessoa' } };
     mapa.set(chave, { conteudo, versao: versaoAtual + 1 });

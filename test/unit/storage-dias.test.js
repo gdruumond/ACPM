@@ -7,6 +7,7 @@ import { backendLocal } from '../../js/backends/local.js';
 import { simularNavegador } from '../helpers/navegador.js';
 import { estadoSintetico } from '../helpers/estado.js';
 import { aluno, missaoExtra } from '../helpers/montar.js';
+import { ESQUEMA } from '../../js/migracoes.js';
 
 // Backend em memória com a mesma interface, contando as gravações
 function backendEmMemoria() {
@@ -177,5 +178,89 @@ describe('Migração dos documentos da fase 2', () => {
     await backend.gravar('dia:2026-11-09', { meu: true });
     await ApiClient.migrarDocumentosAntigos('2026-11-11');
     assert.deepEqual(backend.docs.get('dia:2026-11-09'), { meu: true });
+  });
+});
+
+describe('Formato dos dados guardados (versões)', () => {
+  // Cadastro e dia no formato da fase 3 (sem versão), com simuladores nos nomes antigos
+  const cadastroFase3 = () => ({ nid: 1001, ins: [{ id: 1, nm: 'Instrutor 01', lv: 2, kg: 70 }], stu: [{ id: 1000, nm: 'Aluno 1000', kg: 60, bl: [] }] });
+  const diaFase3 = (resultado = null) => ({
+    win: Array(9).fill(true),
+    av: { 'SIM-MONO-1': false, 'SIM-MONO-2': true, 'SIM-MULTI-1': true, 'SIM-MULTI-2': false, 'PR-BTB': true },
+    ins: { 1: { on: true, aw: Array(9).fill(true) } },
+    pedidos: { 1000: { fly: true, mis: 'Simulador', eq: 'Sim. Mono', p1: 1, p2: 2, nb: 1, ss: 1, pr: 3, extra: [] } },
+    fStatus: {},
+    resultado
+  });
+
+  it('lê dados no formato anterior já no formato atual (simuladores renomeados), sem gravar nada', async () => {
+    await backend.gravar('cadastro', cadastroFase3());
+    await backend.gravar('dia:2026-11-11', diaFase3({ out: [{ fKey: '1000_0_1', r: 'SIM-MONO-2', h: 1 }], al: [], tot: 1 }));
+    backend.gravacoes.length = 0;
+    const { estado, escala } = await ApiClient.carregarDia('2026-11-11');
+    assert.equal(estado.av['SIM-MONO-A'], false);
+    assert.equal(estado.av['SIM-MLTE-D'], false);
+    assert.equal(Object.hasOwn(estado.av, 'SIM-MONO-1'), false, 'os nomes antigos não ficam no estado');
+    assert.equal(escala.out[0].r, 'SIM-MONO-C');
+    assert.deepEqual(backend.gravacoes, []);
+  });
+
+  it('a nova data copia o dia anterior já no formato atual, e o BI usa os nomes novos', async () => {
+    await backend.gravar('cadastro', cadastroFase3());
+    await backend.gravar('dia:2026-11-11', diaFase3({ out: [{ fKey: '1000_0_1', r: 'SIM-MULTI-1', h: 1 }], al: [], tot: 1 }));
+    const { estado } = await ApiClient.carregarDia('2026-11-12');
+    assert.equal(estado.av['SIM-MONO-A'], false);
+    assert.deepEqual((await ApiClient.biDoPeriodo('2026-11-01', '2026-11-30'))['2026-11-11'].out.map(o => o.r), ['SIM-MLTE-E']);
+  });
+
+  it('grava sempre no formato atual', async () => {
+    await ApiClient.salvarDia('2026-11-11', ApiClient.normalizeAndMigrateState(estadoSintetico()), null);
+    assert.equal(backend.docs.get('cadastro').esquema, ESQUEMA);
+    assert.equal(backend.docs.get('dia:2026-11-11').esquema, ESQUEMA);
+  });
+
+  it('a conversão dos documentos da fase 2 já grava no formato atual', async () => {
+    await backend.gravar('estado', { ...estadoSintetico(), av: { 'SIM-MONO-1': false } });
+    await ApiClient.migrarDocumentosAntigos('2026-11-11');
+    assert.equal(backend.docs.get('cadastro').esquema, ESQUEMA);
+    assert.equal(backend.docs.get('dia:2026-11-11').esquema, ESQUEMA);
+    assert.equal(backend.docs.get('dia:2026-11-11').av['SIM-MONO-A'], false);
+  });
+
+  it('atualiza o que está gravado: todos os dias e, por último, o cadastro; uma vez só', async () => {
+    await backend.gravar('cadastro', cadastroFase3());
+    await backend.gravar('dia:2026-10-16', { importado: true, resultado: { out: [{ r: 'SIM-MONO-1', h: 1 }], al: [], tot: 1, rej: 0, data: '2026-10-16' } });
+    await backend.gravar('dia:2026-11-11', diaFase3());
+    await backend.gravar('dia:2026-11-12', { ...diaFase3(), av: { 'SIM-MONO-A': true }, esquema: ESQUEMA });
+    backend.gravacoes.length = 0;
+    assert.equal(await ApiClient.atualizarFormatoGravado(), true);
+    assert.deepEqual(backend.gravacoes, ['dia:2026-10-16', 'dia:2026-11-11', 'cadastro'], 'o dia que já estava no formato atual não é regravado');
+    assert.equal(backend.docs.get('dia:2026-10-16').resultado.out[0].r, 'SIM-MONO-A');
+    assert.equal(backend.docs.get('dia:2026-11-11').av['SIM-MLTE-D'], false);
+    assert.deepEqual(backend.docs.get('cadastro'), { ...cadastroFase3(), esquema: ESQUEMA });
+
+    backend.gravacoes.length = 0;
+    assert.equal(await ApiClient.atualizarFormatoGravado(), false, 'já atualizado');
+    assert.deepEqual(backend.gravacoes, []);
+  });
+
+  it('se uma gravação falha, para com erro e o cadastro continua no formato anterior (retoma na próxima abertura)', async () => {
+    await backend.gravar('cadastro', cadastroFase3());
+    await backend.gravar('dia:2026-11-11', diaFase3());
+    const gravar = backend.gravar;
+    backend.gravar = async (doc, conteudo) => (doc === 'dia:2026-11-11' ? false : gravar(doc, conteudo));
+    await assert.rejects(ApiClient.atualizarFormatoGravado(), /atualização dos dados não terminou/);
+    assert.equal(backend.docs.get('cadastro').esquema, undefined);
+    backend.gravar = gravar;
+    assert.equal(await ApiClient.atualizarFormatoGravado(), true);
+  });
+
+  it('não grava nada no modo somente leitura nem com o banco vazio', async () => {
+    assert.equal(await ApiClient.atualizarFormatoGravado(), false);
+    await backend.gravar('cadastro', cadastroFase3());
+    backend.gravacoes.length = 0;
+    ApiClient.readOnly = true;
+    assert.equal(await ApiClient.atualizarFormatoGravado(), false);
+    assert.deepEqual(backend.gravacoes, []);
   });
 });

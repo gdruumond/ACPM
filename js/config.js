@@ -7,8 +7,8 @@ export const T = WIN.map(w => w.split(':')[0] * 60 + +w.split(':')[1]);
 
 // Frotas físicas exibidas na Aba 1 (Recursos)
 export const EQ = {
-  'Sim. Mono': ['SIM-MONO-1','SIM-MONO-2'],
-  'Sim. Multi': ['SIM-MULTI-1','SIM-MULTI-2'],
+  'Sim. Mono': ['SIM-MONO-A','SIM-MONO-C'],
+  'Sim. Multi': ['SIM-MLTE-E','SIM-MLTE-D'],
   'C152': 'PP-LJV PR-BTB PR-IGU PR-JPL PR-MLB PR-TBT PR-THI PR-VOB PR-VOC PR-VOI PR-VOP PR-VOW PR-VOZ'.split(' '),
   'C172': 'PP-ABP PP-AJS PR-BUL PR-CPL PR-HAR PR-VOY'.split(' '),
   'PA-34': ['PR-VOM','PT-JOB','PT-KIW']

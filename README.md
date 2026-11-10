@@ -57,6 +57,13 @@ npm run test:e2e       # aplicação no navegador (Playwright)
 - Contas: `SUPABASE_DB_PASSWORD=... SENHA_NOVA=... node scripts/criar-conta.mjs <email> <operador|gestor> "<nome>"`.
 - Dados fictícios na prévia (só num banco sem dados): `node scripts/semear-previa.mjs`.
 
+## Formato dos dados
+
+O cadastro e cada dia guardam a versão do formato (campo `esquema`). Para mudar o formato, acrescente um passo em
+`js/migracoes.js` (com teste): as leituras aplicam os passos que faltam, o primeiro acesso de um operador regrava
+no formato novo tudo o que estiver gravado (os dias e, por último, o cadastro) e o banco recusa conteúdo num formato
+mais antigo do que o guardado. Nunca apague campos num passo: mantenha o que o passo não conhece.
+
 ## Estrutura
 
 | Caminho | Conteúdo |
@@ -68,6 +75,7 @@ npm run test:e2e       # aplicação no navegador (Playwright)
 | `js/engine.js` | Motor de alocação (função pura) |
 | `js/storage.js` | Escala por data, migrações de dados e link compartilhado, sobre um backend (`js/backends/`: local ou Supabase) |
 | `js/dias.js` | Cadastro separado do dia, cópia do dia anterior, conversão dos dados da fase 2 e BI das escalas |
+| `js/migracoes.js` | Versões do formato dos dados guardados e os passos de uma versão para a seguinte |
 | `js/sessao.js`, `js/config-supabase.js` | Login, perfil de acesso e projeto Supabase de cada endereço |
 | `js/state.js`, `js/actions.js` | Estado da aplicação e ações (perfil, desfazer, histórico, gerar escala) |
 | `js/views/` | Renderização de cada aba |

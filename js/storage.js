@@ -5,6 +5,7 @@ import { pad } from './format.js';
 import { blank, normalizeMissionFields } from './rules.js';
 import { backendLocal, CHAVES_LOCAIS, CHAVE_LEGADA } from './backends/local.js';
 import { separar, juntar, diaPadrao, diaParaCopiar, converterLegado, biDosDias } from './dias.js';
+import { ESQUEMA, migrarCadastro, migrarDia, precisaMigrar, renomearSimulador } from './migracoes.js';
 
 // Validação do link compartilhado: o conteúdo vem da URL, então só entram os tipos e as faixas que a interface produz
 const LIMITE = { instrutores: 200, alunos: 500, extras: 10, bloqueios: 50, matriculas: 100, nome: 80 };
@@ -92,12 +93,14 @@ export const ApiClient = {
   // JSON do cadastro lido ou gravado por último: o cadastro só é regravado quando muda
   cadastroGravado: undefined,
 
-  // Estado e escala de uma data. Data sem escala começa com uma cópia do dia anterior (nada é gravado)
+  // Estado e escala de uma data. Data sem escala começa com uma cópia do dia anterior (nada é gravado).
+  // Dados num formato anterior chegam já no formato atual (o que está gravado é atualizado na próxima gravação)
   async carregarDia(data) {
-    const cadastro = await this.backend.ler('cadastro');
-    this.cadastroGravado = cadastro ? JSON.stringify(cadastro) : undefined;
-    const dia = await this.backend.ler(`dia:${data}`);
-    const base = dia || diaParaCopiar((await this.backend.diaAnterior(data) || {}).conteudo);
+    const guardado = await this.backend.ler('cadastro');
+    this.cadastroGravado = guardado ? JSON.stringify(guardado) : undefined;
+    const cadastro = migrarCadastro(guardado);
+    const dia = migrarDia(await this.backend.ler(`dia:${data}`));
+    const base = dia || diaParaCopiar(migrarDia((await this.backend.diaAnterior(data) || {}).conteudo));
     const estado = this.normalizeAndMigrateState(juntar(cadastro || { nid: 1000, ins: [], stu: [] }, base || diaPadrao()));
     const escala = dia && dia.resultado && Array.isArray(dia.resultado.out) ? dia.resultado : null;
     return { estado, escala, novo: !dia };
@@ -105,7 +108,9 @@ export const ApiClient = {
 
   async salvarDia(data, estado, escala) {
     if (this.readOnly) return false;
-    const { cadastro, dia } = separar(estado);
+    const partes = separar(estado);
+    const cadastro = { ...partes.cadastro, esquema: ESQUEMA };
+    const dia = { ...partes.dia, esquema: ESQUEMA };
     const json = JSON.stringify(cadastro);
     const gravacoes = [];
     if (json !== this.cadastroGravado) {
@@ -128,7 +133,7 @@ export const ApiClient = {
   },
 
   async biDoPeriodo(de, ate) {
-    return biDosDias(await this.backend.listarDias(de, ate));
+    return biDosDias((await this.backend.listarDias(de, ate)).map(d => ({ ...d, conteudo: migrarDia(d.conteudo) })));
   },
 
   // Converte os documentos da fase 2 (estado, escala, histórico e BI) para o formato por data, uma vez só.
@@ -147,12 +152,30 @@ export const ApiClient = {
     }, dataPadrao);
     for (const [data, conteudo] of Object.entries(plano.dias)) {
       if (await this.backend.ler(`dia:${data}`)) continue;
-      if (!await this.backend.gravar(`dia:${data}`, conteudo)) throw new Error(`A conversão dos dados não terminou (dia ${data}).`);
+      if (!await this.backend.gravar(`dia:${data}`, migrarDia(conteudo))) throw new Error(`A conversão dos dados não terminou (dia ${data}).`);
     }
     if (plano.historico.length) await this.backend.importarHistorico(plano.dataAtual, plano.historico);
-    if (!await this.backend.gravar('cadastro', plano.cadastro)) throw new Error('A conversão dos dados não terminou (cadastro).');
-    this.cadastroGravado = JSON.stringify(plano.cadastro);
+    const cadastro = migrarCadastro(plano.cadastro);
+    if (!await this.backend.gravar('cadastro', cadastro)) throw new Error('A conversão dos dados não terminou (cadastro).');
+    this.cadastroGravado = JSON.stringify(cadastro);
     return plano.dataAtual;
+  },
+
+  // Regrava no formato atual tudo o que está num formato anterior: todos os dias e, por último, o cadastro (que
+  // marca a atualização como concluída). Se uma gravação falhar, para com erro: é retomada na próxima abertura.
+  async atualizarFormatoGravado() {
+    if (this.readOnly) return false;
+    const cadastro = await this.backend.ler('cadastro');
+    if (!precisaMigrar(cadastro)) return false;
+    for (const { data } of await this.backend.listarDias('0001-01-01', '9999-12-31')) {
+      const dia = await this.backend.ler(`dia:${data}`);
+      if (!precisaMigrar(dia)) continue;
+      if (!await this.backend.gravar(`dia:${data}`, migrarDia(dia))) throw new Error(`A atualização dos dados não terminou (dia ${data}).`);
+    }
+    const novo = migrarCadastro(cadastro);
+    if (!await this.backend.gravar('cadastro', novo)) throw new Error('A atualização dos dados não terminou (cadastro).');
+    this.cadastroGravado = JSON.stringify(novo);
+    return true;
   },
 
   encodeShareableURL(state, dateStr) {
@@ -191,7 +214,7 @@ export const ApiClient = {
           .filter(([fKey, st]) => /^\d+_\d+_\d+$/.test(fKey) && FLIGHT_STATUSES.includes(st)));
       }
       Object.keys(state.av).forEach(k => state.av[k] = true);
-      lista(decoded.avOff, LIMITE.matriculas).forEach(k => { if (Object.hasOwn(state.av, k)) state.av[k] = false; });
+      lista(decoded.avOff, LIMITE.matriculas).map(renomearSimulador).forEach(k => { if (Object.hasOwn(state.av, k)) state.av[k] = false; });
 
       if (Array.isArray(decoded.ins)) {
         state.ins = lista(decoded.ins, LIMITE.instrutores).filter(Array.isArray).map(([insId, nm, on, lv, kg, aw]) => ({

@@ -3,6 +3,7 @@
 // documentos e escalas por data com versão (salvar_documento e salvar_dia respondem 409 / PT409 em conflito e
 // 403 sem perfil de operador) e histórico que só cresce (registrar_historico e importar_historico).
 import { separar } from '../../js/dias.js';
+import { migrarCadastro, migrarDia } from '../../js/migracoes.js';
 
 export const URL_TESTE = 'https://acpm-teste.supabase.invalid';
 
@@ -12,10 +13,16 @@ export const CONTAS = {
   semPerfil: { email: 'sem-perfil@teste.acpm', senha: 'senha-sem-perfil', id: '00000000-0000-4000-a000-000000000003', perfil: null, nome: '' }
 };
 
-// Documentos no formato por data (fase 3) a partir de um estado da aplicação
+// Documentos no formato por data da fase 3 (sem a versão do formato) a partir de um estado da aplicação
 export function documentosFase3(estado, data) {
   const { cadastro, dia } = separar(estado);
   return { documentos: { cadastro }, dias: { [data]: { ...dia, resultado: null } } };
+}
+
+// Os mesmos documentos no formato atual (o que o app grava hoje)
+export function documentosAtuais(estado, data) {
+  const { documentos, dias } = documentosFase3(estado, data);
+  return { documentos: { cadastro: migrarCadastro(documentos.cadastro) }, dias: { [data]: migrarDia(dias[data]) } };
 }
 
 const base64url = obj => Buffer.from(JSON.stringify(obj)).toString('base64url');
@@ -56,8 +63,11 @@ export function criarSupabaseFalso({ documentos = {}, dias = {} } = {}) {
   let falhasDeGravacao = 0;
   let leiturasDeDiasSeguras = null;
 
+  // Versão do formato do conteúdo (campo esquema); o servidor não aceita voltar a um formato mais antigo
+  const esquema = conteudo => (conteudo && typeof conteudo.esquema === 'number' ? Math.floor(conteudo.esquema) : 0);
   const salvar = (mapa, chave, conteudo, versaoLida) => {
     const atual = mapa.get(chave);
+    if (atual && esquema(conteudo) < esquema(atual.conteudo)) return [409, { code: 'PT409', message: `${chave} está num formato mais novo` }];
     const versaoAtual = atual ? atual.versao : 0;
     if (versaoLida !== versaoAtual) return [409, { code: 'PT409', message: `${chave} foi alterado por outra pessoa` }];
     mapa.set(chave, { conteudo, versao: versaoAtual + 1 });
