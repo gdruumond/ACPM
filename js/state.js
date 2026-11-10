@@ -1,0 +1,28 @@
+// Estado da aplicação compartilhado entre os módulos. As variáveis são ligações vivas (ES modules):
+// leia-as diretamente e use os setters para substituí-las.
+import { ApiClient } from './storage.js';
+
+export let S = ApiClient.createFreshState();
+export let RES = null;
+export let AUDIT_LOG = [];
+export let BI_HISTORY = {};
+export let TL_MODE = 'eq'; // 'eq' (Por Aeronave) ou 'ins' (Por Instrutor)
+
+export const setS = v => { S = v; };
+export const setRES = v => { RES = v; };
+export const setAuditLog = v => { AUDIT_LOG = v; };
+export const setBIHistory = v => { BI_HISTORY = v; };
+export const setTLMode = v => { TL_MODE = v; };
+
+export const isGestor = () => ApiClient.readOnly || document.body.getAttribute('data-role') === 'gestor';
+
+export const insBy = id => S.ins.find(x => x.id === id);
+export const stuBy = id => S.stu.find(x => x.id === id);
+
+// Utilitário para acessar missão principal (mid = 0) ou missão extra (mid > 0) de um aluno
+export function getMissionTarget(stuId, mid = 0) {
+  const s = stuBy(stuId);
+  if (!s) return null;
+  if (!mid || mid === 0) return s;
+  return (s.extra || []).find(ex => ex.mid === mid) || null;
+}
