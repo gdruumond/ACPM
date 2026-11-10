@@ -56,12 +56,18 @@ test.describe('Escala', () => {
     expect(conteudo.slice(1).split('\r\n').join('\n') + '\n').toMatchSnapshot('escala-exemplo.csv');
   });
 
-  test('emite o PDF da escala', async ({ page }) => {
+  test('emite o PDF da escala com título, quadros e mais de uma página', async ({ page }) => {
     const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#pdf').click()]);
     expect(download.suggestedFilename()).toBe(`escala-acpm-${AMANHA}.pdf`);
     const pdf = await readFile(await download.path());
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
-    expect(pdf.length).toBeGreaterThan(10_000);
+    // O jsPDF grava o conteúdo sem compressão: os textos ASCII aparecem literalmente no arquivo
+    const conteudo = pdf.toString('latin1');
+    for (const trecho of ['Escala de Voo - ACPM', 'Data da escala: 11/11/2026', 'Quadro por instrutor',
+      'Quadro por equipamento / sala', 'Aluno 01', 'Instrutor 10', 'SALA-GROUND', 'PR-JPL']) {
+      expect(conteudo, trecho).toContain(trecho);
+    }
+    expect(conteudo.match(/\/Type \/Page\b(?!s)/g).length).toBeGreaterThanOrEqual(2);
     await expect(page.locator('#msg')).toHaveText('PDF emitido.');
   });
 

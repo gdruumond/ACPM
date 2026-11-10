@@ -7,23 +7,23 @@
   ],
   "alertas": [],
   "linhas": [
-    "06:30 · 1º tempo · 7 lançamento(s) iniciando",
+    "06:30 · 1º tempo · 1 lançamento(s) iniciando",
     "06:30–08:00 | Aluno 01 | Ground PA-34 | SALA-GROUND | Instrutor 01 (A01) | 01h30 (1,5 h) | — | Pref. 1 | [Confirmado] | ✕",
-    "06:30–08:00 | Aluno 02 | Ground C152 | SALA-GROUND | Instrutor 10 (A01) | 01h30 (1,5 h) | — | Pref. 1 · Turma (6) | [Confirmado] | ✕",
-    "06:30–08:00 | Aluno 03 | Ground C152 | SALA-GROUND | Instrutor 10 (A01) | 01h30 (1,5 h) | — | Pref. 1 · Turma (6) | [Confirmado] | ✕",
-    "06:30–08:00 | Aluno 04 | Ground C152 | SALA-GROUND | Instrutor 10 (A01) | 01h30 (1,5 h) | — | Pref. 1 · Turma (6) | [Confirmado] | ✕",
-    "06:30–08:00 | Aluno 05 | Ground C152 | SALA-GROUND | Instrutor 10 (A01) | 01h30 (1,5 h) | — | Pref. 1 · Turma (6) | [Confirmado] | ✕",
-    "06:30–08:00 | Aluno 06 | Ground C152 | SALA-GROUND | Instrutor 10 (A01) | 01h30 (1,5 h) | — | Pref. 1 · Turma (6) | [Confirmado] | ✕",
-    "06:30–08:00 | Aluno 07 | Ground C152 | SALA-GROUND | Instrutor 10 (A01) | 01h30 (1,5 h) | — | Pref. 1 · Turma (6) | [Confirmado] | ✕",
-    "08:20 · 2º tempo · 7 lançamento(s) iniciando",
+    "08:20 · 2º tempo · 10 lançamento(s) iniciando",
+    "08:20–09:50 | Aluno 02 | Ground C152 | SALA-GROUND | Instrutor 10 (A01) | 01h30 (1,5 h) | — | Pref. 2 · Turma (6) | [Confirmado] | ✕",
+    "08:20–09:50 | Aluno 03 | Ground C152 | SALA-GROUND | Instrutor 10 (A01) | 01h30 (1,5 h) | — | Pref. 2 · Turma (6) | [Confirmado] | ✕",
+    "08:20–09:50 | Aluno 04 | Ground C152 | SALA-GROUND | Instrutor 10 (A01) | 01h30 (1,5 h) | — | Pref. 2 · Turma (6) | [Confirmado] | ✕",
+    "08:20–09:50 | Aluno 05 | Ground C152 | SALA-GROUND | Instrutor 10 (A01) | 01h30 (1,5 h) | — | Pref. 2 · Turma (6) | [Confirmado] | ✕",
+    "08:20–09:50 | Aluno 06 | Ground C152 | SALA-GROUND | Instrutor 10 (A01) | 01h30 (1,5 h) | — | Pref. 2 · Turma (6) | [Confirmado] | ✕",
+    "08:20–09:50 | Aluno 07 | Ground C152 | SALA-GROUND | Instrutor 10 (A01) | 01h30 (1,5 h) | — | Pref. 2 · Turma (6) | [Confirmado] | ✕",
     "08:20–10:20 | Aluno 01 | Multimotor | PR-VOM | Instrutor 09 (A09) | 2 h | 118 kg | Pref. 1 | [Confirmado] | ✕",
-    "08:20–09:20 | Aluno 02 | Voo Local | PR-IGU | Instrutor 37 (A01) | 1 h | 169 kg | Pref. 1 | [Confirmado] | ✕",
-    "08:20–09:20 | Aluno 03 | Voo Local | PR-MLB | Instrutor 28 (A01) | 1 h | 134 kg | Pref. 1 | [Confirmado] | ✕",
-    "08:20–09:20 | Aluno 04 | Voo Local | PR-TBT | Instrutor 01 (A01) | 1 h | 122 kg | Pref. 1 | [Confirmado] | ✕",
     "08:20–10:20 | Aluno 12 | Navegação | PR-VOB | Instrutor 13 (A04) | 2 h | 158 kg | Pref. 1 | [Confirmado] | ✕",
     "08:20–10:20 | Aluno 16 | Voo Solo | PR-VOC | Instrutor 05 (A05) | 2 h | 159 kg | Pref. 1 | [Confirmado] | ✕",
     "08:20–09:20 | Aluno 17 | Navegação | PR-THI | Instrutor 04 (A04) | 1 h | 142 kg | Pref. 1 | [Confirmado] | ✕",
-    "10:10 · 3º tempo · 2 lançamento(s) iniciando",
+    "10:10 · 3º tempo · 5 lançamento(s) iniciando",
+    "10:10–11:10 | Aluno 02 | Voo Local | PR-IGU | Instrutor 37 (A01) | 1 h | 169 kg | Pref. 2 | [Confirmado] | ✕",
+    "10:10–11:10 | Aluno 03 | Voo Local | PR-MLB | Instrutor 01 (A01) | 1 h | 125 kg | Pref. 2 | [Confirmado] | ✕",
+    "10:10–11:10 | Aluno 04 | Voo Local | PR-TBT | Instrutor 10 (A01) | 1 h | 140 kg | Pref. 2 | [Confirmado] | ✕",
     "10:10–11:10 | Aluno 08 | Parafuso | PR-JPL | Instrutor 15 (A06) | 1 h | 151 kg | Pref. 1 | [Confirmado] | ✕",
     "10:10–11:10 | Aluno 20 | Voo Local | PR-BTB | Instrutor 28 (A01) | 1 h | 139 kg | Pref. 1 | [Confirmado] | ✕",
     "11:30 · 4º tempo · 1 lançamento(s) iniciando",
@@ -69,7 +69,7 @@
     {
       "rotulo": "PR-IGU C152 · 1 h",
       "barras": [
-        "08:20–09:20 · Aluno 02 / Voo Local · Instrutor 37 (A01)"
+        "10:10–11:10 · Aluno 02 / Voo Local · Instrutor 37 (A01)"
       ]
     },
     {
@@ -81,13 +81,13 @@
     {
       "rotulo": "PR-MLB C152 · 1 h",
       "barras": [
-        "08:20–09:20 · Aluno 03 / Voo Local · Instrutor 28 (A01)"
+        "10:10–11:10 · Aluno 03 / Voo Local · Instrutor 01 (A01)"
       ]
     },
     {
       "rotulo": "PR-TBT C152 · 1 h",
       "barras": [
-        "08:20–09:20 · Aluno 04 / Voo Local · Instrutor 01 (A01)"
+        "10:10–11:10 · Aluno 04 / Voo Local · Instrutor 10 (A01)"
       ]
     },
     {
@@ -124,7 +124,7 @@
       "rotulo": "SALA-GROUND Sala Ground · 3 h",
       "barras": [
         "06:30–08:00 · Aluno 01 / Ground PA-34 · Instrutor 01 (A01)",
-        "06:30–08:00 · Ground C152 (6 alunos) / Instrutor 10 (A01) · Aluno 02, Aluno 03, Aluno 04, Aluno 05, Aluno 06, Aluno 07"
+        "08:20–09:50 · Ground C152 (6 alunos) / Instrutor 10 (A01) · Aluno 02, Aluno 03, Aluno 04, Aluno 05, Aluno 06, Aluno 07"
       ]
     }
   ]

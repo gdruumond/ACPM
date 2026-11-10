@@ -51,6 +51,18 @@ describe('Regras de missão', () => {
     assert.deepEqual(pedido, { mis: 'Multimotor', eq: 'PA-34', p1: 1, p2: 2, nb: 1, ss: 1 });
   });
 
+  it('nomes herdados do Object (constructor, __proto__, toString) não são missões nem equipamentos', () => {
+    assert.equal(isGroundMission('constructor'), false);
+    assert.equal(migrateLegacyMissionName('constructor'), 'Voo Local');
+    assert.equal(migrateLegacyMissionName('__proto__'), 'Voo Local');
+    assert.equal(reqInsLevel('toString', 'C152'), 1);
+    assert.equal(reqInsLevel('Voo Local', 'constructor'), 1);
+    assert.equal(doesGroundGateFlight('constructor', { mis: 'Voo Local', eq: 'C152' }), false);
+    const pedido = { mis: 'constructor', eq: 'valueOf', p1: 1, p2: 2, nb: 1, ss: 1 };
+    normalizeMissionFields(pedido);
+    assert.deepEqual([pedido.mis, pedido.eq], ['Voo Local', 'C152']);
+  });
+
   it('pedido em branco é um objeto novo a cada chamada', () => {
     const a = blank();
     assert.deepEqual(a, { fly: false, mis: 'Voo Local', eq: 'C152', p1: 1, p2: 2, nb: 1, ss: 1, pr: 3 });

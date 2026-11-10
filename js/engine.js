@@ -6,6 +6,8 @@ import { isGroundMission, reqInsLevel, doesGroundGateFlight } from './rules.js';
 
 export function runAllocationEngine(state) {
   const used = {}, busy = {}, stuBusy = {}, stuLastPick = {}, load = {}, eu = {}, out = [], al = [];
+  // Aeronaves/simuladores que cada instrutor já usou no dia, na ordem em que foram escalados
+  const insAircraft = {};
   // Armazena turmas abertas de Ground School por missão para permitir múltiplos alunos no mesmo horário/instrutor
   const openGroundClasses = {};
   // Registra os Grounds agendados por aluno no dia para exigir precedência antes do respectivo voo
@@ -107,7 +109,7 @@ export function runAllocationEngine(state) {
       }
 
       // 2ª Tentativa: Abrir nova turma de Ground se não pôde ingressar em turma existente
-      const fcGnd = { stu_busy: 0, disp: 0, busy: 0, bloq: 0 };
+      const fcGnd = { stu_busy: 0, sala: 0, disp: 0, busy: 0, bloq: 0 };
       if (!chosenClass) {
         // Verifica restrições de bloqueio de todos os alunos da mesma turma potencial para escolher um instrutor comum
         const cohortBlocked = new Set(stu.bl);
@@ -124,6 +126,9 @@ export function runAllocationEngine(state) {
             chosenClass = sameWinCls;
             break;
           }
+
+          // Há uma única sala de Ground: só abre turma nova com a sala livre durante toda a 01h30
+          if (!free(used, GROUND_REG, a, b)) { fcGnd.sala++; continue; }
 
           const q = state.ins.filter(x => x.on && x.lv >= reqLv && cover(x.aw, a, b));
           if (!q.length) { fcGnd.disp++; continue; }
@@ -146,8 +151,9 @@ export function runAllocationEngine(state) {
           chosenClass = { classKey, mis: d.mis, w, a, b, x: pickedIns, count: 0 };
           (openGroundClasses[d.mis] = openGroundClasses[d.mis] || []).push(chosenClass);
 
-          // Marca o instrutor ocupado neste intervalo (outros alunos do MESMO Ground entram via chosenClass)
+          // Marca o instrutor e a sala ocupados neste intervalo (outros alunos do MESMO Ground entram via chosenClass)
           (busy[pickedIns.id] = busy[pickedIns.id] || []).push([a, b]);
+          (used[GROUND_REG] = used[GROUND_REG] || []).push([a, b]);
           load[pickedIns.id] = (load[pickedIns.id] || 0) + GROUND_DURATION_H;
           eu[GROUND_REG] = (eu[GROUND_REG] || 0) + GROUND_DURATION_H;
           break;
@@ -196,6 +202,7 @@ export function runAllocationEngine(state) {
           const key = Object.keys(fcGnd).sort((a, b) => fcGnd[b] - fcGnd[a])[0];
           why = {
             stu_busy: `conflito de horário com outra missão do próprio aluno (${nm})`,
+            sala: `a sala de Ground já está ocupada por outra turma nos horários testados`,
             disp: `nenhum instrutor disponível durante todo o período de 01h30`,
             busy: `todos os instrutores disponíveis já estão ocupados nos horários testados`,
             bloq: `os instrutores disponíveis no horário estão bloqueados por este aluno`
@@ -282,10 +289,15 @@ export function runAllocationEngine(state) {
         const ins = f2.filter(x => !lim || !stu.kg || !x.kg || stu.kg + x.kg <= lim);
         if (!ins.length) { bad = 'peso'; break; }
 
-        eqs.sort((a, b) => (prev && (a === prev.r) - (b === prev.r)) || (eu[a] || 0) - (eu[b] || 0));
         ins.sort((a, b) => (prev && (a.id === prev.x.id) - (b.id === prev.x.id)) || a.lv - b.lv || (load[a.id] || 0) - (load[b.id] || 0));
 
-        prev = { r: eqs[0], x: ins[0] };
+        // O instrutor fica no mesmo avião durante o dia: primeiro o avião que ele já usou hoje,
+        // depois o rodízio do aluno (evita o avião anterior dele) e o avião menos usado
+        const x = ins[0];
+        const ordemNoInstrutor = r => { const i = (insAircraft[x.id] || []).indexOf(r); return i < 0 ? Infinity : i; };
+        eqs.sort((a, b) => (ordemNoInstrutor(a) - ordemNoInstrutor(b)) || (prev && (a === prev.r) - (b === prev.r)) || (eu[a] || 0) - (eu[b] || 0));
+
+        prev = { r: eqs[0], x };
         pick.push(prev);
       }
 
@@ -303,6 +315,8 @@ export function runAllocationEngine(state) {
         (busy[x.id] = busy[x.id] || []).push([p.a, p.b]);
         (stuBusy[stuId] = stuBusy[stuId] || []).push([p.a, p.b]);
         stuLastPick[stuId] = { r, x };
+        const avioesDoInstrutor = (insAircraft[x.id] = insAircraft[x.id] || []);
+        if (!avioesDoInstrutor.includes(r)) avioesDoInstrutor.push(r);
 
         const fKey = `${stuId}_${mid}_${j + 1}`;
         const baseTag = p.w == d.p1 ? 'Pref. 1' : p.w == d.p2 ? 'Pref. 2' : 'Próximo livre';

@@ -56,12 +56,32 @@ describe('Voos: janelas preferidas e encaixe', () => {
     assert.deepEqual(out.map(o => o.fKey), ['1000_0_1', '1000_0_2']);
   });
 
-  // Comportamento atual, a confirmar com a operação: o comparador `(a === prev.r) - (b === prev.r)`
-  // coloca o avião e o instrutor da sessão anterior do aluno no FIM da fila, então a sessão seguinte
-  // troca de avião e de instrutor sempre que houver alternativa.
-  it('sessão seguinte troca de avião e de instrutor quando há alternativa', () => {
+  // Intencional (Gabriel, PR #2): o aluno não voa o dia inteiro com o mesmo instrutor.
+  // O avião acompanha o instrutor, então a troca de instrutor também troca o avião.
+  it('sessão seguinte troca de instrutor (e de avião) quando há alternativa', () => {
     const { out } = alocar({ ins: [instrutor(1, 1), instrutor(2, 1)], stu: [aluno(1000, { nb: 3, ss: 2, p1: 0, p2: 2 })] });
     assert.deepEqual(out.map(o => [o.r, o.insId]), [['PP-LJV', 1], ['PR-BTB', 2]]);
+  });
+
+  it('o instrutor fica no mesmo avião ao longo do dia', () => {
+    const { out } = alocar({ ins: [instrutor(1, 1)], stu: [aluno(1000, { p1: 1, p2: 1 }), aluno(1001, { p1: 2, p2: 2 }), aluno(1002, { p1: 4, p2: 4 })] });
+    assert.deepEqual(out.map(o => [o.s, o.w, o.insId, o.r]), [
+      ['Aluno 1000', 1, 1, 'PP-LJV'],
+      ['Aluno 1001', 2, 1, 'PP-LJV'],
+      ['Aluno 1002', 4, 1, 'PP-LJV']
+    ]);
+  });
+
+  it('o avião do instrutor no dia é por tipo de aeronave', () => {
+    const { out } = alocar({
+      ins: [instrutor(1, 7)],
+      stu: [aluno(1000, { p1: 0, p2: 0 }), aluno(1001, { eq: 'C172', p1: 1, p2: 1 }), aluno(1002, { p1: 2, p2: 2 })]
+    });
+    assert.deepEqual(out.map(o => [o.s, o.eqType, o.r]), [
+      ['Aluno 1000', 'C152', 'PP-LJV'],
+      ['Aluno 1001', 'C172', 'PP-ABP'],
+      ['Aluno 1002', 'C152', 'PP-LJV']
+    ]);
   });
 
   it('respeita a disponibilidade do instrutor', () => {
@@ -210,6 +230,36 @@ describe('Ground School', () => {
       );
     }
     assert.equal(sumUniqueOperationalHours(out), 1.5);
+  });
+
+  it('há uma única sala: turmas de temas diferentes não acontecem ao mesmo tempo', () => {
+    const { out } = alocar({
+      ins: [instrutor(1, 1), instrutor(2, 1)],
+      stu: [aluno(1000, { ...GROUND_C152, p1: 0, p2: 1 }), aluno(1001, { mis: 'Ground PA-34', eq: 'Sala Ground', nb: 1.5, p1: 0, p2: 1 })]
+    });
+    assert.deepEqual(out.map(o => [o.s, o.mis, o.w, o.tag]), [
+      ['Aluno 1000', 'Ground C152', 0, 'Pref. 1'],
+      ['Aluno 1001', 'Ground PA-34', 1, 'Pref. 2']
+    ]);
+  });
+
+  it('aluno que bloqueou o instrutor da turma vai para outro horário (não abre turma paralela)', () => {
+    // Cada aluno bloqueou o instrutor do outro: não há instrutor comum para uma turma única às 06:30
+    const { out } = alocar({
+      ins: [instrutor(1, 1), instrutor(2, 1)],
+      stu: [aluno(1000, { ...GROUND_C152, p1: 0, p2: 1 }, { bl: [2] }), aluno(1001, { ...GROUND_C152, p1: 0, p2: 1 }, { bl: [1] })]
+    });
+    assert.deepEqual(out.map(o => [o.s, o.w, o.insId]), [['Aluno 1000', 0, 1], ['Aluno 1001', 1, 2]]);
+  });
+
+  it('é rejeitado quando a sala está ocupada em todos os horários possíveis', () => {
+    const { out, al } = alocar({
+      ins: [instrutor(1, 1), instrutor(2, 1)],
+      stu: [aluno(1000, { ...GROUND_C152, p1: 0, p2: 0 }), aluno(1001, { mis: 'Ground C172', eq: 'Sala Ground', nb: 1.5, p1: 0, p2: 0 })],
+      janelasOff: [1, 2, 3, 4, 5, 6, 7, 8]
+    });
+    assert.deepEqual(out.map(o => o.s), ['Aluno 1000']);
+    assert.deepEqual(al, [{ t: 'err', s: 'Aluno 1001', m: 'Rejeitado: a sala de Ground já está ocupada por outra turma nos horários testados.' }]);
   });
 
   it('é ministrado pelo instrutor de menor nível disponível', () => {

@@ -167,3 +167,65 @@ describe('Link compartilhável (perfil Gestor)', () => {
     assert.deepEqual(estado, ApiClient.createFreshState());
   });
 });
+
+describe('Link compartilhável: validação do conteúdo (vem da URL, não é confiável)', () => {
+  const ATAQUE = '"><img src=x onerror=alert(1)>';
+  const abrir = payload => {
+    const share = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64');
+    navegarPara(`https://gdruumond.github.io/ACPM/?role=gestor&share=${encodeURIComponent(share)}`);
+    const estado = ApiClient.createFreshState();
+    return { data: ApiClient.applySharedURLIfPresent(estado), estado };
+  };
+
+  it('aceita somente data AAAA-MM-DD, janelas booleanas e matrículas conhecidas', () => {
+    const { data, estado } = abrir({ d: `2026-11-11${ATAQUE}`, w: [1, 0, 'x', 1, 1, 1, 1, 1, 1, 1, 1], avOff: ['PR-BTB', ATAQUE] });
+    assert.equal(data, null);
+    assert.deepEqual(estado.win, [true, false, true, true, true, true, true, true, true]);
+    assert.equal(estado.av['PR-BTB'], false);
+    assert.equal(ATAQUE in estado.av, false);
+  });
+
+  it('status de voo: somente chaves aluno_missão_sessão e valores conhecidos', () => {
+    const { estado } = abrir({ st: { '1000_0_1': ATAQUE, '1000_0_2': 'Em Voo', [ATAQUE]: 'Pendente' } });
+    assert.deepEqual(estado.fStatus, { '1000_0_2': 'Em Voo' });
+  });
+
+  it('instrutores: id inteiro, nível A01–A09, peso numérico e disponibilidade booleana', () => {
+    const { estado } = abrir({
+      ins: [
+        [7, 'Instrutor 07', 1, ATAQUE, ATAQUE, [1, 0]],
+        [8, ATAQUE, 0, 12, 500, 'x'],
+        [ATAQUE, 'Sem id', 1, 3, 70, []]
+      ]
+    });
+    assert.deepEqual(estado.ins, [
+      { id: 7, nm: 'Instrutor 07', on: true, lv: 1, kg: 0, aw: [true, false, false, false, false, false, false, false, false] },
+      { id: 8, nm: ATAQUE, on: false, lv: 1, kg: 0, aw: Array(9).fill(true) }
+    ]);
+  });
+
+  it('alunos e missões: ids inteiros, campos numéricos dentro dos limites da interface', () => {
+    const { estado } = abrir({
+      fly: [
+        [1000, '<b>Ana</b>', ATAQUE, [7, ATAQUE], 1, 'Voo Local', 'C152', ATAQUE, 2, 1e9, 1e9, ATAQUE, [
+          [ATAQUE, 'IFR', 'C172', 1, 2, 1, 1, 3],
+          [1003, 'IFR', 'C172', 99, -5, 2, 9, 7]
+        ]],
+        [ATAQUE, 'Sem id', 70, [], 1, 'Voo Local', 'C152', 1, 2, 1, 1, 3, []]
+      ]
+    });
+    assert.equal(estado.stu.length, 1);
+    const [ana] = estado.stu;
+    assert.deepEqual(
+      { id: ana.id, nm: ana.nm, kg: ana.kg, bl: ana.bl, fly: ana.fly, mis: ana.mis, eq: ana.eq, p1: ana.p1, p2: ana.p2, nb: ana.nb, ss: ana.ss, pr: ana.pr },
+      { id: 1000, nm: '<b>Ana</b>', kg: 0, bl: [7], fly: true, mis: 'Voo Local', eq: 'C152', p1: -1, p2: 2, nb: 1, ss: 1, pr: 3 }
+    );
+    assert.deepEqual(ana.extra, [{ mid: 1003, fly: true, mis: 'IFR', eq: 'C172', p1: -1, p2: -1, nb: 2, ss: 1, pr: 3 }]);
+  });
+
+  it('limita o tamanho das listas recebidas', () => {
+    const linha = id => [id, `Aluno ${id}`, 70, [], 1, 'Voo Local', 'C152', 1, 2, 1, 1, 3, []];
+    const { estado } = abrir({ fly: Array.from({ length: 600 }, (_, i) => linha(1000 + i)) });
+    assert.equal(estado.stu.length, 500);
+  });
+});

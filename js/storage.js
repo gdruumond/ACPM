@@ -1,8 +1,21 @@
 // Camada de acesso a dados: estado inicial, migrações de schema, persistência (localStorage hoje,
 // REMOTE_ENDPOINT opcional) e o link compartilhável que abre a escala no perfil Gestor.
-import { WIN, EQ, DEFAULT_LIM, INS_DATA } from './config.js';
+import { WIN, NI, EQ, DEFAULT_LIM, INS_DATA, FLIGHT_STATUSES } from './config.js';
 import { pad } from './format.js';
 import { blank, normalizeMissionFields } from './rules.js';
+
+// Validação do link compartilhado: o conteúdo vem da URL, então só entram os tipos e as faixas que a interface produz
+const LIMITE = { instrutores: 200, alunos: 500, extras: 10, bloqueios: 50, matriculas: 100, nome: 80 };
+const inteiro = (v, min, max, padrao) => (Number.isInteger(v) && v >= min && v <= max ? v : padrao);
+const numero = (v, min, max, padrao) => (typeof v === 'number' && v >= min && v <= max ? v : padrao);
+const texto = (v, max = LIMITE.nome) => (typeof v === 'string' ? v.slice(0, max) : '');
+const lista = (v, max) => (Array.isArray(v) ? v.slice(0, max) : []);
+const id = v => inteiro(v, 1, Number.MAX_SAFE_INTEGER, null);
+const pedido = (mis, eq, p1, p2, nb, ss, pr) => ({
+  mis: texto(mis), eq: texto(eq),
+  p1: inteiro(p1, -1, NI, -1), p2: inteiro(p2, -1, NI, -1),
+  nb: numero(nb, 1, 11, 1), ss: inteiro(ss, 1, 3, 1), pr: inteiro(pr, 1, 5, 3)
+});
 
 export const ApiClient = {
   KEY_STATE: 'acpm3',
@@ -193,51 +206,54 @@ export const ApiClient = {
       const share = params.get('share');
       if (!share) return null;
       const decoded = JSON.parse(decodeURIComponent(escape(atob(share))));
-      if (Array.isArray(decoded.w)) state.win = decoded.w.map(Boolean);
+      if (!decoded || typeof decoded !== 'object') return null;
+      if (Array.isArray(decoded.w)) state.win = WIN.map((_, i) => Boolean(decoded.w[i]));
       state.lim = { ...DEFAULT_LIM };
-      if (decoded.st) state.fStatus = decoded.st;
+      if (decoded.st && typeof decoded.st === 'object') {
+        state.fStatus = Object.fromEntries(Object.entries(decoded.st)
+          .filter(([fKey, st]) => /^\d+_\d+_\d+$/.test(fKey) && FLIGHT_STATUSES.includes(st)));
+      }
       Object.keys(state.av).forEach(k => state.av[k] = true);
-      (decoded.avOff || []).forEach(k => state.av[k] = false);
+      lista(decoded.avOff, LIMITE.matriculas).forEach(k => { if (Object.hasOwn(state.av, k)) state.av[k] = false; });
 
       if (Array.isArray(decoded.ins)) {
-        state.ins = decoded.ins.map(([id, nm, on, lv, kg, aw]) => ({
-          id, nm, on: Boolean(on), lv, kg: kg || 0, aw: Array.isArray(aw) ? aw.map(Boolean) : WIN.map(() => true)
-        }));
+        state.ins = lista(decoded.ins, LIMITE.instrutores).filter(Array.isArray).map(([insId, nm, on, lv, kg, aw]) => ({
+          id: id(insId), nm: texto(nm), on: Boolean(on), lv: inteiro(lv, 1, 9, 1), kg: numero(kg, 0, 300, 0),
+          aw: Array.isArray(aw) ? WIN.map((_, i) => Boolean(aw[i])) : WIN.map(() => true)
+        })).filter(x => x.id !== null);
       } else if (Array.isArray(decoded.inOff)) {
         state.ins.forEach(x => x.on = !decoded.inOff.includes(x.id));
       }
 
       state.stu = [];
 
-      (decoded.fly || []).forEach(row => {
-        const [id, nm, kg, bl] = row;
-        let target = state.stu.find(s => s.id === id);
+      lista(decoded.fly, LIMITE.alunos).forEach(row => {
+        const stuId = Array.isArray(row) ? id(row[0]) : null;
+        if (stuId === null) return;
+        const [, nm, kg, bl] = row;
+        const cadastro = { nm: texto(nm), kg: numero(kg, 0, 300, 0), bl: lista(bl, LIMITE.bloqueios).map(id).filter(b => b !== null) };
+        let target = state.stu.find(s => s.id === stuId);
         if (!target) {
-          target = { id, nm, kg: kg || 0, bl: bl || [], extra: [], ...blank() };
+          target = { id: stuId, ...cadastro, extra: [], ...blank() };
           state.stu.push(target);
         }
         if (row.length >= 12) {
           const [, , , , flyFlag, mis, eq, p1, p2, nb, ss, pr, extraArr] = row;
-          Object.assign(target, {
-            nm, kg: kg || 0, bl: bl || [],
-            fly: Boolean(flyFlag), mis, eq, p1, p2, nb, ss, pr,
-            extra: Array.isArray(extraArr) ? extraArr.map(([mid, emis, eeq, ep1, ep2, enb, ess, epr]) => {
-              const exObj = { mid, fly: true, mis: emis, eq: eeq, p1: ep1, p2: ep2, nb: enb, ss: ess, pr: epr };
-              normalizeMissionFields(exObj);
-              return exObj;
-            }) : []
+          Object.assign(target, cadastro, {
+            fly: Boolean(flyFlag), ...pedido(mis, eq, p1, p2, nb, ss, pr),
+            extra: lista(extraArr, LIMITE.extras).filter(Array.isArray)
+              .map(([mid, ...campos]) => ({ mid: id(mid), fly: true, ...pedido(...campos) }))
+              .filter(ex => ex.mid !== null)
           });
+          target.extra.forEach(normalizeMissionFields);
           normalizeMissionFields(target);
         } else {
           const [, , , , mis, eq, p1, p2, nb, ss, pr] = row;
-          Object.assign(target, {
-            nm, kg: kg || 0, bl: bl || [],
-            fly: true, mis, eq, p1, p2, nb, ss, pr, extra: []
-          });
+          Object.assign(target, cadastro, { fly: true, ...pedido(mis, eq, p1, p2, nb, ss, pr), extra: [] });
           normalizeMissionFields(target);
         }
       });
-      return decoded.d || null;
+      return typeof decoded.d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(decoded.d) ? decoded.d : null;
     } catch (e) { return null; }
   }
 };
