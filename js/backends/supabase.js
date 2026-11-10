@@ -2,8 +2,8 @@
 // salvar_documento com controle de concorrência otimista (versão lida).
 // - Gravações do mesmo documento saem em série, sempre com o conteúdo mais recente
 // - Se outra pessoa gravou antes (conflito), o backend para de gravar e avisa por aoConflito
-// - Erros de rede avisam por aoErro; a próxima alteração tenta gravar de novo
-export function criarBackendSupabase(cliente, { aoConflito = () => {}, aoErro = () => {} } = {}) {
+// - Erros de rede avisam por aoErro; a próxima alteração tenta gravar de novo (aoGravar avisa quando der certo)
+export function criarBackendSupabase(cliente, { aoConflito = () => {}, aoErro = () => {}, aoGravar = () => {} } = {}) {
   const versoes = {};
   const pendentes = {};
   const emAndamento = {};
@@ -28,6 +28,7 @@ export function criarBackendSupabase(cliente, { aoConflito = () => {}, aoErro = 
           return false;
         }
         versoes[documento] = data;
+        aoGravar(documento);
       }
       return !bloqueado;
     } finally {

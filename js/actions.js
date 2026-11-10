@@ -92,7 +92,8 @@ export function syncBIHistoryForCurrentDate() {
 }
 
 export function gen(switchTab = true) {
-  setRES(runAllocationEngine(S));
+  // A escala guarda a data para a qual foi gerada (no modo compartilhado, todos veem essa data)
+  setRES({ ...runAllocationEngine(S), data: $('#dt').value });
   ApiClient.saveResult(RES);
   syncBIHistoryForCurrentDate();
   rOut(switchTab);

@@ -95,12 +95,18 @@ describe('Backend Supabase', () => {
   it('erro de rede: avisa e a próxima alteração tenta de novo', async () => {
     const cliente = clienteFalso();
     const erros = [];
-    const backend = criarBackendSupabase(cliente, { aoErro: (erro, doc) => erros.push([doc, erro.message]) });
+    const gravados = [];
+    const backend = criarBackendSupabase(cliente, {
+      aoErro: (erro, doc) => erros.push([doc, erro.message]),
+      aoGravar: doc => gravados.push(doc)
+    });
     await backend.ler('estado');
     cliente.falharProximas(1);
     assert.equal(await backend.gravar('estado', 'A'), false);
     assert.deepEqual(erros, [['estado', 'Failed to fetch']]);
+    assert.deepEqual(gravados, []);
     assert.equal(await backend.gravar('estado', 'B'), true);
+    assert.deepEqual(gravados, ['estado'], 'avisa quando volta a gravar');
     assert.deepEqual(cliente.banco.get('estado'), { conteudo: 'B', versao: 1 });
   });
 

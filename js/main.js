@@ -5,7 +5,8 @@
  *   js/rules.js     Regras das missões (Ground School, nível mínimo, precedência, normalização)
  *   js/format.js    Formatação de horários, durações e opções de seleção
  *   js/engine.js    Motor de alocação determinístico (função pura)
- *   js/storage.js   Camada de dados (localStorage, migrações e link compartilhado)
+ *   js/storage.js   Camada de dados (migrações, link compartilhado) sobre js/backends/ (local ou Supabase)
+ *   js/sessao.js    Login e perfil de acesso no modo compartilhado (Supabase)
  *   js/state.js     Estado compartilhado entre os módulos
  *   js/actions.js   Perfil de acesso, desfazer, histórico, gerar escala e exemplo
  *   js/dom.js       Utilitários de DOM
@@ -26,6 +27,8 @@ import { insHTML, stuHTML, rIns, rAlu, applyInstructorFilters } from './views/ca
 import { rRec } from './views/recursos.js';
 import { setRole, pushHistory, save, logChange, undoLastAction, syncBIHistoryForCurrentDate, gen, demo } from './actions.js';
 import { exp, pdf } from './export.js';
+import { projetoSupabase } from './config-supabase.js';
+import { iniciarSessaoSupabase } from './sessao.js';
 
 const activeTimers = new WeakMap();
 
@@ -85,14 +88,27 @@ $('#role-sel').onchange = e => {
   if (RES) rOut(false);
 };
 
+const modoCompartilhado = () => document.body.dataset.backend === 'supabase';
+
+// No modo compartilhado o link leva só a data: quem abre entra com a própria conta e lê do servidor
+function linkDaData(data) {
+  const url = new URL(window.location.href);
+  const projeto = url.searchParams.get('supabase');
+  url.search = '';
+  if (projeto) url.searchParams.set('supabase', projeto);
+  url.searchParams.set('data', data);
+  return url.toString();
+}
+
 $('#btn-share-link').onclick = async () => {
   const dtVal = $('#dt') ? $('#dt').value : '';
-  const url = ApiClient.encodeShareableURL(S, dtVal);
+  const compartilhado = modoCompartilhado();
+  const url = compartilhado ? linkDaData(dtVal) : ApiClient.encodeShareableURL(S, dtVal);
   try {
     await navigator.clipboard.writeText(url);
-    showToast('Link de Gestor (somente leitura) copiado!');
+    showToast(compartilhado ? 'Link da escala copiado (quem abrir entra com a própria conta).' : 'Link de Gestor (somente leitura) copiado!');
   } catch (e) {
-    prompt('Copie o link abaixo (abre bloqueado no perfil Gestor):', url);
+    prompt(compartilhado ? 'Copie o link da escala:' : 'Copie o link abaixo (abre bloqueado no perfil Gestor):', url);
   }
 };
 
@@ -497,20 +513,36 @@ document.addEventListener('change', e => {
   $('#dt').value = isoTomorrow;
   $('#bi-dt').value = isoTomorrow;
 
+  // No site publicado os dados ficam no Supabase, com login; em localhost, no modo local
+  const projeto = projetoSupabase();
+  if (projeto && !(await iniciarSessaoSupabase(projeto))) return;
+
   setS(await ApiClient.fetchState());
   setRES(await ApiClient.fetchResult());
   setAuditLog(await ApiClient.fetchAudit());
   setBIHistory(await ApiClient.fetchBI());
 
   const params = new URLSearchParams(window.location.search);
-  const hasShare = params.has('share');
-  const sharedDate = ApiClient.applySharedURLIfPresent(S);
+  // No modo compartilhado os dados vêm do servidor e o perfil vem da conta: share= e role= da URL não valem
+  const compartilhado = modoCompartilhado();
+  const hasShare = !compartilhado && params.has('share');
+  const sharedDate = compartilhado ? null : ApiClient.applySharedURLIfPresent(S);
 
   // Se aberto via link compartilhado, força bloqueio estrito no perfil Gestor sem permitir troca para Operador
   if (hasShare) {
     setRole('gestor', true);
-  } else if (params.get('role')) {
+  } else if (!compartilhado && params.get('role')) {
     setRole(params.get('role'), false);
+  }
+
+  if (compartilhado && RES && RES.data) {
+    $('#dt').value = RES.data;
+    $('#bi-dt').value = RES.data;
+    const pedida = params.get('data');
+    if (pedida && pedida !== RES.data) {
+      const br = d => d.split('-').reverse().join('/');
+      showToast(`A escala de ${br(pedida)} não está mais disponível; mostrando a de ${br(RES.data)}.`);
+    }
   }
 
   rRec(); rIns(); rAlu(); rDem(); renderAuditPanel();

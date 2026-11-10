@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="css/app.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/4.2.1/jspdf.umd.min.js" integrity="sha512-plOdviVmws4Y3JAvbnpfKb2hVxKM1lCwsi3vmElYRj+tiDLffZ4FVUj5a8vyKJ9pIgl8JCAHEJ4D1iUKBecswg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/5.0.9/jspdf.plugin.autotable.min.js" integrity="sha512-p73fJ+Q5sCDFsEa54+EWEEWYipUV2Dc7L+E+yp6jSud5Ht1zbEqiI3OuatH5EDdDLxnOW/UN+FwBu8l+4klwLQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js" integrity="sha384-uteMfOloLDGt042uDz+xHGF3ym63/WQ6rFq7murQRG8Ih7QrXGEGNtWd8688sb4O" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body data-role="operador">
 
@@ -19,6 +20,8 @@
       <option value="operador">Operador</option>
       <option value="gestor">Gestor</option>
     </select>
+    <span class="hd-usuario" id="usuario" hidden></span>
+    <button class="hd-btn" id="btn-sair" hidden title="Encerrar a sessão">Sair</button>
     <button class="hd-btn edit-only" id="btn-undo" disabled title="Desfazer última alteração">↶ Desfazer</button>
     <button class="hd-btn" id="btn-open-log" title="Ver inclusões e histórico do dia">
       🕒 Histórico <span class="badge-cnt" id="log-cnt">0</span>
@@ -37,6 +40,27 @@
 </header>
 
 <main>
+  <!-- AVISO DE SINCRONIZAÇÃO (modo compartilhado): conflito de versão ou falha ao salvar -->
+  <div class="aviso-sync" id="aviso-sync" role="alert" hidden>
+    <span id="aviso-sync-texto"></span>
+    <button class="btn" type="button" id="btn-recarregar">Recarregar</button>
+  </div>
+
+  <!-- LOGIN (modo compartilhado: dados no Supabase) -->
+  <section id="s-login">
+    <h2>Entrar</h2>
+    <form class="pn login" id="form-login">
+      <label>E-mail <input type="email" id="login-email" autocomplete="username" required></label>
+      <label>Senha <input type="password" id="login-senha" autocomplete="current-password" required></label>
+      <button class="btn" type="submit" id="btn-entrar">Entrar</button>
+      <p id="login-erro" role="alert"></p>
+    </form>
+    <div class="pn" id="sem-acesso" hidden>
+      <p>Sua conta (<b id="sem-acesso-email"></b>) ainda não tem acesso à escala. Peça ao administrador para liberar o seu perfil.</p>
+      <button class="btn sec" type="button" id="btn-sair-sem-acesso">Sair</button>
+    </div>
+  </section>
+
   <!-- ABA 1: RECURSOS -->
   <section id="s-rec" class="on">
     <h2>Janelas de operação</h2>
