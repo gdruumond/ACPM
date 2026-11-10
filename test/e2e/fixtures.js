@@ -47,7 +47,7 @@ export const test = base.extend({
 
 // Abre a aplicação. Com `estado`, grava-o no localStorage antes do primeiro carregamento
 // (recarregamentos posteriores mantêm o que a aplicação salvou).
-export async function abrir(page, { estado = null, url = '/' } = {}) {
+export async function abrir(page, { estado = null, url = './' } = {}) {
   if (estado) {
     await page.addInitScript(json => {
       if (!localStorage.getItem('acpm3')) localStorage.setItem('acpm3', json);

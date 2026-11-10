@@ -24,7 +24,7 @@ test.describe('Perfis de acesso', () => {
   });
 
   test('?role=gestor abre no Gestor sem travar o seletor', async ({ page }) => {
-    await abrirSintetico(page, { url: '/?role=gestor' });
+    await abrirSintetico(page, { url: './?role=gestor' });
     await expect(page.locator('body')).toHaveAttribute('data-role', 'gestor');
     await expect(page.locator('#role-sel')).toBeEnabled();
     await expect(page.locator('#role-sel')).toHaveValue('gestor');

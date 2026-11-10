@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 4173;
+// BASE_URL=https://usuario.github.io/ACPM/ roda os testes contra uma versão publicada (com a barra final)
+const BASE_URL = process.env.BASE_URL;
 
 export default defineConfig({
   testDir: 'test/e2e',
@@ -12,14 +14,14 @@ export default defineConfig({
   updateSnapshots: process.env.CI ? 'none' : 'missing',
   reporter: process.env.CI ? [['github'], ['list']] : 'list',
   use: {
-    baseURL: `http://localhost:${PORT}`,
+    baseURL: BASE_URL || `http://localhost:${PORT}/`,
     locale: 'pt-BR',
     timezoneId: 'America/Sao_Paulo',
     trace: 'retain-on-failure'
   },
   // PW_CHANNEL=chrome usa o Google Chrome instalado em vez do Chromium baixado pelo Playwright
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], channel: process.env.PW_CHANNEL || undefined } }],
-  webServer: {
+  webServer: BASE_URL ? undefined : {
     command: 'node scripts/serve.mjs',
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI

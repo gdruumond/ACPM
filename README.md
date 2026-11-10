@@ -22,6 +22,8 @@ npm run test:e2e       # aplicação no navegador (Playwright)
 
 - Na primeira vez, `npx playwright install chromium` baixa o navegador dos testes.
   Para usar o Google Chrome já instalado: `PW_CHANNEL=chrome npm run test:e2e`.
+- Para testar uma versão publicada em vez do servidor local:
+  `BASE_URL=https://gdruumond.github.io/ACPM/ npm run test:e2e` (com a barra final).
 - Os testes E2E comparam a escala gerada com snapshots em `test/e2e/__snapshots__/`. Se uma mudança
   de comportamento for intencional, atualize-os com `npx playwright test --update-snapshots` e revise o diff.
 - `test/fixtures/motor-goldens.json` guarda a saída do motor original para 40 cenários aleatórios e para o
