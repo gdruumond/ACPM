@@ -1,6 +1,9 @@
 // Servidor Supabase falso para os testes E2E, atendido por rotas do Playwright (sem rede).
 // Segue o contrato do banco real (supabase/tests/database): login por e-mail e senha, perfil por conta,
-// documentos com versão e salvar_documento respondendo 409 (PT409) em conflito e 403 sem perfil de operador.
+// documentos e escalas por data com versão (salvar_documento e salvar_dia respondem 409 / PT409 em conflito e
+// 403 sem perfil de operador) e histórico que só cresce (registrar_historico e importar_historico).
+import { separar } from '../../js/dias.js';
+
 export const URL_TESTE = 'https://acpm-teste.supabase.invalid';
 
 export const CONTAS = {
@@ -9,6 +12,12 @@ export const CONTAS = {
   semPerfil: { email: 'sem-perfil@teste.acpm', senha: 'senha-sem-perfil', id: '00000000-0000-4000-a000-000000000003', perfil: null, nome: '' }
 };
 
+// Documentos no formato por data (fase 3) a partir de um estado da aplicação
+export function documentosFase3(estado, data) {
+  const { cadastro, dia } = separar(estado);
+  return { documentos: { cadastro }, dias: { [data]: { ...dia, resultado: null } } };
+}
+
 const base64url = obj => Buffer.from(JSON.stringify(obj)).toString('base64url');
 const usuario = conta => ({
   id: conta.id, aud: 'authenticated', role: 'authenticated', email: conta.email,
@@ -16,13 +25,43 @@ const usuario = conta => ({
   created_at: '2026-11-10T12:00:00Z', updated_at: '2026-11-10T12:00:00Z'
 });
 
+// Filtros do PostgREST usados pelo app: coluna=eq.x, gte.x, lte.x, lt.x; order=coluna.asc|desc; limit=n
+function consultar(linhas, url) {
+  const operadores = { eq: (a, b) => a === b, gte: (a, b) => a >= b, lte: (a, b) => a <= b, lt: (a, b) => a < b };
+  let resultado = linhas;
+  for (const [coluna, valor] of url.searchParams) {
+    if (['select', 'order', 'limit'].includes(coluna)) continue;
+    const [op, ...resto] = valor.split('.');
+    const alvo = resto.join('.');
+    resultado = resultado.filter(l => operadores[op](String(l[coluna]), alvo));
+  }
+  const ordem = url.searchParams.get('order');
+  if (ordem) {
+    const [coluna, sentido] = ordem.split('.');
+    resultado = [...resultado].sort((a, b) => (a[coluna] < b[coluna] ? -1 : a[coluna] > b[coluna] ? 1 : 0) * (sentido === 'desc' ? -1 : 1));
+  }
+  const limite = url.searchParams.get('limit');
+  return limite ? resultado.slice(0, Number(limite)) : resultado;
+}
+
 // Um servidor pode atender vários contextos do navegador (ex.: operador e gestor vendo os mesmos dados)
-export function criarSupabaseFalso({ documentos = {} } = {}) {
+export function criarSupabaseFalso({ documentos = {}, dias = {} } = {}) {
   const banco = new Map(Object.entries(documentos).map(([chave, conteudo]) => [chave, { conteudo, versao: 1 }]));
+  const tabelaDias = new Map(Object.entries(dias).map(([data, conteudo]) => [data, { conteudo, versao: 1 }]));
+  const historico = [];
   const sessoes = new Map();
   const gravacoes = [];
   const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': '*' };
   let falhasDeGravacao = 0;
+  let leiturasDeDiasSeguras = null;
+
+  const salvar = (mapa, chave, conteudo, versaoLida) => {
+    const atual = mapa.get(chave);
+    const versaoAtual = atual ? atual.versao : 0;
+    if (versaoLida !== versaoAtual) return [409, { code: 'PT409', message: `${chave} foi alterado por outra pessoa` }];
+    mapa.set(chave, { conteudo, versao: versaoAtual + 1 });
+    return [200, versaoAtual + 1];
+  };
 
   const atender = async route => {
     const req = route.request();
@@ -32,6 +71,8 @@ export function criarSupabaseFalso({ documentos = {} } = {}) {
     });
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
     const conta = sessoes.get((req.headers().authorization || '').replace(/^Bearer /, ''));
+    const comPerfil = conta && conta.perfil;
+    const operador = conta && conta.perfil === 'operador';
 
     if (url.pathname === '/auth/v1/token' && url.searchParams.get('grant_type') === 'password') {
       const { email, password } = req.postDataJSON();
@@ -48,42 +89,77 @@ export function criarSupabaseFalso({ documentos = {} } = {}) {
       return route.fulfill({ status: 204, headers: cors });
     }
 
-    if (url.pathname === '/rest/v1/perfis' && req.method() === 'GET') {
-      return responder(200, conta && conta.perfil ? [{ perfil: conta.perfil, nome: conta.nome }] : []);
-    }
-    if (url.pathname === '/rest/v1/documentos' && req.method() === 'GET') {
-      if (!conta || !conta.perfil) return responder(200, []);
-      const chave = (url.searchParams.get('chave') || '').replace(/^eq\./, '');
-      const doc = banco.get(chave);
-      return responder(200, doc ? [{ conteudo: doc.conteudo, versao: doc.versao }] : []);
-    }
-    if (url.pathname === '/rest/v1/rpc/salvar_documento' && req.method() === 'POST') {
-      const { p_chave, p_conteudo, p_versao_lida } = req.postDataJSON();
-      gravacoes.push({ chave: p_chave, versaoLida: p_versao_lida, por: conta && conta.email });
-      if (falhasDeGravacao > 0) {
-        falhasDeGravacao--;
-        return responder(503, { message: 'Service Unavailable' });
+    if (req.method() === 'GET') {
+      if (url.pathname === '/rest/v1/perfis') return responder(200, comPerfil ? [{ perfil: conta.perfil, nome: conta.nome }] : []);
+      if (!comPerfil) return responder(200, []);
+      if (url.pathname === '/rest/v1/documentos') {
+        return responder(200, consultar([...banco].map(([chave, d]) => ({ chave, ...d })), url).map(({ conteudo, versao }) => ({ conteudo, versao })));
       }
-      if (!conta || conta.perfil !== 'operador') return responder(403, { code: '42501', message: 'somente operadores podem alterar a escala' });
-      const atual = banco.get(p_chave);
-      const versaoAtual = atual ? atual.versao : 0;
-      if (p_versao_lida !== versaoAtual) return responder(409, { code: 'PT409', message: `o documento ${p_chave} foi alterado por outra pessoa` });
-      banco.set(p_chave, { conteudo: p_conteudo, versao: versaoAtual + 1 });
-      return responder(200, versaoAtual + 1);
+      if (url.pathname === '/rest/v1/dias') {
+        await leiturasDeDiasSeguras;
+        return responder(200, consultar([...tabelaDias].map(([data, d]) => ({ data, ...d })), url));
+      }
+      if (url.pathname === '/rest/v1/historico') return responder(200, consultar(historico, url));
+    }
+
+    if (req.method() === 'POST' && url.pathname.startsWith('/rest/v1/rpc/')) {
+      const funcao = url.pathname.slice('/rest/v1/rpc/'.length);
+      const args = req.postDataJSON();
+      if (funcao === 'salvar_documento' || funcao === 'salvar_dia') {
+        const chave = funcao === 'salvar_dia' ? `dia:${args.p_data}` : args.p_chave;
+        gravacoes.push({ chave, versaoLida: args.p_versao_lida, por: conta && conta.email });
+        if (falhasDeGravacao > 0) {
+          falhasDeGravacao--;
+          return responder(503, { message: 'Service Unavailable' });
+        }
+      }
+      if (!operador) return responder(403, { code: '42501', message: 'somente operadores podem alterar a escala' });
+      if (funcao === 'salvar_documento') {
+        // Depois da conversão (o cadastro existe), os documentos da fase 2 ficam só como cópia
+        if (args.p_chave !== 'cadastro' && banco.has('cadastro')) return responder(409, { code: 'PT409', message: `${args.p_chave} é da versão anterior do app` });
+        return responder(...salvar(banco, args.p_chave, args.p_conteudo, args.p_versao_lida));
+      }
+      if (funcao === 'salvar_dia') return responder(...salvar(tabelaDias, args.p_data, args.p_conteudo, args.p_versao_lida));
+      if (funcao === 'registrar_historico') {
+        const id = historico.length + 1;
+        historico.push({ id, data: args.p_data, registrado_em: new Date(Date.now() + id).toISOString(), usuario: conta.id, autor: conta.nome,
+          tipo: args.p_tipo, descricao: args.p_descricao, reverter: args.p_reverter ?? null, reverte: args.p_reverte ?? null, importado: false });
+        return responder(200, id);
+      }
+      if (funcao === 'importar_historico') {
+        if (historico.some(h => h.importado)) return responder(200, 0);
+        for (const e of args.p_entradas) {
+          historico.push({ id: historico.length + 1, data: args.p_data, registrado_em: e.registrado_em || new Date().toISOString(), usuario: null, autor: null,
+            tipo: e.tipo, descricao: e.descricao, reverter: null, reverte: null, importado: true });
+        }
+        return responder(200, args.p_entradas.length);
+      }
     }
     return responder(404, { message: `rota não simulada: ${req.method()} ${url.pathname}` });
   };
 
   return {
     banco,
+    dias: tabelaDias,
+    historico,
     gravacoes,
     instalar: context => context.route(`${URL_TESTE}/**`, atender),
     // Simula indisponibilidade do servidor nas próximas gravações
     falharGravacoes(n) { falhasDeGravacao = n; },
+    // Segura as leituras da tabela dias até chamar a função devolvida (uma data que demora a carregar)
+    segurarLeiturasDeDias() {
+      let liberar;
+      leiturasDeDiasSeguras = new Promise(resolve => { liberar = resolve; });
+      return () => { leiturasDeDiasSeguras = null; liberar(); };
+    },
     // Simula a gravação de outra pessoa (para testar conflitos)
     alterarPorOutraPessoa(chave, conteudo) {
       const atual = banco.get(chave);
       banco.set(chave, { conteudo, versao: (atual ? atual.versao : 0) + 1 });
+    },
+    alterarDiaPorOutraPessoa(data, conteudo) {
+      const atual = tabelaDias.get(data);
+      tabelaDias.set(data, { conteudo, versao: (atual ? atual.versao : 0) + 1 });
     }
   };
 }

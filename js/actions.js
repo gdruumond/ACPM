@@ -1,11 +1,11 @@
-// Ações que alteram o estado: perfil de acesso, desfazer, histórico de alterações, geração da escala,
-// sincronização do BI e "Preencher exemplo".
+// Ações que alteram o estado: perfil de acesso, data da escala, desfazer, histórico de alterações, geração da
+// escala, BI e "Preencher exemplo".
 import { WIN, NI, GROUND_EQ_TYPE, GROUND_DURATION_H, SIM_EQ_TYPES, MIS, DEFAULT_LIM } from './config.js';
-import { pad } from './format.js';
+import { pad, isoMenosDias, fimDoMes } from './format.js';
 import { blank } from './rules.js';
 import { runAllocationEngine } from './engine.js';
 import { ApiClient } from './storage.js';
-import { S, RES, AUDIT_LOG, BI_HISTORY, setS, setRES, isGestor } from './state.js';
+import { S, RES, AUDIT_LOG, BI_HISTORY, DATA, setS, setRES, setAuditLog, setBIHistory, setData, isGestor } from './state.js';
 import { $, showToast } from './dom.js';
 import { rBI } from './views/bi.js';
 import { renderAuditPanel, rOut } from './views/escala.js';
@@ -14,6 +14,13 @@ import { rIns, rAlu } from './views/cadastros.js';
 import { rRec } from './views/recursos.js';
 
 const historyStack = [];
+
+// Abre uma data na tela (a data da escala e a data base do BI)
+export function abrirData(data) {
+  setData(data);
+  $('#dt').value = data;
+  $('#bi-dt').value = data;
+}
 
 export function setRole(role, lockShared = false) {
   if (lockShared) ApiClient.readOnly = true;
@@ -33,8 +40,15 @@ export function setRole(role, lockShared = false) {
       sel.value = validRole;
     }
   }
+  // No modo compartilhado o gestor navega entre as datas (somente leitura)
   const dtInput = $('#dt');
-  if (dtInput) dtInput.disabled = isGestor();
+  if (dtInput) dtInput.disabled = isGestor() && document.body.dataset.backend !== 'supabase';
+}
+
+export function limparDesfazer() {
+  historyStack.length = 0;
+  const btnUndo = $('#btn-undo');
+  if (btnUndo) btnUndo.disabled = true;
 }
 
 export function pushHistory() {
@@ -47,23 +61,86 @@ export function pushHistory() {
 
 export function save() {
   if (isGestor()) return;
-  ApiClient.saveState(S);
+  ApiClient.salvarDia(DATA, S, RES);
 }
 
-export function logChange(type, desc, revertAction = null) {
+// A entrada aparece na hora; o id (que permite reverter) chega quando o registro é gravado.
+// reverte: id da entrada que esta alteração desfaz (ela deixa de aparecer no painel)
+export function logChange(type, desc, revertAction = null, reverte = null) {
   if (isGestor()) return;
-  const now = new Date();
   const entry = {
-    id: Date.now() + Math.floor(Math.random() * 1000),
-    ts: now.toTimeString().slice(0, 8),
+    id: null,
+    ts: new Date().toTimeString().slice(0, 8),
     type,
     desc,
-    revert: revertAction
+    revert: revertAction,
+    reverte,
+    autor: ApiClient.autorAtual,
+    importado: false
   };
   AUDIT_LOG.unshift(entry);
-  if (AUDIT_LOG.length > 100) AUDIT_LOG.pop();
-  ApiClient.saveAudit(AUDIT_LOG);
   renderAuditPanel();
+  ApiClient.registrarHistorico(DATA, { tipo: type, descricao: desc, reverter: revertAction, reverte }).then(id => {
+    if (id === null || id === undefined) return;
+    entry.id = id;
+    renderAuditPanel();
+  });
+}
+
+// Entradas importadas (anteriores à fase 3) mostram também o dia em que foram feitas
+function horario(iso, importado) {
+  const d = new Date(iso);
+  const hora = d.toTimeString().slice(0, 8);
+  return importado ? `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} ${hora.slice(0, 5)}` : hora;
+}
+
+export async function historicoParaPainel(data) {
+  return (await ApiClient.historicoDoDia(data)).map(e => ({
+    id: e.id,
+    ts: horario(e.registrado_em, e.importado),
+    type: e.tipo,
+    desc: e.descricao,
+    revert: e.importado ? null : e.reverter,
+    reverte: e.reverte,
+    autor: e.autor,
+    importado: e.importado
+  }));
+}
+
+// Abre a escala de uma data (uma troca rápida de data descarta a resposta da troca anterior)
+let pedidoDeData = 0;
+export async function carregarData(data) {
+  const pedido = ++pedidoDeData;
+  const { estado, escala } = await ApiClient.carregarDia(data);
+  const historico = await historicoParaPainel(data);
+  if (pedido !== pedidoDeData) return;
+  abrirData(data);
+  setS(estado);
+  setRES(escala);
+  setAuditLog(historico);
+  limparDesfazer();
+  rRec(); rIns(); rAlu(); rDem(); renderAuditPanel(); rOut(false);
+  await carregarBI();
+}
+
+// BI das escalas guardadas no mês da data base (e nos 7 dias até ela), com a escala da tela já incluída.
+// Sem conexão, o BI continua como estava
+let pedidoDeBI = 0;
+export async function carregarBI() {
+  const ref = $('#bi-dt').value || DATA;
+  const inicioMes = ref.slice(0, 8) + '01';
+  const inicioSemana = isoMenosDias(ref, 6);
+  const pedido = ++pedidoDeBI;
+  let bi;
+  try {
+    bi = await ApiClient.biDoPeriodo(inicioSemana < inicioMes ? inicioSemana : inicioMes, fimDoMes(ref));
+  } catch (e) {
+    return;
+  }
+  if (pedido !== pedidoDeBI) return;
+  setBIHistory(bi);
+  syncBIHistoryForCurrentDate();
+  rBI();
 }
 
 export function undoLastAction() {
@@ -78,23 +155,25 @@ export function undoLastAction() {
   showToast('Última alteração desfeita.');
 }
 
+// O BI em memória acompanha a escala da tela (que pode ainda estar sendo gravada)
 export function syncBIHistoryForCurrentDate() {
   if (ApiClient.readOnly) return;
-  const dtVal = $('#dt') ? $('#dt').value : '';
-  if (dtVal && RES) {
-    BI_HISTORY[dtVal] = {
+  if (!DATA) return;
+  if (RES) {
+    BI_HISTORY[DATA] = {
       out: RES.out.map(o => ({ ...o })),
       tot: RES.tot,
       rej: RES.al.filter(a => a.t === 'err').length
     };
-    ApiClient.saveBI(BI_HISTORY);
+  } else {
+    delete BI_HISTORY[DATA];
   }
 }
 
 export function gen(switchTab = true) {
   // A escala guarda a data para a qual foi gerada (no modo compartilhado, todos veem essa data)
-  setRES({ ...runAllocationEngine(S), data: $('#dt').value });
-  ApiClient.saveResult(RES);
+  setRES({ ...runAllocationEngine(S), data: DATA });
+  ApiClient.salvarDia(DATA, S, RES);
   syncBIHistoryForCurrentDate();
   rOut(switchTab);
   renderAuditPanel();

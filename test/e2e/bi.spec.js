@@ -15,16 +15,23 @@ test.describe('Dashboard BI', () => {
     await gerarEscala(page);
     await irPara(page, 'bi');
     await expect(page.locator('#bi-dt')).toHaveValue(AMANHA);
-    expect(json(await lerBI(page))).toMatchSnapshot('bi-dia.json');
+    const antes = json(await lerBI(page));
+    expect(antes).toMatchSnapshot('bi-dia.json');
 
+    const mesAntes = await page.locator('#bi-content .st > div').nth(2).innerText();
     await confirmar(page, '#btn-bi-sim');
+    // O BI é recarregado das escalas guardadas: espera os dias simulados aparecerem
+    await expect(page.locator('#bi-content .st > div').nth(2)).not.toHaveText(mesAntes);
     expect(json(await lerBI(page))).toMatchSnapshot('bi-30-dias.json');
 
     await page.locator('#bi-flt-eq').selectOption('C172');
     await page.locator('#bi-flt-ins').fill('instrutor 0');
     expect(json(await lerBI(page))).toMatchSnapshot('bi-filtrado.json');
 
+    // "Limpar BI" tira só os dias simulados: o BI volta a mostrar apenas a escala gerada
+    await page.locator('#bi-flt-eq').selectOption('');
+    await page.locator('#bi-flt-ins').fill('');
     await confirmar(page, '#btn-bi-clr');
-    await expect(page.locator('#bi-content .st > div').first()).toContainText('0 h');
+    await expect.poll(async () => json(await lerBI(page))).toBe(antes);
   });
 });

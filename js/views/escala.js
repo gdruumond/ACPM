@@ -158,8 +158,11 @@ export function renderAuditPanel() {
   const cntEl = $('#inc-active-cnt');
   if (cntEl) cntEl.textContent = activeItems.length;
 
+  // Entradas revertidas (apontadas por uma reversão) não aparecem no painel
+  const revertidas = new Set(AUDIT_LOG.map(e => e.reverte).filter(id => id !== null && id !== undefined));
+  const historico = AUDIT_LOG.filter(e => !revertidas.has(e.id));
   const badgeCnt = $('#log-cnt');
-  if (badgeCnt) badgeCnt.textContent = AUDIT_LOG.length;
+  if (badgeCnt) badgeCnt.textContent = historico.length;
 
   const allocatedKeySet = new Set(RES ? RES.out.map(o => `${o.stuId}_${o.mid || 0}`) : []);
 
@@ -183,16 +186,19 @@ export function renderAuditPanel() {
 
   const logListEl = $('#audit-log-list');
   if (logListEl) {
-    if (!AUDIT_LOG.length) {
-      logListEl.innerHTML = `<div class="audit-item"><span class="h">Sem alterações registradas hoje.</span></div>`;
+    if (!historico.length) {
+      logListEl.innerHTML = `<div class="audit-item"><span class="h">Sem alterações registradas nesta data.</span></div>`;
     } else {
-      logListEl.innerHTML = AUDIT_LOG.map(item => {
+      logListEl.innerHTML = historico.map(item => {
         const lbl = item.type === 'inc' ? 'Inclusão' : item.type === 'exc' ? 'Exclusão' : 'Edição';
-        const btnRevert = item.revert
-          ? `<button class="x edit-only" data-act="rev-log" data-logid="${item.id}">${item.revert.label || '↶ Reverter'}</button>`
+        const podeReverter = item.revert && item.id !== null && item.id !== undefined;
+        const btnRevert = podeReverter
+          ? `<button class="x edit-only" data-act="rev-log" data-logid="${item.id}">${esc(item.revert.label || '↶ Reverter')}</button>`
           : '';
+        const autor = item.autor ? ` <span class="sm">${esc(item.autor)}</span>` : '';
+        const importado = item.importado ? ' <span class="sm">(importado)</span>' : '';
         return `<div class="audit-item">
-          <div><span class="sm">[${item.ts}]</span> <span class="audit-badge ${item.type}">${lbl}</span> <span>${esc(item.desc)}</span></div>
+          <div><span class="sm">[${esc(item.ts)}]</span>${autor} <span class="audit-badge ${item.type}">${lbl}</span> <span>${esc(item.desc)}</span>${importado}</div>
           ${btnRevert}
         </div>`;
       }).join('');
@@ -201,7 +207,10 @@ export function renderAuditPanel() {
 }
 
 export function rOut(switchTab = true) {
-  if (!RES) return;
+  if (!RES) {
+    $('#out').innerHTML = `<p class="h">Ainda não há escala para esta data. Marque quem vai voar em “4 · Demanda” e clique em “Gerar escala”.</p>`;
+    return;
+  }
   const { out, al, tot } = RES;
   const rej = al.filter(a => a.t === 'err').length;
 

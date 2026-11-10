@@ -6,6 +6,8 @@ export class MemoriaLocal {
   setItem(k, v) { this.#dados.set(k, String(v)); }
   removeItem(k) { this.#dados.delete(k); }
   clear() { this.#dados.clear(); }
+  get length() { return this.#dados.size; }
+  key(i) { return [...this.#dados.keys()][i] ?? null; }
 }
 
 export function simularNavegador(href = 'https://gdruumond.github.io/ACPM/') {

@@ -14,10 +14,10 @@
  *   js/export.js    Exportação CSV e PDF
  */
 import { WIN, NI, T, EQ, GROUND_EQ_TYPE, GROUND_REG, GROUND_DURATION_MIN, GROUND_DURATION_H, ACROBAT_REG, MIS, PRE } from './config.js';
-import { hm, fmtDurLabel, pad, A } from './format.js';
+import { hm, fmtDurLabel, pad, A, amanhaISO, isoMenosDias } from './format.js';
 import { isGroundMission, reqInsLevel, blank } from './rules.js';
 import { ApiClient } from './storage.js';
-import { S, RES, AUDIT_LOG, BI_HISTORY, setS, setRES, setAuditLog, setBIHistory, setTLMode, isGestor, insBy, stuBy, getMissionTarget } from './state.js';
+import { S, RES, AUDIT_LOG, DATA, setS, setRES, setAuditLog, setTLMode, isGestor, insBy, stuBy, getMissionTarget } from './state.js';
 import { $, showToast, msg, focusLast } from './dom.js';
 import { show } from './views/tabs.js';
 import { rBI } from './views/bi.js';
@@ -25,7 +25,7 @@ import { renderAuditPanel, rOut } from './views/escala.js';
 import { singleDemandRowHTML, cnt, rDem, applyDemandFilters } from './views/demanda.js';
 import { insHTML, stuHTML, rIns, rAlu, applyInstructorFilters } from './views/cadastros.js';
 import { rRec } from './views/recursos.js';
-import { setRole, pushHistory, save, logChange, undoLastAction, syncBIHistoryForCurrentDate, gen, demo } from './actions.js';
+import { setRole, pushHistory, save, logChange, undoLastAction, syncBIHistoryForCurrentDate, gen, demo, abrirData, historicoParaPainel, carregarData, carregarBI } from './actions.js';
 import { exp, pdf } from './export.js';
 import { projetoSupabase } from './config-supabase.js';
 import { iniciarSessaoSupabase } from './sessao.js';
@@ -35,7 +35,9 @@ const activeTimers = new WeakMap();
 document.addEventListener('click', e => {
   const g = e.target.closest('[data-t],[data-go]');
   if (g) {
-    show(g.dataset.t || g.dataset.go);
+    const aba = g.dataset.t || g.dataset.go;
+    show(aba);
+    if (aba === 'bi') carregarBI();
     try { window.scrollTo(0, 0); } catch (x) {}
     return;
   }
@@ -101,9 +103,8 @@ function linkDaData(data) {
 }
 
 $('#btn-share-link').onclick = async () => {
-  const dtVal = $('#dt') ? $('#dt').value : '';
   const compartilhado = modoCompartilhado();
-  const url = compartilhado ? linkDaData(dtVal) : ApiClient.encodeShareableURL(S, dtVal);
+  const url = compartilhado ? linkDaData(DATA) : ApiClient.encodeShareableURL(S, DATA);
   try {
     await navigator.clipboard.writeText(url);
     showToast(compartilhado ? 'Link da escala copiado (quem abrir entra com a própria conta).' : 'Link de Gestor (somente leitura) copiado!');
@@ -118,21 +119,29 @@ $('#btn-open-log').onclick = () => {
   if (p) { p.open = true; p.scrollIntoView({ behavior: 'smooth' }); }
 };
 
-$('#btn-clear-log').onclick = () => {
-  if (isGestor()) return;
+// Só no modo local: no modo compartilhado o histórico é permanente (o botão fica oculto)
+$('#btn-clear-log').onclick = async () => {
+  if (isGestor() || !ApiClient.backend.limparHistorico) return;
+  await ApiClient.backend.limparHistorico(DATA);
   setAuditLog([]);
-  ApiClient.saveAudit(AUDIT_LOG);
   renderAuditPanel();
   showToast('Histórico limpo.');
 };
 
+// Cada data tem a sua escala: trocar a data abre a escala daquela data (o gestor do modo compartilhado também navega).
+// Data vazia ou que não carregou: o campo volta para a data aberta
 $('#dt').onchange = e => {
-  if (isGestor()) return;
-  if ($('#bi-dt')) $('#bi-dt').value = e.target.value;
-  if (RES) gen(false);
-  else rBI();
+  const data = e.target.value;
+  if ((isGestor() && !modoCompartilhado()) || !/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+    e.target.value = DATA;
+    return;
+  }
+  carregarData(data).catch(() => {
+    if (e.target.value === data) e.target.value = DATA;
+    showToast('Não foi possível abrir essa data. Verifique a conexão e tente de novo.');
+  });
 };
-$('#bi-dt').onchange = () => rBI();
+$('#bi-dt').onchange = () => carregarBI();
 $('#bi-flt-eq').onchange = () => rBI();
 $('#flt-dem-mis').onchange = applyDemandFilters;
 $('#flt-ins-lv').onchange = applyInstructorFilters;
@@ -156,9 +165,11 @@ armed('#clr', 'Confirmar limpeza', () => {
   if (RES) gen(false);
 });
 
-armed('#btn-bi-sim', 'Confirmar simulação', () => {
-  if (isGestor()) return;
+// Só no modo local: grava 30 dias simulados (marcados como simulados) nas datas que ainda não têm escala
+armed('#btn-bi-sim', 'Confirmar simulação', async () => {
+  if (isGestor() || modoCompartilhado()) return;
   const refStr = ($('#bi-dt') && $('#bi-dt').value) || ($('#dt') && $('#dt').value);
+  const existentes = new Set((await ApiClient.backend.listarDias(isoMenosDias(refStr, 30), refStr)).map(d => d.data));
   const baseDate = new Date(refStr + 'T12:00:00');
   let seed = 42;
   const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -169,7 +180,7 @@ armed('#btn-bi-sim', 'Confirmar simulação', () => {
   for (let dayOffset = 0; dayOffset < 30; dayOffset++) {
     const d = new Date(baseDate.getTime() - dayOffset * 86400000);
     const iso = d.toISOString().slice(0, 10);
-    if (dayOffset === 0 && RES && RES.out.length) continue;
+    if (existentes.has(iso)) continue;
 
     const flights = [];
     const numFlights = 10 + Math.floor(rnd() * 14);
@@ -199,19 +210,18 @@ armed('#btn-bi-sim', 'Confirmar simulação', () => {
         r: reg, eqType, ins: ins.nm, lv: ins.lv, status: 'Confirmado'
       });
     }
-    BI_HISTORY[iso] = { out: flights, tot: numFlights, rej: 0 };
+    await ApiClient.backend.gravar(`dia:${iso}`, { simulado: true, resultado: { out: flights, al: [], tot: numFlights, rej: 0, data: iso } });
   }
-  ApiClient.saveBI(BI_HISTORY);
-  rBI();
+  await carregarBI();
   showToast('Histórico de 30 dias simulado.');
 });
 
-armed('#btn-bi-clr', 'Confirmar limpeza', () => {
-  if (isGestor()) return;
-  setBIHistory({});
-  ApiClient.saveBI(BI_HISTORY);
-  rBI();
-  showToast('Histórico BI zerado.');
+// Só no modo local: remove os dias simulados (as escalas reais continuam)
+armed('#btn-bi-clr', 'Confirmar limpeza', async () => {
+  if (isGestor() || !ApiClient.backend.removerDiasSimulados) return;
+  await ApiClient.backend.removerDiasSimulados();
+  await carregarBI();
+  showToast('Dias simulados removidos do BI.');
 });
 
 document.addEventListener('click', e => {
@@ -274,11 +284,12 @@ document.addEventListener('click', e => {
     return;
   }
 
+  // Reverter registra uma nova entrada que aponta a revertida (o histórico só cresce)
   if (a === 'rev-log') {
     const logId = +b.dataset.logid;
-    const entryIdx = AUDIT_LOG.findIndex(x => x.id === logId);
-    if (entryIdx < 0 || !AUDIT_LOG[entryIdx].revert) return;
-    const rev = AUDIT_LOG[entryIdx].revert;
+    const entry = AUDIT_LOG.find(x => x.id === logId);
+    if (!entry || !entry.revert) return;
+    const rev = entry.revert;
     pushHistory();
 
     if (rev.kind === 'setFly') {
@@ -286,22 +297,18 @@ document.addEventListener('click', e => {
       const target = getMissionTarget(rev.stuId, rev.mid || 0);
       if (st && target) {
         target.fly = rev.val;
-        AUDIT_LOG.splice(entryIdx, 1);
-        ApiClient.saveAudit(AUDIT_LOG);
-        logChange(rev.val ? 'inc' : 'exc', `Revertido: ${st.nm} (${target.mis})`);
+        logChange(rev.val ? 'inc' : 'exc', `Revertido: ${st.nm} (${target.mis})`, null, entry.id);
         save(); rDem(); gen(false);
       }
     } else if (rev.kind === 'setAv') {
       S.av[rev.reg] = rev.val;
-      AUDIT_LOG.splice(entryIdx, 1);
-      ApiClient.saveAudit(AUDIT_LOG);
+      logChange(rev.val ? 'inc' : 'exc', `Revertido: ${rev.reg} ${rev.val ? 'disponível' : 'em manutenção'}`, null, entry.id);
       save(); rRec(); if (RES) gen(false);
     } else if (rev.kind === 'setInsOn') {
       const ins = insBy(rev.insId);
       if (ins) {
         ins.on = rev.val;
-        AUDIT_LOG.splice(entryIdx, 1);
-        ApiClient.saveAudit(AUDIT_LOG);
+        logChange(rev.val ? 'inc' : 'exc', `Revertido: ${ins.nm} ${rev.val ? 'disponível' : 'indisponível'}`, null, entry.id);
         save(); rIns(); if (RES) gen(false);
       }
     }
@@ -376,7 +383,6 @@ document.addEventListener('change', e => {
         targetFlight.status = t.value;
         flightDesc = `${targetFlight.s} (${hm(targetFlight.a)}–${hm(targetFlight.b)})`;
       }
-      ApiClient.saveResult(RES);
     }
     save();
     syncBIHistoryForCurrentDate();
@@ -508,21 +514,25 @@ document.addEventListener('change', e => {
     if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
   } catch (e) {}
 
-  const t = new Date(Date.now() + 864e5);
-  const isoTomorrow = new Date(t - t.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
-  $('#dt').value = isoTomorrow;
-  $('#bi-dt').value = isoTomorrow;
+  const amanha = amanhaISO();
+  abrirData(amanha);
 
   // No site publicado os dados ficam no Supabase, com login; em localhost, no modo local
   const projeto = projetoSupabase();
   if (projeto && !(await iniciarSessaoSupabase(projeto))) return;
 
-  setS(await ApiClient.fetchState());
-  setRES(await ApiClient.fetchResult());
-  setAuditLog(await ApiClient.fetchAudit());
-  setBIHistory(await ApiClient.fetchBI());
+  // Primeira abertura com a escala por data: converte os documentos da fase 2 (do servidor ou deste navegador)
+  await ApiClient.migrarDocumentosAntigos(amanha);
 
   const params = new URLSearchParams(window.location.search);
+  const pedida = params.get('data');
+  const data = /^\d{4}-\d{2}-\d{2}$/.test(pedida || '') ? pedida : amanha;
+  abrirData(data);
+  const { estado, escala } = await ApiClient.carregarDia(data);
+  setS(estado);
+  setRES(escala);
+  setAuditLog(await historicoParaPainel(data));
+
   // No modo compartilhado os dados vêm do servidor e o perfil vem da conta: share= e role= da URL não valem
   const compartilhado = modoCompartilhado();
   const hasShare = !compartilhado && params.has('share');
@@ -535,25 +545,14 @@ document.addEventListener('change', e => {
     setRole(params.get('role'), false);
   }
 
-  if (compartilhado && RES && RES.data) {
-    $('#dt').value = RES.data;
-    $('#bi-dt').value = RES.data;
-    const pedida = params.get('data');
-    if (pedida && pedida !== RES.data) {
-      const br = d => d.split('-').reverse().join('/');
-      showToast(`A escala de ${br(pedida)} não está mais disponível; mostrando a de ${br(RES.data)}.`);
-    }
-  }
-
   rRec(); rIns(); rAlu(); rDem(); renderAuditPanel();
 
   if (sharedDate) {
-    $('#dt').value = sharedDate;
-    $('#bi-dt').value = sharedDate;
+    abrirData(sharedDate);
     gen(true);
     showToast('Escala compartilhada carregada (Modo Gestor Somente Leitura).');
-  } else if (RES) {
+  } else {
     rOut(false);
   }
-  rBI();
+  carregarBI();
 })();

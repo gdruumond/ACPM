@@ -4,6 +4,7 @@ import { WIN, NI, EQ, DEFAULT_LIM, FLIGHT_STATUSES } from './config.js';
 import { pad } from './format.js';
 import { blank, normalizeMissionFields } from './rules.js';
 import { backendLocal, CHAVES_LOCAIS, CHAVE_LEGADA } from './backends/local.js';
+import { separar, juntar, diaPadrao, diaParaCopiar, converterLegado, biDosDias } from './dias.js';
 
 // Validação do link compartilhado: o conteúdo vem da URL, então só entram os tipos e as faixas que a interface produz
 const LIMITE = { instrutores: 200, alunos: 500, extras: 10, bloqueios: 50, matriculas: 100, nome: 80 };
@@ -27,6 +28,8 @@ export const ApiClient = {
   KEY_THEME: 'acpm3_theme',
   // Onde os documentos ficam: backend local (localStorage) ou Supabase (login)
   backend: backendLocal,
+  // Nome de quem está alterando (modo compartilhado), mostrado no histórico
+  autorAtual: null,
   // Link compartilhado: nada é gravado e a interface fica travada no perfil Gestor
   readOnly: false,
 
@@ -85,44 +88,70 @@ export const ApiClient = {
     return x;
   },
 
-  async fetchState() {
-    const x = await this.backend.ler('estado');
-    return x && Array.isArray(x.stu) && Array.isArray(x.ins) ? this.normalizeAndMigrateState(x) : this.createFreshState();
+  // Escala por data (fase 3) ------------------------------------------------------------------------
+  // JSON do cadastro lido ou gravado por último: o cadastro só é regravado quando muda
+  cadastroGravado: undefined,
+
+  // Estado e escala de uma data. Data sem escala começa com uma cópia do dia anterior (nada é gravado)
+  async carregarDia(data) {
+    const cadastro = await this.backend.ler('cadastro');
+    this.cadastroGravado = cadastro ? JSON.stringify(cadastro) : undefined;
+    const dia = await this.backend.ler(`dia:${data}`);
+    const base = dia || diaParaCopiar((await this.backend.diaAnterior(data) || {}).conteudo);
+    const estado = this.normalizeAndMigrateState(juntar(cadastro || { nid: 1000, ins: [], stu: [] }, base || diaPadrao()));
+    const escala = dia && dia.resultado && Array.isArray(dia.resultado.out) ? dia.resultado : null;
+    return { estado, escala, novo: !dia };
   },
 
-  async saveState(state) {
+  async salvarDia(data, estado, escala) {
     if (this.readOnly) return false;
-    return this.backend.gravar('estado', state);
+    const { cadastro, dia } = separar(estado);
+    const json = JSON.stringify(cadastro);
+    const gravacoes = [];
+    if (json !== this.cadastroGravado) {
+      gravacoes.push(this.backend.gravar('cadastro', cadastro).then(ok => {
+        if (ok) this.cadastroGravado = json;
+        return ok;
+      }));
+    }
+    gravacoes.push(this.backend.gravar(`dia:${data}`, { ...dia, resultado: escala || null }));
+    return (await Promise.all(gravacoes)).every(Boolean);
   },
 
-  async fetchResult() {
-    const r = await this.backend.ler('escala');
-    return r && Array.isArray(r.out) && Array.isArray(r.al) ? r : null;
+  async registrarHistorico(data, entrada) {
+    if (this.readOnly) return null;
+    return this.backend.registrar({ data, ...entrada });
   },
 
-  async saveResult(res) {
-    if (this.readOnly) return;
-    await this.backend.gravar('escala', res);
+  historicoDoDia(data) {
+    return this.backend.listarHistorico(data);
   },
 
-  async fetchAudit() {
-    const a = await this.backend.ler('historico');
-    return Array.isArray(a) ? a : [];
+  async biDoPeriodo(de, ate) {
+    return biDosDias(await this.backend.listarDias(de, ate));
   },
 
-  async saveAudit(list) {
-    if (this.readOnly) return;
-    await this.backend.gravar('historico', list);
-  },
-
-  async fetchBI() {
-    const b = await this.backend.ler('bi');
-    return b && typeof b === 'object' ? b : {};
-  },
-
-  async saveBI(biMap) {
-    if (this.readOnly) return;
-    await this.backend.gravar('bi', biMap);
+  // Converte os documentos da fase 2 (estado, escala, histórico e BI) para o formato por data, uma vez só.
+  // A origem pode ser outro backend (envio dos dados do navegador). Os documentos antigos ficam como cópia;
+  // dias que já existem não são sobrescritos e o cadastro é gravado por último (marca a migração como concluída).
+  async migrarDocumentosAntigos(dataPadrao, origem = this.backend) {
+    if (this.readOnly || await this.backend.ler('cadastro')) return null;
+    const estado = await origem.ler('estado');
+    if (!estado || !Array.isArray(estado.ins) || !Array.isArray(estado.stu)) return null;
+    const plano = converterLegado({
+      estado: this.normalizeAndMigrateState(estado),
+      escala: await origem.ler('escala'),
+      historico: await origem.ler('historico'),
+      bi: await origem.ler('bi')
+    }, dataPadrao);
+    for (const [data, conteudo] of Object.entries(plano.dias)) {
+      if (await this.backend.ler(`dia:${data}`)) continue;
+      if (!await this.backend.gravar(`dia:${data}`, conteudo)) return null;
+    }
+    if (plano.historico.length) await this.backend.importarHistorico(plano.dataAtual, plano.historico);
+    if (!await this.backend.gravar('cadastro', plano.cadastro)) return null;
+    this.cadastroGravado = JSON.stringify(plano.cadastro);
+    return plano.dataAtual;
   },
 
   encodeShareableURL(state, dateStr) {
