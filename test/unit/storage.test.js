@@ -140,6 +140,8 @@ describe('Link compartilhável (perfil Gestor)', () => {
     estado.av['PR-BTB'] = false;
     estado.ins[0].on = false;
     estado.fStatus = { '1000_0_1': 'Em Voo' };
+    estado.horas = { 'PR-BTB': 42 };
+    estado.filas = { cheque: [], mlte: [9], noturno: [8, 7], c172: [8, 7, 9] };
     estado.stu = [
       aluno(1000, { jan: 'manha' }, { kg: 81, bl: [3] }),
       aluno(1001, { fly: false }),
@@ -156,6 +158,7 @@ describe('Link compartilhável (perfil Gestor)', () => {
     assert.equal(destino.av['PR-BTB'], false);
     assert.deepEqual(destino.ins, estado.ins.map(({ lv, ...x }) => x), 'o link leva as habilitações (o nível de antes não vai)');
     assert.deepEqual(destino.fStatus, estado.fStatus);
+    assert.deepEqual([destino.horas, destino.filas], [estado.horas, estado.filas], 'as horas até a revisão e as filas do rodízio vão no link');
     assert.equal(destino.stu[0].jan, 'manha', 'a disponibilidade vai no link');
     assert.deepEqual(destino.stu.map(s => [s.id, s.fly, s.kg, s.bl, s.extra.map(ex => [ex.mid, ex.mis])]), [
       [1000, true, 81, [3], []],
@@ -191,6 +194,15 @@ describe('Link compartilhável: validação do conteúdo (vem da URL, não é co
     const { estado } = abrir({ fly: [[1000, 'Aluno', 70, [], 1, 'Voo Local', 'C152', 1, 2, 1, 1, 3, [[1001, 'IFR', 'C172', 3, 3, 1, 1, 3, ATAQUE]], 'tarde']] });
     assert.equal(estado.stu[0].jan, 'tarde');
     assert.equal(Object.hasOwn(estado.stu[0].extra[0], 'jan'), false);
+  });
+
+  it('horas até a revisão e filas do rodízio: só matrículas conhecidas, horas numéricas e ids inteiros', () => {
+    const { estado } = abrir({
+      h: { 'PR-BTB': 48.5, 'XX-XXX': 10, 'PP-LJV': ATAQUE, 'PR-IGU': 99, constructor: 1 },
+      f: { c172: [3, ATAQUE, 2], cheque: 'x', outra: [1], noturno: [1.5, 4] }
+    });
+    assert.deepEqual(estado.horas, { 'PR-BTB': 48.5 });
+    assert.deepEqual(estado.filas, { cheque: [], mlte: [], noturno: [4], c172: [3, 2] });
   });
 
   it('link antigo com simulador em manutenção vale para o nome novo do simulador', () => {

@@ -1,13 +1,13 @@
 // Camada de acesso a dados: estado inicial, migrações de schema, persistência por um backend
 // (localStorage ou Supabase) e o link compartilhável que abre a escala no perfil Gestor.
-import { WIN, NI, EQ, DEFAULT_LIM, FLIGHT_STATUSES } from './config.js';
+import { WIN, NI, EQ, DEFAULT_LIM, FLIGHT_STATUSES, AIRCRAFT_EQ_TYPES } from './config.js';
 import { pad } from './format.js';
 import { blank, normalizeMissionFields, janelasDaDisponibilidade } from './rules.js';
 import { backendLocal, CHAVES_LOCAIS, CHAVE_LEGADA } from './backends/local.js';
 import { separar, juntar, diaPadrao, diaParaCopiar, converterLegado, biDosDias } from './dias.js';
 import { ESQUEMA, migrarCadastro, migrarDia, precisaMigrar, renomearSimulador } from './migracoes.js';
 import { habilitacoesDoNivel, normalizarHabilitacoes } from './habilitacoes.js';
-import { ajustarFilas } from './rodizio.js';
+import { ajustarFilas, CATEGORIAS_DO_RODIZIO } from './rodizio.js';
 
 // Validação do link compartilhado: o conteúdo vem da URL, então só entram os tipos e as faixas que a interface produz
 const LIMITE = { instrutores: 200, alunos: 500, extras: 10, bloqueios: 50, matriculas: 100, nome: 80 };
@@ -215,6 +215,9 @@ export const ApiClient = {
       avOff: Object.keys(state.av).filter(k => !state.av[k]),
       ins: state.ins.map(x => [x.id, x.nm, x.on ? 1 : 0, x.hab, x.kg, x.aw.map(a => a ? 1 : 0)]),
       st: state.fStatus || {},
+      // Revisão de 50 horas e filas do rodízio: quem abre o link gera a mesma escala
+      h: state.horas || {},
+      f: state.filas || {},
       fly: state.stu
         .filter(s => s.fly || (s.extra && s.extra.some(ex => ex.fly)))
         .map(s => [
@@ -243,6 +246,14 @@ export const ApiClient = {
       if (decoded.st && typeof decoded.st === 'object') {
         state.fStatus = Object.fromEntries(Object.entries(decoded.st)
           .filter(([fKey, st]) => /^\d+_\d+_\d+$/.test(fKey) && FLIGHT_STATUSES.includes(st)));
+      }
+      if (decoded.h && typeof decoded.h === 'object') {
+        const avioes = AIRCRAFT_EQ_TYPES.flatMap(tipo => EQ[tipo]);
+        state.horas = Object.fromEntries(Object.entries(decoded.h)
+          .filter(([r, horas]) => avioes.includes(r) && typeof horas === 'number' && horas >= 0 && horas <= 60));
+      }
+      if (decoded.f && typeof decoded.f === 'object') {
+        state.filas = Object.fromEntries(CATEGORIAS_DO_RODIZIO.map(({ id: cat }) => [cat, lista(decoded.f[cat], LIMITE.instrutores).map(id).filter(x => x !== null)]));
       }
       Object.keys(state.av).forEach(k => state.av[k] = true);
       lista(decoded.avOff, LIMITE.matriculas).map(renomearSimulador).forEach(k => { if (Object.hasOwn(state.av, k)) state.av[k] = false; });
