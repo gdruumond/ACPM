@@ -4,6 +4,7 @@ import { T, NI, DAY, NIGHT_OK, EQ, MIS, DEFAULT_LIM, ACROBAT_REG, GROUND_EQ_TYPE
 import { hm, fmtH } from './format.js';
 import { isGroundMission, doesGroundGateFlight } from './rules.js';
 import { podeFazer, descreverExigencias } from './habilitacoes.js';
+import { categoriaDoRodizio, ajustarFilas } from './rodizio.js';
 
 // Entre os instrutores possíveis, primeiro os que têm menos habilitações: os mais versáteis ficam livres
 const qtdHabilitacoes = x => (Array.isArray(x.hab) ? x.hab.length : 0);
@@ -126,6 +127,10 @@ export function runAllocationEngine(state) {
   });
 
   const free = (mp, id, s, e) => !(mp[id] || []).some(([a, b]) => s < b && e > a);
+  // Rodízio: a fila de cada categoria (cheque, MLTE, noturno e C172) e os voos dela que cada instrutor já recebeu hoje
+  const filas = ajustarFilas(state.filas, state.ins);
+  const voosNaCategoria = {};
+
   // Revisão de 50 horas: horas que o avião ainda pode voar hoje (sem as horas informadas, não há limite)
   const horas = state.horas || {};
   const saldo = r => (typeof horas[r] === 'number' ? REVISAO_H - horas[r] : Infinity);
@@ -297,6 +302,10 @@ export function runAllocationEngine(state) {
     const night = d.mis === 'Noturno';
     const isParafuso = d.mis === 'Parafuso';
     const exige = descreverExigencias(d.mis, d.eq);
+    // Voo de categoria do rodízio: primeiro quem ainda não voou nela hoje, depois a ordem da fila
+    const categoria = categoriaDoRodizio(d.mis, d.eq);
+    const voosHoje = x => (categoria ? voosNaCategoria[`${categoria}:${x.id}`] || 0 : 0);
+    const naFila = x => { const i = categoria ? filas[categoria].indexOf(x.id) : 0; return i < 0 ? Number.MAX_SAFE_INTEGER : i; };
 
     // 1. Validação de equipamento permitido para a missão
     if (!m.eq.includes(d.eq)) {
@@ -368,7 +377,9 @@ export function runAllocationEngine(state) {
         const ins = f2.filter(x => !lim || !stu.kg || !x.kg || stu.kg + x.kg <= lim);
         if (!ins.length) { bad = 'peso'; break; }
 
-        ins.sort((a, b) => (prev && (a.id === prev.x.id) - (b.id === prev.x.id)) || qtdHabilitacoes(a) - qtdHabilitacoes(b) || (load[a.id] || 0) - (load[b.id] || 0));
+        ins.sort((a, b) => (prev && (a.id === prev.x.id) - (b.id === prev.x.id)) ||
+          voosHoje(a) - voosHoje(b) || naFila(a) - naFila(b) ||
+          qtdHabilitacoes(a) - qtdHabilitacoes(b) || (load[a.id] || 0) - (load[b.id] || 0));
 
         // O instrutor fica no mesmo avião durante o dia: primeiro o avião que ele já usou hoje,
         // depois o rodízio do aluno (evita o avião anterior dele) e o avião menos usado
@@ -423,6 +434,7 @@ export function runAllocationEngine(state) {
 
         eu[r] = (eu[r] || 0) + hh;
         load[x.id] = (load[x.id] || 0) + hh;
+        if (categoria) voosNaCategoria[`${categoria}:${x.id}`] = voosHoje(x) + 1;
 
         if (lim && !warned && (!stu.kg || !x.kg)) {
           warned = true;

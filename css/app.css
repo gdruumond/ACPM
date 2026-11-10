@@ -255,6 +255,11 @@ tr.st-Cancelado td { opacity: 0.45; text-decoration: line-through; }
 .tag.grp { color: var(--ok); border-color: var(--ok); }
 .tag.er { color: var(--er); border-color: var(--er); }
 .revisao input { width: 6em; }
+.rodizio { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.fila { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.fila li { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 4px 0; border-bottom: 1px solid var(--ln); }
+.fila .pos { min-width: 2.2em; color: var(--mu); }
+.fila .acoes { margin-left: auto; display: flex; gap: 4px; }
 
 /* Status Operacional do Voo */
 .st-sel {

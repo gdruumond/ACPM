@@ -6,7 +6,7 @@ import { ApiClient } from '../../js/storage.js';
 import { backendLocal } from '../../js/backends/local.js';
 import { simularNavegador } from '../helpers/navegador.js';
 import { estadoSintetico } from '../helpers/estado.js';
-import { aluno, missaoExtra } from '../helpers/montar.js';
+import { aluno, instrutor, missaoExtra } from '../helpers/montar.js';
 import { ESQUEMA } from '../../js/migracoes.js';
 import { habilitacoesDoNivel } from '../../js/habilitacoes.js';
 
@@ -111,6 +111,15 @@ describe('Horas até a revisão de 50 horas', () => {
     await ApiClient.salvarDia('2026-11-11', estado, { out: [{ fKey: '1000_0_1', r: 'PR-BTB', eqType: 'C152', h: 2 }], al: [], tot: 1 });
     assert.deepEqual((await ApiClient.carregarDia('2026-11-11')).estado.horas, { 'PR-BTB': 40 });
     assert.deepEqual((await ApiClient.carregarDia('2026-11-12')).estado.horas, { 'PR-BTB': 42 });
+  });
+});
+
+describe('Filas do rodízio', () => {
+  it('ficam no dia; a nova data começa com quem voou na categoria no fim da fila', async () => {
+    const estado = ApiClient.normalizeAndMigrateState({ ...estadoSintetico(), ins: [instrutor(1, 9), instrutor(2, 9)], filas: { c172: [1, 2] } });
+    await ApiClient.salvarDia('2026-11-11', estado, { out: [{ fKey: 'a', insId: 1, mis: 'Voo Local', eqType: 'C172', h: 1, r: 'PP-ABP' }], al: [], tot: 1 });
+    assert.deepEqual((await ApiClient.carregarDia('2026-11-11')).estado.filas.c172, [1, 2]);
+    assert.deepEqual((await ApiClient.carregarDia('2026-11-12')).estado.filas.c172, [2, 1]);
   });
 });
 

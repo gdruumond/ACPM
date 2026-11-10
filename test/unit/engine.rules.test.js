@@ -236,6 +236,32 @@ describe('Revisão de 50 horas', () => {
   });
 });
 
+describe('Rodízio', () => {
+  const doC172 = id => instrutor(id, 1, { hab: ['local', 'noturno', 'c172'] });
+  const comFilas = (opts, filas) => runAllocationEngine({ ...cenario(opts), filas });
+  const voosNoC172 = [aluno(1000, { eq: 'C172', p1: 1, p2: 1 }), aluno(1001, { eq: 'C172', p1: 2, p2: 2 })];
+
+  it('o voo da categoria vai para o primeiro da fila', () => {
+    assert.equal(comFilas({ ins: [doC172(1), doC172(2)], stu: [voosNoC172[0]] }, { c172: [2, 1] }).out[0].insId, 2);
+    assert.equal(comFilas({ ins: [doC172(1), doC172(2)], stu: [voosNoC172[0]] }, { c172: [1, 2] }).out[0].insId, 1);
+  });
+
+  it('no mesmo dia, quem já voou na categoria fica atrás de quem ainda não voou', () => {
+    const { out } = comFilas({ ins: [doC172(1), doC172(2)], stu: voosNoC172 }, { c172: [1, 2] });
+    assert.deepEqual(out.map(o => [o.s, o.insId]), [['Aluno 1000', 1], ['Aluno 1001', 2]]);
+  });
+
+  it('o voo noturno segue a fila do noturno, não a do C172', () => {
+    const noturno = aluno(1000, { mis: 'Noturno', eq: 'C172', p1: 8, p2: 8 });
+    assert.equal(comFilas({ ins: [doC172(1), doC172(2)], stu: [noturno] }, { c172: [1, 2], noturno: [2, 1] }).out[0].insId, 2);
+  });
+
+  it('voos fora das categorias (local no C152) não seguem fila: vai quem tem menos habilitações', () => {
+    const ins = [instrutor(1, 1, { hab: ['local', 'c172', 'tgl'] }), instrutor(2, 1, { hab: ['local', 'c172'] })];
+    assert.equal(comFilas({ ins, stu: [aluno(1000)] }, { c172: [1, 2] }).out[0].insId, 2);
+  });
+});
+
 describe('PR-JPL (C152 Acrobat)', () => {
   it('Parafuso no C152 usa exclusivamente o PR-JPL', () => {
     const { out } = alocar({ ins: [instrutor(1, 6)], stu: [aluno(1000, { mis: 'Parafuso' })] });

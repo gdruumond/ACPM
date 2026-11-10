@@ -29,6 +29,8 @@ import { rRec } from './views/recursos.js';
 import { setRole, pushHistory, save, logChange, undoLastAction, syncBIHistoryForCurrentDate, gen, demo, abrirData, historicoParaPainel, carregarData, carregarBI } from './actions.js';
 import { exp, pdf } from './export.js';
 import { projetoSupabase } from './config-supabase.js';
+import { CATEGORIAS_DO_RODIZIO, ajustarFilas } from './rodizio.js';
+import { rRodizio } from './views/rodizio.js';
 import { ESQUEMA } from './migracoes.js';
 import { iniciarSessaoSupabase } from './sessao.js';
 
@@ -320,6 +322,24 @@ document.addEventListener('click', e => {
         save(); rIns(); if (RES) gen(false);
       }
     }
+    return;
+  }
+
+  // Rodízio: ajusta a posição de um instrutor na fila da categoria (na data aberta)
+  if (a === 'fila-subir' || a === 'fila-descer' || a === 'fila-inicio') {
+    pushHistory();
+    const cat = b.dataset.cat, insId = +b.dataset.id;
+    S.filas = ajustarFilas(S.filas, S.ins);
+    const fila = S.filas[cat].filter(x => x !== insId);
+    const antes = S.filas[cat].indexOf(insId);
+    const depois = a === 'fila-inicio' ? 0 : Math.max(0, Math.min(fila.length, antes + (a === 'fila-subir' ? -1 : 1)));
+    fila.splice(depois, 0, insId);
+    S.filas[cat] = fila;
+    const categoria = CATEGORIAS_DO_RODIZIO.find(c => c.id === cat);
+    logChange('mod', `Rodízio · ${categoria.nome}: ${insBy(insId).nm} passou para ${depois + 1}º`);
+    save();
+    if (RES) gen(false);
+    rRodizio();
     return;
   }
 

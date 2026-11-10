@@ -69,6 +69,12 @@ describe('Migrações do formato dos dados', () => {
     assert.ok(ESQUEMA >= 7);
   });
 
+  it('versão 8: os dias passam a guardar as filas do rodízio (versões anteriores do app não conhecem o campo)', () => {
+    const dia = { av: {}, filas: { c172: [1, 2] }, esquema: 7 };
+    assert.deepEqual(migrarDia(dia), { ...dia, esquema: ESQUEMA });
+    assert.ok(ESQUEMA >= 8);
+  });
+
   it('os nomes novos são os da frota cadastrada, na mesma ordem', () => {
     assert.deepEqual(EQ['Sim. Mono'], ['SIM-MONO-A', 'SIM-MONO-C']);
     assert.deepEqual(EQ['Sim. Multi'], ['SIM-MLTE-E', 'SIM-MLTE-D']);

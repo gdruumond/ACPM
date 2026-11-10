@@ -25,9 +25,10 @@
     ]
   },
   {
-    "rotulo": "Instrutor 08 1 h",
+    "rotulo": "Instrutor 08 2 h",
     "barras": [
-      "11:30–12:30 · PP-AJS / Aluno 14 · IFR"
+      "11:30–12:30 · PP-AJS / Aluno 14 · IFR",
+      "17:30–18:30 · PP-AJS / Aluno 15 · Noturno"
     ]
   },
   {
@@ -53,12 +54,6 @@
     "rotulo": "Instrutor 15 1 h",
     "barras": [
       "10:10–11:10 · PR-JPL / Aluno 08 · Parafuso"
-    ]
-  },
-  {
-    "rotulo": "Instrutor 16 1 h",
-    "barras": [
-      "17:30–18:30 · PR-BUL / Aluno 15 · Noturno"
     ]
   },
   {

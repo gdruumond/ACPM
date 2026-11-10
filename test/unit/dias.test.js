@@ -27,7 +27,7 @@ describe('Separar e juntar', () => {
     assert.deepEqual(Object.keys(cadastro).sort(), ['ins', 'nid', 'stu']);
     assert.deepEqual(Object.keys(cadastro.ins[0]).sort(), ['hab', 'id', 'kg', 'lv', 'nm']);
     assert.deepEqual(Object.keys(cadastro.stu[0]).sort(), ['bl', 'id', 'kg', 'nm']);
-    assert.deepEqual(Object.keys(dia).sort(), ['av', 'fStatus', 'horas', 'ins', 'pedidos', 'win']);
+    assert.deepEqual(Object.keys(dia).sort(), ['av', 'fStatus', 'filas', 'horas', 'ins', 'pedidos', 'win']);
     assert.deepEqual(Object.keys(dia.ins[estado.ins[0].id]).sort(), ['aw', 'on']);
     const pedido = dia.pedidos[estado.stu[0].id];
     assert.equal('nm' in pedido || 'kg' in pedido, false);
@@ -72,7 +72,7 @@ describe('Nova data', () => {
     estado.fStatus = { '1000_0_1': 'Cancelado' };
     const anterior = { ...separar(estado).dia, resultado: { out: [{ fKey: '1000_0_1' }], al: [], tot: 1 } };
     const novo = diaParaCopiar(anterior);
-    assert.deepEqual(Object.keys(novo).sort(), ['av', 'fStatus', 'horas', 'ins', 'pedidos', 'win']);
+    assert.deepEqual(Object.keys(novo).sort(), ['av', 'fStatus', 'filas', 'horas', 'ins', 'pedidos', 'win']);
     assert.deepEqual(novo.fStatus, {});
     assert.equal(novo.av['PR-BTB'], false);
     assert.deepEqual(novo.pedidos[1000], anterior.pedidos[1000]);
@@ -173,5 +173,20 @@ describe('Horas até a revisão de 50 horas', () => {
     const { dia } = separar(estado);
     assert.deepEqual(dia.horas, { 'PR-BTB': 12.5 });
     assert.deepEqual(juntar(separar(estado).cadastro, dia).horas, { 'PR-BTB': 12.5 });
+  });
+});
+
+describe('Filas do rodízio por data', () => {
+  it('as filas fazem parte do dia e a nova data começa com quem voou na categoria no fim da fila', () => {
+    const estado = ApiClient.normalizeAndMigrateState({
+      ...estadoSintetico(),
+      ins: [instrutor(1, 9), instrutor(2, 9), instrutor(3, 1)],
+      filas: { c172: [1, 2] }
+    });
+    const { dia, cadastro } = separar(estado);
+    assert.deepEqual(dia.filas.c172, [1, 2]);
+    assert.deepEqual(juntar(cadastro, dia).filas.c172, [1, 2]);
+    const anterior = { ...dia, resultado: { out: [{ fKey: 'a', insId: 1, mis: 'Voo Local', eqType: 'C172' }], al: [], tot: 1 } };
+    assert.deepEqual(diaParaCopiar(anterior, cadastro.ins).filas.c172, [2, 1]);
   });
 });

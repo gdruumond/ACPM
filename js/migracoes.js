@@ -5,7 +5,7 @@
 // Sem o campo "esquema": formato da fase 3 (versão 4).
 import { habilitacoesDoNivel } from './habilitacoes.js';
 
-export const ESQUEMA = 7;
+export const ESQUEMA = 8;
 
 // Versão 5 (fase 4): simuladores com os nomes usados no aeroclube
 const SIMULADORES_RENOMEADOS = { 'SIM-MONO-1': 'SIM-MONO-A', 'SIM-MONO-2': 'SIM-MONO-C', 'SIM-MULTI-1': 'SIM-MLTE-E', 'SIM-MULTI-2': 'SIM-MLTE-D' };
@@ -36,6 +36,11 @@ const PASSOS = {
   // Versão 7 (fase 4): os dias guardam as horas de cada avião até a revisão de 50 horas (campo "horas"). O passo não
   // muda nada; a versão nova impede que uma aba com a versão anterior do app grave os dias sem esse campo
   7: {
+    cadastro: cadastro => cadastro,
+    dia: dia => dia
+  },
+  // Versão 8 (fase 4): os dias guardam as filas do rodízio (campo "filas"), pelo mesmo motivo da versão 7
+  8: {
     cadastro: cadastro => cadastro,
     dia: dia => dia
   }

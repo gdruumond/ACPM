@@ -7,6 +7,7 @@ import { backendLocal, CHAVES_LOCAIS, CHAVE_LEGADA } from './backends/local.js';
 import { separar, juntar, diaPadrao, diaParaCopiar, converterLegado, biDosDias } from './dias.js';
 import { ESQUEMA, migrarCadastro, migrarDia, precisaMigrar, renomearSimulador } from './migracoes.js';
 import { habilitacoesDoNivel, normalizarHabilitacoes } from './habilitacoes.js';
+import { ajustarFilas } from './rodizio.js';
 
 // Validação do link compartilhado: o conteúdo vem da URL, então só entram os tipos e as faixas que a interface produz
 const LIMITE = { instrutores: 200, alunos: 500, extras: 10, bloqueios: 50, matriculas: 100, nome: 80 };
@@ -84,6 +85,9 @@ export const ApiClient = {
     // Habilitações individuais (fase 4): quem só tem o nível A01–A09 recebe o que o nível permitia
     x.ins.forEach(i => { i.hab = Array.isArray(i.hab) ? normalizarHabilitacoes(i.hab) : habilitacoesDoNivel(i.lv); });
 
+    // Filas do rodízio só com os instrutores habilitados (quem passou a ser habilitado entra no fim)
+    x.filas = ajustarFilas(x.filas, x.ins);
+
     x.stu.forEach(s => {
       normalizeMissionFields(s);
       if (!Array.isArray(s.extra)) s.extra = [];
@@ -107,7 +111,8 @@ export const ApiClient = {
     this.cadastroGravado = guardado ? JSON.stringify(guardado) : undefined;
     const cadastro = migrarCadastro(guardado);
     const dia = migrarDia(await this.backend.ler(`dia:${data}`));
-    const base = dia || diaParaCopiar(migrarDia((await this.backend.diaAnterior(data) || {}).conteudo));
+    const instrutores = (cadastro && cadastro.ins) || [];
+    const base = dia || diaParaCopiar(migrarDia((await this.backend.diaAnterior(data) || {}).conteudo), instrutores);
     const estado = this.normalizeAndMigrateState(juntar(cadastro || { nid: 1000, ins: [], stu: [] }, base || diaPadrao()));
     const escala = dia && dia.resultado && Array.isArray(dia.resultado.out) ? dia.resultado : null;
     return { estado, escala, novo: !dia };
