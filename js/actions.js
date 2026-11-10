@@ -3,6 +3,7 @@
 import { WIN, NI, GROUND_EQ_TYPE, GROUND_DURATION_H, SIM_EQ_TYPES, MIS, DEFAULT_LIM } from './config.js';
 import { pad, isoMenosDias, fimDoMes } from './format.js';
 import { blank } from './rules.js';
+import { habilitacoesDoNivel } from './habilitacoes.js';
 import { runAllocationEngine } from './engine.js';
 import { ApiClient } from './storage.js';
 import { S, RES, AUDIT_LOG, BI_HISTORY, DATA, setS, setRES, setAuditLog, setBIHistory, setData, isGestor } from './state.js';
@@ -189,13 +190,13 @@ export const demo = () => {
   const wt = [0,0,1,1,1,2,2,3,4,4,5,6,6,7];
   const poolMis = ['Simulador','Voo Local','Voo Local','Navegação','Navegação','Voo Solo','IFR','Multimotor','Noturno'];
 
-  // Se não houver nenhum instrutor cadastrado, cria 40 instrutores fictícios (níveis A01–A09 em ciclo)
+  // Se não houver nenhum instrutor cadastrado, cria 40 instrutores fictícios (habilitações dos níveis A01–A09 em ciclo)
   if (!S.ins.length) {
     S.ins = Array.from({ length: 40 }, (_, i) => ({
       id: i + 1,
       nm: `Instrutor ${String(i + 1).padStart(2, '0')}`,
       on: true,
-      lv: (i % 9) + 1,
+      hab: habilitacoesDoNivel((i % 9) + 1),
       kg: 55 + ((i * 17) % 45),
       aw: WIN.map(() => true)
     }));

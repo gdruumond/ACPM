@@ -1,8 +1,9 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  isGroundMission, reqInsLevel, doesGroundGateFlight, migrateLegacyMissionName, normalizeMissionFields, blank
+  isGroundMission, doesGroundGateFlight, migrateLegacyMissionName, normalizeMissionFields, blank
 } from '../../js/rules.js';
+import { podeFazer, descreverExigencias } from '../../js/habilitacoes.js';
 
 describe('Regras de missão', () => {
   it('identifica as missões de Ground School', () => {
@@ -12,15 +13,6 @@ describe('Regras de missão', () => {
     );
   });
 
-  it('nível mínimo combina missão e equipamento (Ground sempre A01)', () => {
-    assert.equal(reqInsLevel('Ground PA-34', 'Sala Ground'), 1);
-    assert.equal(reqInsLevel('Voo Local', 'C152'), 1);
-    assert.equal(reqInsLevel('Voo Local', 'C172'), 7);
-    assert.equal(reqInsLevel('Navegação', 'PA-34'), 9);
-    assert.equal(reqInsLevel('Simulador', 'Sim. Multi'), 2);
-    assert.equal(reqInsLevel('IFR', 'C172'), 8);
-    assert.equal(reqInsLevel('Missão desconhecida', 'C152'), 1);
-  });
 
   it('Ground de aeronave libera voos naquele equipamento; Ground Navegação libera Navegação', () => {
     assert.equal(doesGroundGateFlight('Ground C152', { mis: 'Voo Local', eq: 'C152' }), true);
@@ -55,8 +47,9 @@ describe('Regras de missão', () => {
     assert.equal(isGroundMission('constructor'), false);
     assert.equal(migrateLegacyMissionName('constructor'), 'Voo Local');
     assert.equal(migrateLegacyMissionName('__proto__'), 'Voo Local');
-    assert.equal(reqInsLevel('toString', 'C152'), 1);
-    assert.equal(reqInsLevel('Voo Local', 'constructor'), 1);
+    assert.equal(descreverExigencias('toString', 'C152'), 'Voo Local');
+    assert.equal(descreverExigencias('Simulador', 'constructor'), 'Simulador (Mono)');
+    assert.equal(podeFazer({ hab: ['local'] }, 'Voo Local', 'constructor'), true);
     assert.equal(doesGroundGateFlight('constructor', { mis: 'Voo Local', eq: 'C152' }), false);
     const pedido = { mis: 'constructor', eq: 'valueOf', p1: 1, p2: 2, nb: 1, ss: 1 };
     normalizeMissionFields(pedido);

@@ -1,7 +1,8 @@
 // Aba 4 · Demanda: pedidos de missão por aluno (inclusive missões extras) e filtros.
-import { NI, T, GROUND_DURATION_MIN, ACROBAT_REG, MIS } from '../config.js';
-import { hm, A, esc, opts, wopt } from '../format.js';
-import { isGroundMission, reqInsLevel } from '../rules.js';
+import { NI, T, GROUND_DURATION_MIN, ACROBAT_REG, MIS, GROUND_EQ_TYPE } from '../config.js';
+import { hm, esc, opts, wopt } from '../format.js';
+import { isGroundMission } from '../rules.js';
+import { descreverExigencias } from '../habilitacoes.js';
 import { S } from '../state.js';
 import { $ } from '../dom.js';
 import { renderAuditPanel } from './escala.js';
@@ -9,9 +10,8 @@ import { renderAuditPanel } from './escala.js';
 export const sum = d => {
   if (!d.fly) return '';
   const isGnd = isGroundMission(d.mis);
-  const reqLv = reqInsLevel(d.mis, d.eq);
   if (isGnd) {
-    const lvTag = ` · 01h30 · Instrutor A01+ · Turma coletiva`;
+    const lvTag = ` · 01h30 · Turma coletiva · Exige ${descreverExigencias(d.mis, GROUND_EQ_TYPE)}`;
     if (d.p1 < 0) return `Livre${lvTag}`;
     const s = T[d.p1], e = s + GROUND_DURATION_MIN;
     return `${hm(s)}–${hm(e)}${lvTag}` + ((d.p1 == NI || e > T[NI]) ? ' ⚠ horário' : '');
@@ -19,7 +19,7 @@ export const sum = d => {
   const H = d.nb, K = Math.min(d.ss || 1, H);
   const L = Array.from({ length: K }, (_, j) => Math.floor(H / K) + (j < H % K ? 1 : 0));
   const nt = d.mis === 'Noturno';
-  const lvTag = ` · Mín. ${A(reqLv)}${d.mis === 'Parafuso' && d.eq === 'C152' ? ' (' + ACROBAT_REG + ')' : ''}`;
+  const lvTag = ` · Exige ${descreverExigencias(d.mis, d.eq)}${d.mis === 'Parafuso' && d.eq === 'C152' ? ' (' + ACROBAT_REG + ')' : ''}`;
   if (K > 1) return `${H} h em ${K} sessões (${L.join('h+') + 'h'})${lvTag}`;
   if (d.p1 < 0) return `${H} h, livre${lvTag}`;
   const s = T[d.p1], e = s + H * 60;

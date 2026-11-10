@@ -70,7 +70,8 @@ mais antigo do que o guardado. Nunca apague campos num passo: mantenha o que o p
 |---|---|
 | `index.html` | Marcação das seis abas |
 | `css/app.css` | Estilos e temas claro/escuro |
-| `js/config.js` | Janelas, frota, missões, níveis A01–A09, limites de peso |
+| `js/config.js` | Janelas, frota, missões, limites de peso |
+| `js/habilitacoes.js` | Habilitações individuais dos instrutores e o que cada missão exige |
 | `js/rules.js` | Regras das missões (Ground School, nível mínimo, precedência) |
 | `js/engine.js` | Motor de alocação (função pura) |
 | `js/storage.js` | Escala por data, migrações de dados e link compartilhado, sobre um backend (`js/backends/`: local ou Supabase) |

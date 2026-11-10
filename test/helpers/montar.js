@@ -1,8 +1,10 @@
 // Construtores de cenários pequenos e legíveis para os testes de regras do motor.
 import { estadoSintetico, FROTA_POR_TIPO, JANELAS, dois } from './estado.js';
+import { habilitacoesDoNivel } from '../../js/habilitacoes.js';
 
+// instrutor(id, lv): com as habilitações que o nível A01–A09 permitia; extra.hab define outras
 export const instrutor = (id, lv, extra = {}) => ({
-  id, nm: `Instrutor ${dois(id)}`, on: true, lv, kg: 70, aw: Array(JANELAS).fill(true), ...extra
+  id, nm: `Instrutor ${dois(id)}`, on: true, hab: habilitacoesDoNivel(lv), kg: 70, aw: Array(JANELAS).fill(true), ...extra
 });
 
 // Pedido padrão: Voo Local no C152, Pref. 1 às 08:20 e Pref. 2 às 10:10, 1 h, prioridade 3

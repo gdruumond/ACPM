@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { ESQUEMA, migrarCadastro, migrarDia, precisaMigrar, renomearSimulador } from '../../js/migracoes.js';
 import { EQ } from '../../js/config.js';
+import { habilitacoesDoNivel } from '../../js/habilitacoes.js';
 
 describe('Migrações do formato dos dados', () => {
   it('dia da fase 3: renomeia os simuladores na disponibilidade e na escala, sem perder nada', () => {
@@ -41,8 +42,25 @@ describe('Migrações do formato dos dados', () => {
 
   it('cadastro: ganha a versão do formato e mantém tudo o que tinha', () => {
     const cadastro = { nid: 1003, ins: [{ id: 1, nm: 'Instrutor 01', lv: 3, kg: 70 }], stu: [{ id: 1000, nm: 'Aluno 1000', kg: 60, bl: [1] }] };
-    assert.deepEqual(migrarCadastro(structuredClone(cadastro)), { ...cadastro, esquema: ESQUEMA });
+    const novo = migrarCadastro(structuredClone(cadastro));
+    assert.equal(novo.esquema, ESQUEMA);
+    assert.deepEqual({ ...novo, ins: null }, { ...cadastro, ins: null, esquema: ESQUEMA });
     assert.equal(migrarCadastro(null), null);
+  });
+
+  it('versão 6: cada instrutor recebe as habilitações do seu nível; o nível fica guardado como cópia', () => {
+    const cadastro = {
+      nid: 1004,
+      ins: [{ id: 1, nm: 'A', lv: 1, kg: 70 }, { id: 2, nm: 'B', lv: 9, kg: 80, extra: 'x' }, { id: 3, nm: 'C', kg: 60 }],
+      stu: []
+    };
+    const novo = migrarCadastro(cadastro);
+    assert.deepEqual(novo.ins[0], { id: 1, nm: 'A', lv: 1, kg: 70, hab: habilitacoesDoNivel(1) });
+    assert.deepEqual(novo.ins[1], { id: 2, nm: 'B', lv: 9, kg: 80, extra: 'x', hab: habilitacoesDoNivel(9) });
+    assert.deepEqual(novo.ins[2].hab, habilitacoesDoNivel(1), 'sem nível: o padrão de antes (A01)');
+    assert.deepEqual(migrarCadastro({ ...cadastro, esquema: 5 }).ins[0].hab, habilitacoesDoNivel(1), 'cadastro da versão 5 também migra');
+    const editado = { ...novo, ins: [{ ...novo.ins[0], hab: ['c172'] }] };
+    assert.deepEqual(migrarCadastro(editado), editado, 'quem já está no formato atual não muda');
   });
 
   it('os nomes novos são os da frota cadastrada, na mesma ordem', () => {

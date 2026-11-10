@@ -25,7 +25,7 @@ describe('Separar e juntar', () => {
     const estado = normalizado(goldens.exemplo.estado);
     const { cadastro, dia } = separar(estado);
     assert.deepEqual(Object.keys(cadastro).sort(), ['ins', 'nid', 'stu']);
-    assert.deepEqual(Object.keys(cadastro.ins[0]).sort(), ['id', 'kg', 'lv', 'nm']);
+    assert.deepEqual(Object.keys(cadastro.ins[0]).sort(), ['hab', 'id', 'kg', 'lv', 'nm']);
     assert.deepEqual(Object.keys(cadastro.stu[0]).sort(), ['bl', 'id', 'kg', 'nm']);
     assert.deepEqual(Object.keys(dia).sort(), ['av', 'fStatus', 'ins', 'pedidos', 'win']);
     assert.deepEqual(Object.keys(dia.ins[estado.ins[0].id]).sort(), ['aw', 'on']);

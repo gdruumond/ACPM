@@ -1,17 +1,11 @@
-// Regras das missões: Ground School, nível mínimo do instrutor, precedência Ground → voo
+// Regras das missões: Ground School, precedência Ground → voo
 // e normalização de pedidos (inclusive nomes de missão de versões anteriores).
-import { MIS, EQ_MIN_LV, NI, GROUND_EQ_TYPE, GROUND_DURATION_H } from './config.js';
+import { MIS, NI, GROUND_EQ_TYPE, GROUND_DURATION_H } from './config.js';
 
 // Regra da missão pelo nome, somente entre as missões cadastradas (nomes como "constructor" não contam)
 export const missionRule = mis => (Object.hasOwn(MIS, mis) ? MIS[mis] : null);
 
 export const isGroundMission = mis => Boolean(missionRule(mis) && missionRule(mis).isGround);
-
-export function reqInsLevel(mis, eq) {
-  const m = missionRule(mis) || MIS['Voo Local'];
-  if (m.isGround) return 1; // Sem restrição de nível para Ground School (qualquer instrutor A01+)
-  return Math.max(m.lv, (Object.hasOwn(EQ_MIN_LV, eq) && EQ_MIN_LV[eq]) || 1);
-}
 
 // Verifica se um voo (d) depende de uma missão de Ground (gMis) agendada para o mesmo aluno no dia
 export function doesGroundGateFlight(gMis, flightReq) {

@@ -1,6 +1,6 @@
 // Aba 6 · Dashboard BI: horas por equipamento, instrutor e missão (dia, semana e mês).
 import { EQ, GROUND_EQ_TYPE, GROUND_REG, ACROBAT_REG, MIS } from '../config.js';
-import { fmtH, A, esc } from '../format.js';
+import { fmtH, esc } from '../format.js';
 import { isGroundMission, migrateLegacyMissionName } from '../rules.js';
 import { S, BI_HISTORY } from '../state.js';
 import { $ } from '../dom.js';
@@ -28,7 +28,7 @@ export function rBI() {
   eqStats[GROUND_REG] = { reg: GROUND_REG, type: GROUND_EQ_TYPE, d: 0, w: 0, m: 0, flightsM: 0 };
 
   const insStats = {};
-  S.ins.forEach(x => { insStats[x.nm] = { nm: x.nm, lv: x.lv, on: x.on, d: 0, w: 0, m: 0, flightsM: 0 }; });
+  S.ins.forEach(x => { insStats[x.nm] = { nm: x.nm, on: x.on, d: 0, w: 0, m: 0, flightsM: 0 }; });
 
   const misStats = {};
   Object.keys(MIS).forEach(m => { misStats[m] = { mis: m, d: 0, w: 0, m: 0 }; });
@@ -70,7 +70,7 @@ export function rBI() {
       if (isWeek) eqStats[o.r].w += h;
       if (isMonth) { eqStats[o.r].m += h; eqStats[o.r].flightsM++; }
 
-      if (!insStats[o.ins]) insStats[o.ins] = { nm: o.ins, lv: o.lv || 1, on: true, d: 0, w: 0, m: 0, flightsM: 0 };
+      if (!insStats[o.ins]) insStats[o.ins] = { nm: o.ins, on: true, d: 0, w: 0, m: 0, flightsM: 0 };
       if (isDay) insStats[o.ins].d += h;
       if (isWeek) insStats[o.ins].w += h;
       if (isMonth) { insStats[o.ins].m += h; insStats[o.ins].flightsM++; }
@@ -132,13 +132,12 @@ export function rBI() {
         <h3>Horas por Instrutor (Dia · Semana · Mês)</h3>
         <div class="tw" style="max-height:440px;overflow-y:auto">
           <table style="min-width:100%">
-            <thead><tr><th>Instrutor</th><th>Nível</th><th>Dia</th><th>Semana</th><th>Mês</th><th>Carga</th></tr></thead>
+            <thead><tr><th>Instrutor</th><th>Dia</th><th>Semana</th><th>Mês</th><th>Carga</th></tr></thead>
             <tbody>
               ${insList.map(x => {
                 const pct = Math.round((x.m / maxInsM) * 100);
                 return `<tr>
                   <td><b>${esc(x.nm)}</b></td>
-                  <td><span class="tag">${A(x.lv)}</span></td>
                   <td><b>${fmtH(x.d)}</b></td>
                   <td>${fmtH(x.w)}</td>
                   <td><b>${fmtH(x.m)}</b></td>
@@ -155,7 +154,7 @@ export function rBI() {
       <h3>Horas por Fase / Missão</h3>
       <div class="tw">
         <table style="min-width:100%">
-          <thead><tr><th>Missão</th><th>Equipamento Permitido</th><th>Nível Base</th><th>Dia</th><th>Semana</th><th>Mês</th><th>Proporção</th></tr></thead>
+          <thead><tr><th>Missão</th><th>Equipamento Permitido</th><th>Dia</th><th>Semana</th><th>Mês</th><th>Proporção</th></tr></thead>
           <tbody>
             ${Object.values(misStats).map(ms => {
               const rule = MIS[ms.mis] || MIS['Voo Local'];
@@ -166,7 +165,6 @@ export function rBI() {
               return `<tr>
                 <td><b>${esc(ms.mis)}</b></td>
                 <td>${esc(eqDesc)}</td>
-                <td><span class="tag">${A(rule.lv)}+</span></td>
                 <td><b>${fmtH(ms.d)}</b></td>
                 <td>${fmtH(ms.w)}</td>
                 <td><b>${fmtH(ms.m)}</b></td>

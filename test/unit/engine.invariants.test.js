@@ -3,7 +3,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { runAllocationEngine } from '../../js/engine.js';
 import { EQ, GROUND_REG, ACROBAT_REG, T, NI, DEFAULT_LIM } from '../../js/config.js';
-import { isGroundMission, reqInsLevel, doesGroundGateFlight } from '../../js/rules.js';
+import { isGroundMission, doesGroundGateFlight } from '../../js/rules.js';
+import { podeFazer } from '../../js/habilitacoes.js';
 import { gerarCenario } from '../helpers/cenarios.js';
 
 const SEEDS = Array.from({ length: 300 }, (_, i) => 1001 + i);
@@ -60,12 +61,12 @@ describe('Invariantes do motor de alocação', () => {
     }
   }));
 
-  it('instrutor ativo, com nível suficiente, disponível em todo o período e não bloqueado', () => emTodos(({ estado, out }) => {
+  it('instrutor ativo, habilitado para a missão no equipamento, disponível em todo o período e não bloqueado', () => emTodos(({ estado, out }) => {
     for (const o of out) {
       const x = estado.ins.find(i => i.id === o.insId);
       const { stu } = pedidoDe(estado, o);
       assert.ok(x.on, `${o.fKey}: instrutor inativo`);
-      assert.ok(x.lv >= reqInsLevel(o.mis, o.eqType), `${o.fKey}: ${o.mis}/${o.eqType} com A0${x.lv}`);
+      assert.ok(podeFazer(x, o.mis, o.eqType), `${o.fKey}: ${o.mis}/${o.eqType} sem habilitação (${x.hab})`);
       assert.ok(!stu.bl.includes(x.id), `${o.fKey}: instrutor bloqueado`);
       T.forEach((ini, k) => {
         const fim = k < NI ? T[k + 1] : 1440;

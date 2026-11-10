@@ -1,4 +1,5 @@
-import { test, expect, abrir, abrirSintetico, irPara } from './fixtures.js';
+import { test, expect, abrir, abrirSintetico, irPara, gerarEscala, lerEscala } from './fixtures.js';
+import { aluno, cenario, instrutor } from '../helpers/montar.js';
 
 test.describe('Recursos', () => {
   test('estado inicial: 9 janelas, 26 recursos, nenhum instrutor e nenhum aluno', async ({ page }) => {
@@ -36,26 +37,28 @@ test.describe('Recursos', () => {
 });
 
 test.describe('Instrutores', () => {
-  test('filtra por nome e por nível mínimo', async ({ page }) => {
+  test('filtra por nome e por habilitação', async ({ page }) => {
     await abrirSintetico(page);
     await irPara(page, 'ins');
     await page.locator('[data-flt="inst"]').fill('instrutor 1');
     await expect(page.locator('#inst .cd:visible')).toHaveCount(10);
     await page.locator('[data-flt="inst"]').fill('');
-    await page.locator('#flt-ins-lv').selectOption('9');
+    await page.locator('#flt-ins-hab').selectOption('mlte');
     await expect(page.locator('#inst .cd:visible')).toHaveCount(4);
     await expect(page.locator('#inst .cd:visible .nm').first()).toHaveValue('Instrutor 09');
   });
 
-  test('cadastra instrutor e altera nível, peso e turno', async ({ page }) => {
+  test('cadastra instrutor e altera habilitações, peso e turno', async ({ page }) => {
     await abrirSintetico(page);
     await irPara(page, 'ins');
     await page.locator('[data-act="addi"]').click();
     const card = page.locator('#inst .cd').last();
     await expect(page.locator('#inst .cd')).toHaveCount(41);
     await expect(card.locator('.nm')).toHaveValue('Novo instrutor');
-    await card.locator('[data-f="lv"]').selectOption('7');
-    await expect(page.locator('#inst .cd').last()).toHaveAttribute('data-lv', '7');
+    await expect(card).toHaveAttribute('data-hab', 'grounds ground_pa34 local');
+    await card.locator('[data-f="hab"][data-h="c172"]').check();
+    await page.locator('#inst .cd').last().locator('[data-f="hab"][data-h="local"]').uncheck();
+    await expect(page.locator('#inst .cd').last()).toHaveAttribute('data-hab', 'grounds ground_pa34 c172');
     await page.locator('#inst .cd').last().locator('[data-f="kg"]').fill('80');
     await page.locator('#inst .cd').last().locator('[data-f="kg"]').blur();
     await page.locator('#inst .cd').last().locator('[data-f="pre"]').selectOption('Manhã');
@@ -66,7 +69,26 @@ test.describe('Instrutores', () => {
       else await expect(janelas.nth(i)).not.toBeChecked();
     }
     await expect(page.locator('#audit-log-list')).toContainText('Peso Novo instrutor: 80 kg');
-    await expect(page.locator('#audit-log-list')).toContainText('Nível Novo instrutor: A07');
+    await expect(page.locator('#audit-log-list')).toContainText('Habilitação incluída: Novo instrutor · C172');
+    await expect(page.locator('#audit-log-list')).toContainText('Habilitação retirada: Novo instrutor · Voo Local');
+  });
+
+  test('as habilitações não são cumulativas e valem na escala', async ({ page }) => {
+    // Instrutor 01 é de C172 e não dá simulador; o Instrutor 02 só dá simulador (Mono)
+    const estado = cenario({
+      ins: [instrutor(1, 9, { hab: ['local', 'noturno', 'c172'] }), instrutor(2, 1, { hab: ['sim_mono'] })],
+      stu: [aluno(1000, { mis: 'Simulador', eq: 'Sim. Mono' })]
+    });
+    await abrir(page, { estado });
+    await gerarEscala(page);
+    const voos = (await lerEscala(page)).linhas.filter(l => l.includes('Aluno 1000'));
+    expect(voos).toHaveLength(1);
+    expect(voos[0]).toContain('| Instrutor 02 |');
+
+    await irPara(page, 'ins');
+    await page.locator('#inst .cd[data-id="2"] [data-f="hab"][data-h="sim_mono"]').uncheck();
+    await irPara(page, 'esc');
+    await expect(page.locator('#out')).toContainText('nenhum instrutor ativo habilitado para Simulador em Sim. Mono (Simulador (Mono))');
   });
 
   test('instrutor indisponível pode ser revertido pelo histórico', async ({ page }) => {

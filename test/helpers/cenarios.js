@@ -3,6 +3,7 @@
 // do motor original (index.html no commit 9b5de75) sem versionar os estados de entrada.
 import { createHash } from 'node:crypto';
 import { FROTA, JANELAS, LIMITES, dois } from './estado.js';
+import { habilitacoesDoNivel } from '../../js/habilitacoes.js';
 
 const EQUIP_MISSAO = {
   'Ground C152': ['Sala Ground'],
@@ -38,6 +39,7 @@ export function gerarCenario(seed) {
   const int = (a, b) => a + Math.floor(r() * (b - a + 1));
   const pick = a => a[Math.floor(r() * a.length)];
 
+  // As habilitações saem do nível sorteado (sem sorteio a mais): os cenários são os mesmos de antes das habilitações
   const ins = Array.from({ length: int(6, 40) }, (_, i) => ({
     id: i + 1,
     nm: `Instrutor ${dois(i + 1)}`,
@@ -45,7 +47,7 @@ export function gerarCenario(seed) {
     lv: int(1, 9),
     kg: r() < 0.05 ? 0 : int(50, 110),
     aw: Array.from({ length: JANELAS }, () => r() > 0.15)
-  }));
+  })).map(x => ({ ...x, hab: habilitacoesDoNivel(x.lv) }));
 
   let nid = 1000;
   const missao = () => {

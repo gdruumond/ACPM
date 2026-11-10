@@ -1,10 +1,11 @@
 // Abas 2 e 3 · Instrutores e Alunos: cartões de cadastro e filtros.
-import { WIN, PRE, LV } from '../config.js';
-import { esc, opts } from '../format.js';
+import { WIN, PRE } from '../config.js';
+import { HABILITACOES } from '../habilitacoes.js';
+import { esc } from '../format.js';
 import { S, insBy } from '../state.js';
 import { $ } from '../dom.js';
 
-export const insHTML = x => `<div class="cd${x.on ? '' : ' off'}" data-k="i" data-id="${x.id}" data-lv="${x.lv}" data-nm="${esc(x.nm.toLowerCase())}">
+export const insHTML = x => `<div class="cd${x.on ? '' : ' off'}" data-k="i" data-id="${x.id}" data-hab="${x.hab.join(' ')}" data-nm="${esc(x.nm.toLowerCase())}">
   <div class="r1">
     <input type="checkbox" data-f="on"${x.on ? ' checked' : ''} title="Disponível no dia" aria-label="Disponível">
     <input class="nm" data-f="nm" value="${esc(x.nm)}" aria-label="Nome">
@@ -12,10 +13,13 @@ export const insHTML = x => `<div class="cd${x.on ? '' : ' off'}" data-k="i" dat
   </div>
   <div class="r2">
     <input type="number" min="0" max="200" data-f="kg" value="${x.kg || ''}" placeholder="Peso kg" aria-label="Peso em kg">
-    <select data-f="lv" aria-label="Nível">${opts(LV, x.lv)}</select>
     <select data-f="pre" class="edit-only" aria-label="Turno rápido"><option value="">Turno rápido…</option>${Object.keys(PRE).map(k => `<option>${k}</option>`).join('')}</select>
   </div>
   <div class="ws">${WIN.map((w, i) => `<label class="w${x.aw[i] ? ' on' : ''}"><input type="checkbox" data-f="aw" data-w="${i}"${x.aw[i] ? ' checked' : ''}>${w}</label>`).join('')}</div>
+  <div class="habs" role="group" aria-label="Habilitações de ${esc(x.nm)}"><span class="sm">Habilitações:</span>${HABILITACOES.map(h => {
+    const tem = x.hab.includes(h.id);
+    return `<label class="w${tem ? ' on' : ''}" title="${esc(h.nome)}"><input type="checkbox" data-f="hab" data-h="${h.id}" aria-label="${esc(h.nome)}"${tem ? ' checked' : ''}>${esc(h.curto)}</label>`;
+  }).join('')}</div>
 </div>`;
 
 export const stuHTML = s => `<div class="cd" data-k="s" data-id="${s.id}" data-nm="${esc(s.nm.toLowerCase())}">
@@ -46,12 +50,17 @@ export const rAlu = () => {
   $('#alu').innerHTML = S.stu.map(stuHTML).join('');
 };
 
+// Filtro da aba Instrutores: uma opção por habilitação
+export function preencherFiltroDeHabilitacoes() {
+  $('#flt-ins-hab').insertAdjacentHTML('beforeend', HABILITACOES.map(h => `<option value="${h.id}">${esc(h.nome)}</option>`).join(''));
+}
+
 export function applyInstructorFilters() {
   const q = ($('[data-flt="inst"]') && $('[data-flt="inst"]').value || '').toLowerCase();
-  const minLv = +($('#flt-ins-lv') && $('#flt-ins-lv').value || 0);
+  const hab = ($('#flt-ins-hab') && $('#flt-ins-hab').value) || '';
   document.querySelectorAll('#inst .cd').forEach(c => {
     const matchName = !q || c.dataset.nm.includes(q);
-    const matchLv = !minLv || +c.dataset.lv >= minLv;
-    c.hidden = !(matchName && matchLv);
+    const matchHab = !hab || c.dataset.hab.split(' ').includes(hab);
+    c.hidden = !(matchName && matchHab);
   });
 }

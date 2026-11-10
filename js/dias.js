@@ -15,7 +15,8 @@ export function separar(estado) {
   return {
     cadastro: {
       nid: estado.nid,
-      ins: estado.ins.map(({ id, nm, lv, kg }) => ({ id, nm, lv, kg })),
+      // O nível A01–A09 de antes da fase 4 fica só como cópia, em quem já o tinha
+      ins: estado.ins.map(({ id, nm, lv, kg, hab }) => ({ id, nm, ...(lv === undefined ? {} : { lv }), kg, hab: [...(hab || [])] })),
       stu: estado.stu.map(({ id, nm, kg, bl }) => ({ id, nm, kg, bl: [...(bl || [])] }))
     },
     dia: {

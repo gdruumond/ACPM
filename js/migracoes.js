@@ -3,7 +3,9 @@
 // que faltam, então o app sempre trabalha no formato atual; no primeiro acesso de um operador depois de uma mudança,
 // os dados guardados são regravados no formato atual (ApiClient.atualizarFormatoGravado).
 // Sem o campo "esquema": formato da fase 3 (versão 4).
-export const ESQUEMA = 5;
+import { habilitacoesDoNivel } from './habilitacoes.js';
+
+export const ESQUEMA = 6;
 
 // Versão 5 (fase 4): simuladores com os nomes usados no aeroclube
 const SIMULADORES_RENOMEADOS = { 'SIM-MONO-1': 'SIM-MONO-A', 'SIM-MONO-2': 'SIM-MONO-C', 'SIM-MULTI-1': 'SIM-MLTE-E', 'SIM-MULTI-2': 'SIM-MLTE-D' };
@@ -22,6 +24,14 @@ const PASSOS = {
       }
       return novo;
     }
+  },
+  // Versão 6 (fase 4): habilitações individuais no lugar dos níveis cumulativos A01–A09. Cada instrutor recebe
+  // exatamente o que o seu nível permitia; o nível fica no registro só como cópia (não é mais usado)
+  6: {
+    cadastro: cadastro => (Array.isArray(cadastro.ins)
+      ? { ...cadastro, ins: cadastro.ins.map(x => (x && !Array.isArray(x.hab) ? { ...x, hab: habilitacoesDoNivel(x.lv) } : x)) }
+      : cadastro),
+    dia: dia => dia
   }
 };
 

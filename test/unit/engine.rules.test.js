@@ -9,7 +9,7 @@ const resumo = o => ({ s: o.s, w: o.w, tag: o.tag });
 const SO_PP_LJV = apenas('C152', 'PP-LJV');
 
 describe('Voos: janelas preferidas e encaixe', () => {
-  it('voo local no C152 sai na Pref. 1 com o instrutor de menor nível habilitado', () => {
+  it('voo local no C152 sai na Pref. 1 com o instrutor habilitado que tem menos habilitações', () => {
     const { out, al, tot } = alocar({ ins: [instrutor(1, 8), instrutor(2, 3), instrutor(3, 1)], stu: [aluno(1000)] });
     assert.equal(tot, 1);
     assert.deepEqual(al, []);
@@ -102,23 +102,24 @@ describe('Voos: janelas preferidas e encaixe', () => {
   });
 });
 
-describe('Matriz de instrutores A01–A09', () => {
+describe('Habilitações exigidas (os instrutores migrados fazem o mesmo que os níveis A01–A09 permitiam)', () => {
+  // [missão, equipamento, nível que bastava antes, habilitações exigidas agora]
   const casos = [
-    ['Simulador', 'Sim. Mono', 2],
-    ['Simulador', 'Sim. Multi', 2],
-    ['Voo Local', 'C172', 7],
-    ['Voo Local', 'PA-34', 9],
-    ['Navegação', 'C152', 4],
-    ['Voo Solo', 'C152', 5],
-    ['Parafuso', 'C152', 6],
-    ['Noturno', 'C172', 7],
-    ['IFR', 'C172', 8],
-    ['IFR', 'PA-34', 9],
-    ['Multimotor', 'PA-34', 9]
+    ['Simulador', 'Sim. Mono', 2, 'Simulador (Mono)'],
+    ['Simulador', 'Sim. Multi', 2, 'Simulador (Multi)'],
+    ['Voo Local', 'C172', 7, 'Voo Local + C172'],
+    ['Voo Local', 'PA-34', 9, 'Voo Local + MLTE (PA-34)'],
+    ['Navegação', 'C152', 4, 'Voo de Navegação'],
+    ['Voo Solo', 'C152', 5, 'Voo para liberação de Solo'],
+    ['Parafuso', 'C152', 6, 'Voo de Parafuso (SPIN)'],
+    ['Noturno', 'C172', 7, 'Voo Noturno + C172'],
+    ['IFR', 'C172', 8, 'Voo IFR + C172'],
+    ['IFR', 'PA-34', 9, 'Voo IFR + MLTE (PA-34)'],
+    ['Multimotor', 'PA-34', 9, 'MLTE (PA-34)']
   ];
 
-  for (const [mis, eq, lv] of casos) {
-    it(`${mis} em ${eq} exige A0${lv}+`, () => {
+  for (const [mis, eq, lv, exige] of casos) {
+    it(`${mis} em ${eq} exige ${exige}`, () => {
       const noturno = mis === 'Noturno' ? { p1: 8, p2: 8 } : {};
       const pedido = aluno(1000, { mis, eq, ...noturno });
 
@@ -126,7 +127,7 @@ describe('Matriz de instrutores A01–A09', () => {
       assert.equal(abaixo.out.length, 0);
       assert.deepEqual(abaixo.al, [{
         t: 'err', s: 'Aluno 1000',
-        m: `Rejeitado: nenhum instrutor ativo com nível A0${lv} ou superior (exigido para ${mis} em ${eq}).`
+        m: `Rejeitado: nenhum instrutor ativo habilitado para ${mis} em ${eq} (${exige}).`
       }]);
 
       const habilitado = alocar({ ins: [instrutor(1, lv - 1), instrutor(2, lv)], stu: [pedido] });
@@ -134,6 +135,29 @@ describe('Matriz de instrutores A01–A09', () => {
       assert.equal(habilitado.out[0].insId, 2);
     });
   }
+
+  it('as habilitações não são cumulativas: instrutor de C172 sem simulador, de PA-34 sem parafuso', () => {
+    const ins = [instrutor(1, 9, { hab: ['local', 'noturno', 'c172'] }), instrutor(2, 1, { hab: ['sim_mono'] })];
+    assert.equal(alocar({ ins, stu: [aluno(1000, { mis: 'Simulador', eq: 'Sim. Mono' })] }).out[0].insId, 2);
+    assert.equal(alocar({ ins, stu: [aluno(1000, { mis: 'Noturno', eq: 'C172', p1: 8, p2: 8 })] }).out[0].insId, 1);
+    const parafuso = alocar({ ins: [instrutor(1, 9, { hab: ['local', 'mlte'] })], stu: [aluno(1000, { mis: 'Parafuso', eq: 'PA-34' })] });
+    assert.deepEqual(parafuso.al.map(a => a.m), ['Rejeitado: nenhum instrutor ativo habilitado para Parafuso em PA-34 (Voo de Parafuso (SPIN) + MLTE (PA-34)).']);
+  });
+
+  it('TGL (TMA): só o instrutor com a habilitação TGL (TMA)', () => {
+    const ins = [instrutor(1, 1, { hab: ['local'] }), instrutor(2, 1, { hab: ['local', 'tgl'] })];
+    assert.equal(alocar({ ins, stu: [aluno(1000, { mis: 'TGL (TMA)', eq: 'C152' })] }).out[0].insId, 2);
+  });
+
+  it('voos de cheque vão para o checador credenciado (cheque PC MNTE IFR: checador IFR ou MLTE IFR, nunca o VFR)', () => {
+    const ins = [instrutor(1, 9, { hab: ['checador_vfr'] }), instrutor(2, 9, { hab: ['checador_ifr'] }), instrutor(3, 9, { hab: ['checador_mlte'] })];
+    const cheque = (mis, eq) => alocar({ ins, stu: [aluno(1000, { mis, eq })] });
+    assert.equal(cheque('Cheque PP', 'C152').out[0].insId, 1);
+    assert.equal(cheque('Cheque PC MNTE IFR', 'C172').out[0].insId, 2);
+    assert.equal(cheque('Cheque PC MLTE IFR', 'PA-34').out[0].insId, 3);
+    const semChecador = alocar({ ins: [instrutor(1, 9)], stu: [aluno(1000, { mis: 'Cheque PC MLTE VFR', eq: 'PA-34' })] });
+    assert.deepEqual(semChecador.al.map(a => a.m), ['Rejeitado: nenhum instrutor ativo habilitado para Cheque PC MLTE VFR em PA-34 (Checador PP, PC, MLTE, MNTE, INVA, IFR).']);
+  });
 
   it('missão em equipamento não permitido é rejeitada', () => {
     const { out, al } = alocar({ stu: [aluno(1000, { mis: 'IFR', eq: 'C152' })] });
@@ -145,7 +169,7 @@ describe('Matriz de instrutores A01–A09', () => {
     const ins = [instrutor(1, 1), instrutor(2, 1)];
     assert.equal(alocar({ ins, stu: [aluno(1000, {}, { bl: [1] })] }).out[0].insId, 2);
     assert.deepEqual(alocar({ ins, stu: [aluno(1000, {}, { bl: [1, 2] })] }).al, [
-      { t: 'err', s: 'Aluno 1000', m: 'Rejeitado: os instrutores A01+ livres estão bloqueados por este aluno.' }
+      { t: 'err', s: 'Aluno 1000', m: 'Rejeitado: os instrutores habilitados (Voo Local) livres estão bloqueados por este aluno.' }
     ]);
   });
 
@@ -262,7 +286,7 @@ describe('Ground School', () => {
     assert.deepEqual(al, [{ t: 'err', s: 'Aluno 1001', m: 'Rejeitado: a sala de Ground já está ocupada por outra turma nos horários testados.' }]);
   });
 
-  it('é ministrado pelo instrutor de menor nível disponível', () => {
+  it('é ministrado pelo instrutor disponível com menos habilitações', () => {
     const { out } = alocar({ ins: [instrutor(1, 9), instrutor(2, 4), instrutor(3, 1)], stu: [aluno(1000, GROUND_C152)] });
     assert.equal(out[0].insId, 3);
   });

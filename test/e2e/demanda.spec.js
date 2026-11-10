@@ -1,4 +1,5 @@
-import { test, expect, abrir, abrirSintetico, irPara, preencherExemplo, json } from './fixtures.js';
+import { test, expect, abrir, abrirSintetico, irPara, preencherExemplo, gerarEscala, lerEscala, json } from './fixtures.js';
+import { aluno, cenario, instrutor } from '../helpers/montar.js';
 
 const lerDemanda = page => page.locator('#dem tr[data-k="d"]').evaluateAll(linhas => linhas.map(tr => {
   const valor = f => {
@@ -63,10 +64,31 @@ test.describe('Demanda', () => {
     await expect(linha.locator('td').last()).toHaveText('');
 
     await linha.locator('[data-f="fly"]').check();
-    await expect(linha.locator('td').last()).toHaveText('06:30–08:00 · 01h30 · Instrutor A01+ · Turma coletiva');
+    await expect(linha.locator('td').last()).toHaveText('06:30–08:00 · 01h30 · Turma coletiva · Exige Grounds (C152, C172 e Navegação)');
 
     await linha.locator('[data-f="mis"]').selectOption('Voo Local');
     expect(await valores()).toEqual({ eq: 'C152', p1: '0', p2: '1', nb: '1' });
+  });
+
+  test('TGL (TMA) e voos de cheque na demanda: equipamentos do cheque e o checador credenciado', async ({ page }) => {
+    const estado = cenario({
+      ins: [instrutor(1, 9, { hab: ['local', 'c172', 'checador_vfr'] }), instrutor(2, 9, { hab: ['local', 'c172', 'checador_ifr'] })],
+      stu: [aluno(1000)]
+    });
+    await abrir(page, { estado });
+    await irPara(page, 'dem');
+    const linha = page.locator('#dem tr[data-k="d"]').first();
+    const opcoes = await linha.locator('[data-f="mis"] option').allTextContents();
+    expect(opcoes).toEqual(expect.arrayContaining(['TGL (TMA)', 'Cheque PP', 'Cheque PC MNTE VFR', 'Cheque PC MNTE IFR', 'Cheque PC MLTE VFR', 'Cheque PC MLTE IFR']));
+
+    await linha.locator('[data-f="mis"]').selectOption('Cheque PC MNTE IFR');
+    expect(await linha.locator('[data-f="eq"] option').allTextContents()).toEqual(['C172']);
+    await expect(linha.locator('td').last()).toContainText('Exige Checador PP, PC, MNTE, INVA, IFR ou Checador PP, PC, MLTE, MNTE, INVA, IFR');
+    await gerarEscala(page);
+    const voos = (await lerEscala(page)).linhas.filter(l => l.includes('Aluno 1000'));
+    expect(voos).toHaveLength(1);
+    expect(voos[0]).toContain('| Cheque PC MNTE IFR |');
+    expect(voos[0]).toContain('| Instrutor 02 |');
   });
 
   test('filtros "Só quem voa", nome e missão', async ({ page }) => {

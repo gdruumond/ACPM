@@ -14,8 +14,9 @@
  *   js/export.js    Exportação CSV e PDF
  */
 import { WIN, NI, T, EQ, GROUND_EQ_TYPE, GROUND_REG, GROUND_DURATION_MIN, GROUND_DURATION_H, ACROBAT_REG, MIS, PRE } from './config.js';
-import { hm, fmtDurLabel, pad, A, amanhaISO, isoMenosDias } from './format.js';
-import { isGroundMission, reqInsLevel, blank } from './rules.js';
+import { hm, fmtDurLabel, pad, amanhaISO, isoMenosDias } from './format.js';
+import { isGroundMission, blank } from './rules.js';
+import { habilitacoesDoNivel, normalizarHabilitacoes, nomeDaHabilitacao, podeFazer } from './habilitacoes.js';
 import { ApiClient } from './storage.js';
 import { S, RES, AUDIT_LOG, DATA, setS, setRES, setAuditLog, setTLMode, isGestor, insBy, stuBy, getMissionTarget } from './state.js';
 import { $, showToast, msg, focusLast, mostrarAviso, avisoAberto } from './dom.js';
@@ -23,7 +24,7 @@ import { show } from './views/tabs.js';
 import { rBI } from './views/bi.js';
 import { renderAuditPanel, rOut } from './views/escala.js';
 import { singleDemandRowHTML, cnt, rDem, applyDemandFilters } from './views/demanda.js';
-import { insHTML, stuHTML, rIns, rAlu, applyInstructorFilters } from './views/cadastros.js';
+import { insHTML, stuHTML, rIns, rAlu, applyInstructorFilters, preencherFiltroDeHabilitacoes } from './views/cadastros.js';
 import { rRec } from './views/recursos.js';
 import { setRole, pushHistory, save, logChange, undoLastAction, syncBIHistoryForCurrentDate, gen, demo, abrirData, historicoParaPainel, carregarData, carregarBI } from './actions.js';
 import { exp, pdf } from './export.js';
@@ -145,7 +146,8 @@ $('#dt').onchange = e => {
 $('#bi-dt').onchange = () => carregarBI();
 $('#bi-flt-eq').onchange = () => rBI();
 $('#flt-dem-mis').onchange = applyDemandFilters;
-$('#flt-ins-lv').onchange = applyInstructorFilters;
+preencherFiltroDeHabilitacoes();
+$('#flt-ins-hab').onchange = applyInstructorFilters;
 $('#flt-esc-eq').onchange = () => rOut(false);
 
 $('#btn-theme').onclick = () => {
@@ -175,7 +177,8 @@ armed('#btn-bi-sim', 'Confirmar simulação', async () => {
   let seed = 42;
   const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const pick = a => a[Math.floor(rnd() * a.length)];
-  const allMis = Object.keys(MIS);
+  // Só missões que algum instrutor ativo pode fazer (sem checadores cadastrados, não há voo de cheque simulado)
+  const allMis = Object.keys(MIS).filter(m => S.ins.some(x => x.on && MIS[m].eq.some(eq => podeFazer(x, m, eq))));
   const stuPool = S.stu.length ? S.stu : Array.from({ length: 15 }, (_, i) => ({ nm: pad(i) }));
 
   for (let dayOffset = 0; dayOffset < 30; dayOffset++) {
@@ -194,10 +197,10 @@ armed('#btn-bi-sim', 'Confirmar simulação', async () => {
         : (mis === 'Parafuso' && eqType === 'C152')
           ? ACROBAT_REG
           : pick(EQ[eqType].filter(r => r !== ACROBAT_REG));
-      const minLv = reqInsLevel(mis, eqType);
+      // Grounds simulados com os instrutores menos habilitados (como os A01–A02 de antes)
       const qualIns = isGnd
-        ? S.ins.filter(x => x.lv === 1 || x.lv === 2)
-        : S.ins.filter(x => x.lv >= minLv);
+        ? S.ins.filter(x => podeFazer(x, mis, eqType) && x.hab.length <= habilitacoesDoNivel(2).length)
+        : S.ins.filter(x => podeFazer(x, mis, eqType));
       const ins = pick(qualIns.length ? qualIns : S.ins);
       const stu = pick(stuPool);
       const h = isGnd ? GROUND_DURATION_H : 1 + Math.floor(rnd() * 3);
@@ -208,7 +211,7 @@ armed('#btn-bi-sim', 'Confirmar simulação', async () => {
         classKey: isGnd ? `SIM_${iso}_${mis}_${w}_${ins.id}` : `SIM_${iso}_${f}`,
         w, a: T[w], b: T[w] + durMin,
         s: stu.nm, mis, h, ss: '1/1',
-        r: reg, eqType, ins: ins.nm, lv: ins.lv, status: 'Confirmado'
+        r: reg, eqType, ins: ins.nm, status: 'Confirmado'
       });
     }
     await ApiClient.backend.gravar(`dia:${iso}`, { simulado: true, resultado: { out: flights, al: [], tot: numFlights, rej: 0, data: iso }, esquema: ESQUEMA });
@@ -318,7 +321,7 @@ document.addEventListener('click', e => {
 
   if (a === 'addi') {
     pushHistory();
-    const newIns = { id: S.nid++, nm: 'Novo instrutor', on: true, lv: 1, kg: 0, aw: WIN.map((_, i) => i < 8) };
+    const newIns = { id: S.nid++, nm: 'Novo instrutor', on: true, hab: habilitacoesDoNivel(1), kg: 0, aw: WIN.map((_, i) => i < 8) };
     S.ins.push(newIns);
     save(); rIns(); rAlu(); focusLast('#inst .nm');
     logChange('inc', `Instrutor adicionado: ${newIns.nm}`);
@@ -431,9 +434,10 @@ document.addEventListener('change', e => {
     } else if (f === 'kg') {
       x.kg = +t.value || 0;
       logChange('mod', `Peso ${x.nm}: ${x.kg} kg`);
-    } else if (f === 'lv') {
-      x.lv = +t.value;
-      logChange('mod', `Nível ${x.nm}: ${A(x.lv)}`);
+    } else if (f === 'hab') {
+      const h = t.dataset.h;
+      x.hab = normalizarHabilitacoes(t.checked ? [...x.hab, h] : x.hab.filter(k => k !== h));
+      logChange('mod', `Habilitação ${t.checked ? 'incluída' : 'retirada'}: ${x.nm} · ${nomeDaHabilitacao(h)}`);
     } else if (f === 'aw') {
       x.aw[+t.dataset.w] = t.checked;
     } else if (f === 'pre') {

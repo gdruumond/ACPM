@@ -1,5 +1,5 @@
 // Exportação da escala do dia em CSV e PDF (jsPDF + AutoTable carregados no index.html).
-import { hm, WLB, fmtH, A } from './format.js';
+import { hm, WLB, fmtH } from './format.js';
 import { sumUniqueOperationalHours, consolidateTimelineSlots } from './engine.js';
 import { S, RES, DATA } from './state.js';
 import { $, msg } from './dom.js';
@@ -56,7 +56,7 @@ export async function pdf() {
       cw = o.w;
       body.push([{ content: `${WLB(o.w)}  -  ${out.filter(x => x.w === o.w).length} lançamento(s) iniciando`, colSpan: 8, styles: { fillColor: [222, 230, 238], fontStyle: 'bold' } }]);
     }
-    body.push([`${hm(o.a)}-${hm(o.b)}`, o.s, o.mis, o.r, `${o.ins} (${A(o.lv)})`, HT(o), o.kg ? o.kg + ' kg' : '-', o.tag]);
+    body.push([`${hm(o.a)}-${hm(o.b)}`, o.s, o.mis, o.r, o.ins, HT(o), o.kg ? o.kg + ' kg' : '-', o.tag]);
   });
 
   doc.autoTable({ startY: 33, head: [['Horário','Aluno','Missão','Equipamento','Instrutor','Duração','Peso tripulação','Encaixe']], body, styles: { fontSize: 9 }, headStyles: H });
@@ -74,7 +74,7 @@ export async function pdf() {
     doc.autoTable({ startY: y + 3, head: [head], body: rows, styles: { fontSize: 9 }, headStyles: H });
   };
 
-  tb('Quadro por instrutor', ['Instrutor','Nível','Horas','Horários e alunos'], grp('ins').map(([n, a]) => [n, A(a[0].lv), hrs(a), lst(a)]));
+  tb('Quadro por instrutor', ['Instrutor','Horas','Horários e alunos'], grp('ins').map(([n, a]) => [n, hrs(a), lst(a)]));
   tb('Quadro por equipamento / sala', ['Recurso','Horas','Horários e alunos'], grp('r').map(([n, a]) => [n, hrs(a), lst(a)]));
   if (al.length) tb('Alertas e pendências', ['Situação','Aluno','Detalhe'], al.map(a => [a.t === 'err' ? 'Rejeitado' : 'Aviso', a.s, a.m]));
 

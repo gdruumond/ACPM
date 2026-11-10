@@ -2,6 +2,7 @@
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { ApiClient } from '../../js/storage.js';
+import { habilitacoesDoNivel } from '../../js/habilitacoes.js';
 import { DEFAULT_LIM } from '../../js/config.js';
 import { rosterSintetico } from '../helpers/estado.js';
 import { simularNavegador, navegarPara } from '../helpers/navegador.js';
@@ -53,22 +54,28 @@ describe('Migração de estado', () => {
     const antigo = {
       schemaVer: 2,
       win: Array(9).fill(true), av: {}, lim: {}, nid: 1200,
-      ins: [{ id: 77, nm: 'Instrutor Antigo', on: false, lv: 6, kg: 99, aw }, instrutor(78, 3), { id: 79, nm: 'Sem dados', lv: 12, aw: [true] }],
+      ins: [{ id: 77, nm: 'Instrutor Antigo', on: false, lv: 6, kg: 99, aw }, { id: 78, nm: 'Instrutor 78', on: true, lv: 3, kg: 70, aw }, { id: 79, nm: 'Sem dados', lv: 12, aw: [true] }],
       stu: Array.from({ length: 50 }, (_, i) => ({ id: i + 1, nm: `Aluno ${String(i + 1).padStart(2, '0')}`, fly: false, extra: [], ...missaoExtra(0, { fly: false }) }))
     };
     const x = ApiClient.normalizeAndMigrateState(antigo);
     assert.deepEqual(x.ins, [
-      { id: 77, nm: 'Instrutor Antigo', on: false, lv: 6, kg: 99, aw },
-      instrutor(78, 3),
-      { id: 79, nm: 'Sem dados', on: true, lv: 1, kg: 0, aw: Array(9).fill(true) }
+      { id: 77, nm: 'Instrutor Antigo', on: false, lv: 6, kg: 99, aw, hab: habilitacoesDoNivel(6) },
+      { id: 78, nm: 'Instrutor 78', on: true, lv: 3, kg: 70, aw, hab: habilitacoesDoNivel(3) },
+      { id: 79, nm: 'Sem dados', on: true, lv: 1, kg: 0, aw: Array(9).fill(true), hab: habilitacoesDoNivel(1) }
     ]);
     assert.deepEqual(x.stu, [], 'remove os 50 alunos de exemplo das versões antigas');
     assert.equal(x.schemaVer, 4);
   });
 
-  it('schema v1: mantém os níveis válidos dos instrutores', () => {
-    const x = ApiClient.normalizeAndMigrateState({ schemaVer: 1, ins: [instrutor(9, 9)], stu: [] });
+  it('schema v1: mantém os níveis válidos dos instrutores (e dá as habilitações equivalentes)', () => {
+    const x = ApiClient.normalizeAndMigrateState({ schemaVer: 1, ins: [{ id: 9, nm: 'Instrutor 09', lv: 9, kg: 70 }], stu: [] });
     assert.equal(x.ins[0].lv, 9);
+    assert.deepEqual(x.ins[0].hab, habilitacoesDoNivel(9));
+  });
+
+  it('habilitações: lista conhecida e na ordem da grade; quem não tem recebe as do nível', () => {
+    const x = ApiClient.normalizeAndMigrateState({ schemaVer: 4, ins: [instrutor(1, 1, { hab: ['c172', 'xyz', 'local'] }), { id: 2, nm: 'B', on: true, lv: 7, kg: 0, aw: [] }], stu: [] });
+    assert.deepEqual(x.ins.map(i => i.hab), [['local', 'c172'], habilitacoesDoNivel(7)]);
   });
 });
 
@@ -147,7 +154,7 @@ describe('Link compartilhável (perfil Gestor)', () => {
     assert.equal(ApiClient.applySharedURLIfPresent(destino), '2026-11-11');
     assert.deepEqual(destino.win, estado.win);
     assert.equal(destino.av['PR-BTB'], false);
-    assert.deepEqual(destino.ins, estado.ins);
+    assert.deepEqual(destino.ins, estado.ins.map(({ lv, ...x }) => x), 'o link leva as habilitações (o nível de antes não vai)');
     assert.deepEqual(destino.fStatus, estado.fStatus);
     assert.deepEqual(destino.stu.map(s => [s.id, s.fly, s.kg, s.bl, s.extra.map(ex => [ex.mid, ex.mis])]), [
       [1000, true, 81, [3], []],
@@ -189,17 +196,21 @@ describe('Link compartilhável: validação do conteúdo (vem da URL, não é co
     assert.deepEqual(estado.fStatus, { '1000_0_2': 'Em Voo' });
   });
 
-  it('instrutores: id inteiro, nível A01–A09, peso numérico e disponibilidade booleana', () => {
+  it('instrutores: id inteiro, habilitações conhecidas (ou o nível dos links antigos), peso numérico e disponibilidade booleana', () => {
     const { estado } = abrir({
       ins: [
         [7, 'Instrutor 07', 1, ATAQUE, ATAQUE, [1, 0]],
         [8, ATAQUE, 0, 12, 500, 'x'],
+        [9, 'Instrutor 09', 1, ['c172', ATAQUE, 'local'], 70, []],
+        [10, 'Link antigo', 1, 7, 70, []],
         [ATAQUE, 'Sem id', 1, 3, 70, []]
       ]
     });
     assert.deepEqual(estado.ins, [
-      { id: 7, nm: 'Instrutor 07', on: true, lv: 1, kg: 0, aw: [true, false, false, false, false, false, false, false, false] },
-      { id: 8, nm: ATAQUE, on: false, lv: 1, kg: 0, aw: Array(9).fill(true) }
+      { id: 7, nm: 'Instrutor 07', on: true, hab: habilitacoesDoNivel(1), kg: 0, aw: [true, false, false, false, false, false, false, false, false] },
+      { id: 8, nm: ATAQUE, on: false, hab: habilitacoesDoNivel(1), kg: 0, aw: Array(9).fill(true) },
+      { id: 9, nm: 'Instrutor 09', on: true, hab: ['local', 'c172'], kg: 70, aw: Array(9).fill(false) },
+      { id: 10, nm: 'Link antigo', on: true, hab: habilitacoesDoNivel(7), kg: 70, aw: Array(9).fill(false) }
     ]);
   });
 

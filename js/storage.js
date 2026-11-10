@@ -6,6 +6,7 @@ import { blank, normalizeMissionFields } from './rules.js';
 import { backendLocal, CHAVES_LOCAIS, CHAVE_LEGADA } from './backends/local.js';
 import { separar, juntar, diaPadrao, diaParaCopiar, converterLegado, biDosDias } from './dias.js';
 import { ESQUEMA, migrarCadastro, migrarDia, precisaMigrar, renomearSimulador } from './migracoes.js';
+import { habilitacoesDoNivel, normalizarHabilitacoes } from './habilitacoes.js';
 
 // Validação do link compartilhado: o conteúdo vem da URL, então só entram os tipos e as faixas que a interface produz
 const LIMITE = { instrutores: 200, alunos: 500, extras: 10, bloqueios: 50, matriculas: 100, nome: 80 };
@@ -64,7 +65,8 @@ export const ApiClient = {
         on: old.on !== false,
         lv: old.lv >= 1 && old.lv <= 9 ? old.lv : 1,
         kg: old.kg > 0 ? old.kg : 0,
-        aw: Array.isArray(old.aw) && old.aw.length === WIN.length ? old.aw : WIN.map(() => true)
+        aw: Array.isArray(old.aw) && old.aw.length === WIN.length ? old.aw : WIN.map(() => true),
+        ...(Array.isArray(old.hab) ? { hab: old.hab } : {})
       }));
 
       const isDefaultPlaceholderList =
@@ -76,6 +78,9 @@ export const ApiClient = {
     }
 
     x.schemaVer = 4;
+
+    // Habilitações individuais (fase 4): quem só tem o nível A01–A09 recebe o que o nível permitia
+    x.ins.forEach(i => { i.hab = Array.isArray(i.hab) ? normalizarHabilitacoes(i.hab) : habilitacoesDoNivel(i.lv); });
 
     x.stu.forEach(s => {
       normalizeMissionFields(s);
@@ -183,7 +188,7 @@ export const ApiClient = {
       d: dateStr,
       w: state.win.map(v => v ? 1 : 0),
       avOff: Object.keys(state.av).filter(k => !state.av[k]),
-      ins: state.ins.map(x => [x.id, x.nm, x.on ? 1 : 0, x.lv, x.kg, x.aw.map(a => a ? 1 : 0)]),
+      ins: state.ins.map(x => [x.id, x.nm, x.on ? 1 : 0, x.hab, x.kg, x.aw.map(a => a ? 1 : 0)]),
       st: state.fStatus || {},
       fly: state.stu
         .filter(s => s.fly || (s.extra && s.extra.some(ex => ex.fly)))
@@ -217,8 +222,11 @@ export const ApiClient = {
       lista(decoded.avOff, LIMITE.matriculas).map(renomearSimulador).forEach(k => { if (Object.hasOwn(state.av, k)) state.av[k] = false; });
 
       if (Array.isArray(decoded.ins)) {
-        state.ins = lista(decoded.ins, LIMITE.instrutores).filter(Array.isArray).map(([insId, nm, on, lv, kg, aw]) => ({
-          id: id(insId), nm: texto(nm), on: Boolean(on), lv: inteiro(lv, 1, 9, 1), kg: numero(kg, 0, 300, 0),
+        // Habilitações: lista conhecida; links antigos trazem o nível A01–A09 no lugar
+        state.ins = lista(decoded.ins, LIMITE.instrutores).filter(Array.isArray).map(([insId, nm, on, hab, kg, aw]) => ({
+          id: id(insId), nm: texto(nm), on: Boolean(on),
+          hab: Array.isArray(hab) ? normalizarHabilitacoes(hab) : habilitacoesDoNivel(inteiro(hab, 1, 9, 1)),
+          kg: numero(kg, 0, 300, 0),
           aw: Array.isArray(aw) ? WIN.map((_, i) => Boolean(aw[i])) : WIN.map(() => true)
         })).filter(x => x.id !== null);
       } else if (Array.isArray(decoded.inOff)) {

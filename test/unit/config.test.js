@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { WIN, T, NI, DAY, NIGHT_OK, EQ, MIS, EQ_MIN_LV, DEFAULT_LIM, ACROBAT_REG, ALL_EQ_TYPES, PRE, LV } from '../../js/config.js';
+import { WIN, T, NI, DAY, NIGHT_OK, EQ, MIS, DEFAULT_LIM, ACROBAT_REG, ALL_EQ_TYPES, PRE } from '../../js/config.js';
 
 describe('Configuração operacional', () => {
   it('nove janelas de instrução, a última noturna', () => {
@@ -19,17 +19,15 @@ describe('Configuração operacional', () => {
   });
 
   it('cada missão tem equipamento padrão entre os permitidos', () => {
-    assert.equal(Object.keys(MIS).length, 12);
+    assert.equal(Object.keys(MIS).length, 18);
     for (const [nome, m] of Object.entries(MIS)) assert.ok(m.eq.includes(m.defEq), nome);
   });
 
-  it('limites de nível e de peso por equipamento', () => {
-    assert.deepEqual(EQ_MIN_LV, { 'Sala Ground': 1, 'C152': 1, 'Sim. Mono': 2, 'Sim. Multi': 2, 'C172': 7, 'PA-34': 9 });
+  it('limites de peso por equipamento', () => {
     assert.deepEqual(DEFAULT_LIM, { 'C152': 170, 'C172': 222, 'PA-34': 250 });
   });
 
-  it('turnos rápidos e níveis A01–A09', () => {
+  it('turnos rápidos', () => {
     assert.deepEqual(PRE['Manhã'], [0, 1, 2, 3]);
-    assert.deepEqual(LV.map(([n]) => n), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
 });

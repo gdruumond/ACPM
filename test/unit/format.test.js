@@ -1,6 +1,6 @@
 import { describe, it, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { hm, fmtH, fmtDurLabel, WLB, A, pad, esc, amanhaISO, isoMenosDias, fimDoMes } from '../../js/format.js';
+import { hm, fmtH, fmtDurLabel, WLB, pad, esc, amanhaISO, isoMenosDias, fimDoMes } from '../../js/format.js';
 
 describe('Formatação', () => {
   it('minutos do dia em HH:MM', () => {
@@ -21,8 +21,7 @@ describe('Formatação', () => {
     assert.equal(WLB(8), '17:30 · 9º tempo (noturno)');
   });
 
-  it('nível do instrutor e nome padrão do aluno', () => {
-    assert.equal(A(7), 'A07');
+  it('nome padrão do aluno', () => {
     assert.equal(pad(0), 'Aluno 01');
     assert.equal(pad(19), 'Aluno 20');
   });

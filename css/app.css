@@ -339,6 +339,8 @@ p.h { color: var(--mu); margin: 4px 0 8px; }
 }
 .w input { margin: 0; }
 .w.on { background: var(--ac); color: var(--acT); border-color: var(--ac); }
+.habs { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.habs .w { font-size: 12px; padding: 1px 5px; }
 
 .tg {
   display: inline-flex;

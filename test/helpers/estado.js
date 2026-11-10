@@ -1,5 +1,6 @@
 // Estado sintético no formato do schema v4 da aplicação (chave localStorage "acpm3").
 // Usa nomes e pesos fictícios para que nenhum dado pessoal real seja copiado para os testes.
+import { habilitacoesDoNivel } from '../../js/habilitacoes.js';
 
 export const JANELAS = 9;
 
@@ -17,13 +18,15 @@ export const LIMITES = { 'C152': 170, 'C172': 222, 'PA-34': 250 };
 
 export const dois = n => String(n).padStart(2, '0');
 
-// 40 instrutores fictícios com a mesma distribuição de níveis do estado inicial da aplicação (A01–A09 em ciclo)
+// 40 instrutores fictícios com a mesma distribuição de níveis do estado inicial da aplicação (A01–A09 em ciclo),
+// já com as habilitações equivalentes (o nível fica como no cadastro migrado)
 export function rosterSintetico(n = 40) {
   return Array.from({ length: n }, (_, i) => ({
     id: i + 1,
     nm: `Instrutor ${dois(i + 1)}`,
     on: true,
     lv: (i % 9) + 1,
+    hab: habilitacoesDoNivel((i % 9) + 1),
     kg: 55 + ((i * 17) % 45),
     aw: Array(JANELAS).fill(true)
   }));
