@@ -186,7 +186,7 @@ Decisions: the audit comes first and Pedro and Gabriel approve the redesign; two
     7. [x] Recursos: one fleet table with availability, hours and balance until the 50-hour inspection.
     8. [x] Instrutores: a day-availability grid and a registry table with an edit panel.
     9. [x] Small items: Agenda shows whether each request is already in the Demanda; Alunos as a table; compact Rodízio; BI in one column on the phone; the Secretaria sees only Agenda and Escala.
-    10. [ ] Accessibility and wording: labels for screen readers, 44 px touch targets on the phone, the Manual with the new names.
+    10. [x] Accessibility and wording: labels for screen readers, 44 px touch targets on the phone, the Manual with the new names.
 
 ### Phase 7: Later (nice to have)
 - [ ] Track instructor and student qualifications and currency: last flight, medical/CMA expiry, student course phase. The engine then checks these instead of relying on manual levels.

@@ -112,7 +112,7 @@ export function rBI() {
       <div><strong>${fmtH(totH_D)}</strong>No dia (${fmtDateBR})<small>${totF_D} voos/aulas ativas</small></div>
       <div><strong>${fmtH(totH_W)}</strong>Na semana (7 dias)<small>${totF_W} voos/aulas ativas</small></div>
       <div><strong>${fmtH(totH_M)}</strong>No mês (${refMonth.split('-').reverse().join('/')})<small>${daysRecordedInMonth} dias registrados</small></div>
-      <div><strong>${Object.values(S.av).filter(Boolean).length}/${Object.keys(S.av).length}</strong>Frota ativa<small>${S.ins.filter(x => x.on).length}/${S.ins.length} instrutores</small></div>
+      <div><strong>${Object.values(S.av).filter(Boolean).length}/${Object.keys(S.av).length}</strong>Aviões e salas disponíveis<small>${S.ins.filter(x => x.on).length}/${S.ins.length} instrutores</small></div>
     </div>
 
     <div class="bi-grid-2">

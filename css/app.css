@@ -192,6 +192,7 @@ h3 { font: 600 15px 'Barlow Semi Condensed', sans-serif; margin: 10px 0 6px; col
 body[data-role="gestor"] .edit-only { display: none !important; }
 body[data-role="gestor"] #s-rec .janela,
 body[data-role="gestor"] #s-ins .cel,
+body[data-role="gestor"] main label.alvo,
 body[data-role="gestor"] #painel-instrutor input,
 body[data-role="gestor"]:not([data-backend="supabase"]) #dt,
 body[data-role="gestor"] .st-sel,
@@ -445,6 +446,8 @@ input.sw::after {
 }
 input.sw:checked { background: var(--ok); }
 input.sw:checked::after { left: 16px; }
+/* Rótulo em volta de um interruptor sem texto: aumenta a área de toque */
+label.alvo { display: inline-flex; align-items: center; justify-content: center; cursor: pointer; vertical-align: middle; }
 
 /* Recursos: as janelas como interruptores e a frota numa tabela só */
 .janelas { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -980,3 +983,23 @@ body[data-backend="supabase"] #btn-bi-clr { display: none !important; }
   section#s-esc { display: block; }
   body { background: #fff; color: #000; }
 }
+
+/* ==========================================================================
+   ALVOS DE TOQUE NO CELULAR: botões, campos e interruptores com pelo menos 44 px
+   ========================================================================== */
+@media (max-width: 640px) {
+  /* Com largura mínima, o item não encolhe mais que o próprio texto (flex-shrink: 0) */
+  .topo-ico, .hd-btn, .hd-conta { min-width: 44px; min-height: 44px; justify-content: center; flex-shrink: 0; }
+  .hd-sel, .topo-data-campo, .seg button, .menu-itens button, .cal .dia { min-height: 44px; }
+  nav#nav button { min-width: 44px; min-height: 44px; justify-content: center; flex: none; }
+  .btn, .x, .btn-add-mis, .tg button { min-width: 44px; min-height: 44px; flex-shrink: 0; }
+  select, input:not([type="checkbox"]):not([type="radio"]) { min-height: 44px; }
+  details.caixa summary { padding: 12px 0; }
+  label.alvo, label.chk, .janela, .habs-painel label.hab { min-width: 44px; min-height: 44px; }
+  input[type="checkbox"]:not(.sw) { width: 24px; height: 24px; }
+  .cel { height: 44px; min-width: 44px; }
+  .fila li { min-height: 48px; }
+  .tg { padding-right: 0; }
+  .cal { gap: 2px; }
+}
+

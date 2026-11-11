@@ -86,11 +86,19 @@ test.describe('Aplicação', () => {
     await expect(page.locator('#manual-pesos')).toContainText('C152: 170 kg');
     await expect(page.locator('#manual-rodizio li')).toHaveText(['Voos de cheque', 'Voo MLTE (PA-34)', 'Voo noturno', 'Voo C172']);
 
-    // Nada das regras antigas
+    // Nada das regras e dos nomes antigos
     const texto = await manual.innerText();
-    for (const antigo of ['A01', 'A09', 'Gerar escala', 'Preencher exemplo', 'Link Blindado']) expect(texto).not.toContain(antigo);
-    for (const secao of ['Primeiros passos', 'Perfis de acesso', 'Como a escala é montada', 'Para o gestor', 'Perguntas frequentes']) {
-      await expect(manual.locator('h3', { hasText: secao })).toHaveCount(1);
+    for (const antigo of ['A01', 'A09', 'Gerar escala', 'Preencher exemplo', 'Link Blindado', 'Importar Solicitações da Agenda',
+      'Vai voar?', 'Início pref', 'Exportar CSV', 'Emitir PDF', 'Turno rápido', 'Cada cartão', 'campo Data', 'Equipamento', 'Bloquear']) {
+      expect(texto, antigo).not.toContain(antigo);
+    }
+    await expect(manual.locator('h3')).toHaveText(['Primeiros passos: a rotina do operador', 'Perfis de acesso', 'As abas',
+      'Como a escala é montada', 'Para o gestor', 'Perguntas frequentes']);
+    // As abas na ordem do app, sem números, com os nomes novos dos botões e das vistas
+    await expect(manual.locator('#manual-abas h4')).toHaveText(['Escala', 'Demanda', 'Agenda', 'Recursos', 'Instrutores', 'Alunos', 'Rodízio', 'BI']);
+    for (const novo of ['menu da conta', 'Pôr um aluno na demanda', 'Disponibilidade do dia', 'Editar habilitações', 'Não escalar com',
+      'Ainda não importado', 'Atualizada às', 'Ver todos', 'Desfazer', 'Compartilhar']) {
+      expect(texto, novo).toContain(novo);
     }
 
     // O índice leva às seções e as abas continuam funcionando

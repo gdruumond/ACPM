@@ -30,7 +30,7 @@ function linha(r, tipo, voadas, revisao) {
   const temHoras = typeof horas === 'number';
   const parafuso = r === ACROBAT_REG ? ' <span class="tag fb" title="Exclusivo para a missão de Parafuso">Só Parafuso</span>' : '';
   return `<tr data-r="${r}"${S.av[r] ? '' : ' class="manutencao"'}>
-    <td><input type="checkbox" class="sw" data-a="av" data-id="${r}"${S.av[r] ? ' checked' : ''} aria-label="${r} disponível"></td>
+    <td><label class="alvo"><input type="checkbox" class="sw" data-a="av" data-id="${r}"${S.av[r] ? ' checked' : ''} aria-label="${r} disponível"></label></td>
     <td><b>${r}</b>${aviao ? '' : ` <small class="sm">${tipo}</small>`}${parafuso}</td>
     <td>${aviao ? `<input type="number" class="horas" min="0" max="60" step="0.1" inputmode="decimal" data-a="horas" data-horas="${r}" value="${temHoras ? horas : ''}" placeholder="—" aria-label="Horas do ${r} desde a última revisão"> h` : ''}</td>
     <td>${aviao && temHoras ? saldo(horas) : ''}</td>

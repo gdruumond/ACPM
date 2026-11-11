@@ -18,22 +18,22 @@ export const singleDemandRowHTML = (stu, d, mid = 0) => {
   const isGnd = isGroundMission(d.mis);
   const trCls = `${d.fly ? 'on p' + d.pr : 'off'}${isExtra ? ' extra-row' : ''}`;
   const firstCell = isExtra
-    ? `<div class="stu-cell"><span class="sm">↳ missão extra</span><button class="x edit-only" data-act="del-mis" data-id="${stu.id}" data-mid="${mid}" aria-label="Remover a missão extra de ${esc(stu.nm)}" title="Remover esta missão extra">✕</button></div>`
-    : `<div class="stu-cell"><span>${esc(stu.nm)}</span><button class="btn-add-mis edit-only" data-act="add-mis" data-id="${stu.id}" title="Adicionar outra missão para este aluno no mesmo dia">+ missão</button></div>`;
+    ? `<div class="stu-cell"><span class="sm">↳ missão extra</span><button class="x edit-only" data-act="del-mis" data-id="${stu.id}" data-mid="${mid}" aria-label="Tirar a missão extra de ${esc(stu.nm)}" title="Tirar esta missão extra">✕</button></div>`
+    : `<div class="stu-cell"><span>${esc(stu.nm)}</span><button class="btn-add-mis edit-only" data-act="add-mis" data-id="${stu.id}" title="Outra missão para este aluno no mesmo dia" aria-label="Mais uma missão para ${esc(stu.nm)}">+ missão</button></div>`;
   const exige = `Exige ${descreverExigencias(d.mis, isGnd ? GROUND_EQ_TYPE : d.eq)}${d.mis === 'Parafuso' && d.eq === 'C152' ? ` (no ${ACROBAT_REG})` : ''}`;
   const de = ` de ${esc(stu.nm)}`;
 
   const nbOpts = isGnd
-    ? `<select data-f="nb" disabled title="Ground School tem duração fixa de 01h30"><option value="1.5" selected>1h30</option></select>`
+    ? `<select data-f="nb" disabled title="Ground School tem duração fixa de 01h30" aria-label="Duração de ${esc(stu.nm)}"><option value="1.5" selected>1h30</option></select>`
     : `<select data-f="nb" aria-label="Duração de ${esc(stu.nm)}">${opts(Array.from({ length: 11 }, (_, i) => [i + 1, (i + 1) + ' h']), d.nb)}</select>`;
 
   const ssOpts = isGnd
-    ? `<select data-f="ss" disabled><option value="1" selected>1</option></select>`
+    ? `<select data-f="ss" disabled aria-label="Sessões de ${esc(stu.nm)}"><option value="1" selected>1</option></select>`
     : `<select data-f="ss" aria-label="Sessões de ${esc(stu.nm)}">${opts([[1, '1'], [2, '2'], [3, '3']].filter(o => o[0] <= d.nb), Math.min(d.ss || 1, d.nb))}</select>`;
 
   return `<tr data-k="d" data-id="${stu.id}" data-mid="${mid}" data-nm="${esc(stu.nm.toLowerCase())}" data-mis="${esc(d.mis)}" class="${trCls}">
     <td>${firstCell}</td>
-    <td><input type="checkbox" data-f="fly"${d.fly ? ' checked' : ''} aria-label="${esc(stu.nm)} vai voar"></td>
+    <td><label class="alvo"><input type="checkbox" class="sw" data-f="fly"${d.fly ? ' checked' : ''} aria-label="${esc(stu.nm)} vai voar"></label></td>
     <td><select data-f="mis" title="${esc(exige)}" aria-label="Missão${de}">${opts(Object.keys(MIS).map(m => [m, m]), d.mis)}</select></td>
     <td><select data-f="eq"${isGnd ? ' disabled' : ''} aria-label="Avião ou sala${de}">${allowedEqOptionsForMission(d.mis, d.eq)}</select></td>
     <td><select data-f="p1" aria-label="1ª preferência${de}">${wopt(d.p1, 1)}</select></td>

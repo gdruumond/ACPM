@@ -5,6 +5,24 @@ test.use({ viewport: { width: 390, height: 844 } });
 
 const larguraDaPagina = page => page.evaluate(() => document.documentElement.scrollWidth);
 
+// Controles da aba aberta e do topo com área de toque menor que 44 px (a caixa de seleção conta com o rótulo que a
+// envolve; links no meio do texto ficam de fora)
+const alvosPequenos = page => page.evaluate(() => {
+  const secao = document.querySelector('main section.on');
+  const controles = [...document.querySelectorAll('.topo button, .topo select, .topo input, #nav button'),
+    ...secao.querySelectorAll('button, select, input, summary, a[href]')];
+  const pequenos = new Set();
+  for (const el of controles) {
+    if (!el.checkVisibility({ visibilityProperty: true }) || el.matches('p a, .sr')) continue;
+    const alvo = el.matches('input[type=checkbox]') ? (el.closest('label') || el) : el;
+    const { width, height } = alvo.getBoundingClientRect();
+    if (height < 44 || (!el.matches('select, input:not([type=checkbox]), summary') && width < 44)) {
+      pequenos.add(`${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${el.dataset.f ? `[data-f=${el.dataset.f}]` : ''}${el.dataset.act ? `[data-act=${el.dataset.act}]` : ''} ${Math.round(width)}×${Math.round(height)}`);
+    }
+  }
+  return [...pequenos];
+});
+
 test.describe('Celular', () => {
   test('nenhuma aba rola para o lado; o mapa rola dentro do próprio painel', async ({ page }) => {
     await abrirComExemplo(page);
@@ -17,6 +35,14 @@ test.describe('Celular', () => {
       await page.locator(`#s-esc [data-tl="${vista}"]`).click();
       await expect(page.locator('#out .mapa')).toBeVisible();
       expect(await larguraDaPagina(page), `mapa ${vista}`).toBeLessThanOrEqual(390);
+    }
+  });
+
+  test('botões e campos com pelo menos 44 px para o dedo, em todas as abas', async ({ page }) => {
+    await abrirComExemplo(page);
+    for (const aba of ['esc', 'dem', 'age', 'rec', 'ins', 'alu', 'rod', 'bi']) {
+      await irPara(page, aba);
+      expect(await alvosPequenos(page), `aba ${aba}`).toEqual([]);
     }
   });
 

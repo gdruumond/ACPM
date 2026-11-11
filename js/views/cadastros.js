@@ -55,7 +55,7 @@ function linhaDoDia(x, ocupacao) {
   }).join('');
   return `<tr ${atributos(x)}${x.on ? '' : ' class="off"'}>
     <td class="nome"><b>${esc(x.nm)}</b></td>
-    <td><input type="checkbox" class="sw" data-f="on"${x.on ? ' checked' : ''} aria-label="${esc(x.nm)} vem no dia"></td>
+    <td><label class="alvo"><input type="checkbox" class="sw" data-f="on"${x.on ? ' checked' : ''} aria-label="${esc(x.nm)} vem no dia"></label></td>
     ${celulas}
     <td class="voos">${voos.size || ''}</td>
     <td><select data-f="pre" class="edit-only" aria-label="Aplicar um turno a ${esc(x.nm)}"><option value="">Aplicar turno…</option>${Object.keys(PRE).map(k => `<option>${k}</option>`).join('')}</select></td>

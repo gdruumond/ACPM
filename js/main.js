@@ -546,7 +546,7 @@ document.addEventListener('click', e => {
     pushHistory();
     target.fly = false;
     save();
-    logChange('exc', `${s.nm} excluído da escala (${target.mis} · ${target.eq})`, {
+    logChange('exc', `Tirado da escala: ${s.nm} (${target.mis} · ${target.eq})`, {
       kind: 'setFly', stuId: s.id, mid, val: true, label: '↶ Restaurar'
     });
     rDem();
