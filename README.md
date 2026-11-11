@@ -57,7 +57,11 @@ npm run test:e2e       # aplicação no navegador (Playwright)
 - Rode os testes do banco **somente no projeto de prévia** (o `supabase/` local fica vinculado a ele):
   `SUPABASE_DB_PASSWORD=... npm run test:db` (cada teste roda numa transação desfeita no final).
 - Aplicar migrações: `supabase db push --remote` (prévia) ou `--remote=<ref de produção>`.
-- Contas: `SUPABASE_DB_PASSWORD=... SENHA_NOVA=... node scripts/criar-conta.mjs <email> <operador|gestor> "<nome>"`.
+- Contas: `SUPABASE_DB_PASSWORD=... SENHA_NOVA=... node scripts/criar-conta.mjs <email> <operador|gestor|secretaria|administrador> "<nome>"`
+  (depois da primeira conta de administrador, as outras saem de "Minha conta" › Usuários).
+- Configuração do Auth (SMTP, senha mínima de 12 caracteres e o e-mail da troca de endereço, em
+  `supabase/templates/`): `SUPABASE_AUTH_SMTP_USER=<gmail> SUPABASE_AUTH_SMTP_PASS=<senha de app> supabase config push`
+  (prévia) ou com `--remote=<ref de produção>`. Confira antes com `supabase config diff`.
 - Dados fictícios na prévia (só num banco sem dados): `node scripts/semear-previa.mjs`.
 
 ## Formato dos dados
