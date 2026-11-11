@@ -24,7 +24,7 @@ import { show } from './views/tabs.js';
 import { rBI } from './views/bi.js';
 import { renderAuditPanel, rOut } from './views/escala.js';
 import { singleDemandRowHTML, cnt, rDem, applyDemandFilters } from './views/demanda.js';
-import { insHTML, stuHTML, rIns, rAlu, applyInstructorFilters, preencherFiltroDeHabilitacoes } from './views/cadastros.js';
+import { stuHTML, rIns, rAlu, applyInstructorFilters, preencherFiltroDeHabilitacoes, mostrarVistaDosInstrutores, abrirPainelDoInstrutor, fecharPainelDoInstrutor, atualizarLinhaDoCadastro } from './views/cadastros.js';
 import { rRec } from './views/recursos.js';
 import { setRole, pushHistory, save, logChange, undoLastAction, refazerEscala, escalaCalculada, marcarEscalaSoCalculada, gravarEscalaCalculada, abrirData, historicoParaPainel, carregarData, carregarBI } from './actions.js';
 import { exp, pdf } from './export.js';
@@ -55,7 +55,18 @@ document.addEventListener('click', e => {
   if (tlBtn) {
     setTLMode(tlBtn.dataset.tl);
     rOut();
+    return;
   }
+  const vistaIns = e.target.closest('[data-vista-ins]');
+  if (vistaIns) mostrarVistaDosInstrutores(vistaIns.dataset.vistaIns);
+});
+
+// Painel das habilitações de um instrutor: ✕ e Esc fecham (o foco volta para o botão que abriu)
+document.addEventListener('click', e => {
+  if (e.target.closest('#btn-fechar-painel-instrutor')) fecharPainelDoInstrutor(true);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !$('#painel-instrutor').hidden) fecharPainelDoInstrutor(true);
 });
 
 document.addEventListener('input', e => {
@@ -589,10 +600,17 @@ document.addEventListener('click', e => {
     return;
   }
 
+  if (a === 'editar-habs') {
+    abrirPainelDoInstrutor(+b.dataset.id);
+    return;
+  }
+
+  // O instrutor novo aparece no cadastro, com o nome selecionado para digitar
   if (a === 'addi') {
     pushHistory();
     const newIns = { id: S.nid++, nm: 'Novo instrutor', on: true, hab: habilitacoesDoNivel(1), kg: 0, aw: WIN.map((_, i) => i < 8) };
     S.ins.push(newIns);
+    mostrarVistaDosInstrutores('cadastro');
     save(); rIns(); rAlu(); focusLast('#inst .nm');
     logChange('inc', `Instrutor adicionado: ${newIns.nm}`);
   } else if (a === 'adds') {
@@ -620,6 +638,7 @@ document.addEventListener('click', e => {
     pushHistory();
     if (a === 'deli') {
       const target = insBy(id);
+      if (+$('#painel-instrutor').dataset.id === id) fecharPainelDoInstrutor();
       S.ins = S.ins.filter(x => x.id !== id);
       S.stu.forEach(s => s.bl = s.bl.filter(v => v !== id));
       logChange('exc', `Instrutor excluído: ${target ? target.nm : id}`);
@@ -716,7 +735,9 @@ document.addEventListener('change', e => {
       if (!t.value) return;
       x.aw = WIN.map((_, i) => PRE[t.value].includes(i));
     }
-    save(); c.outerHTML = insHTML(x);
+    // A grade do dia é refeita com a escala; a linha do cadastro é atualizada no lugar
+    save();
+    atualizarLinhaDoCadastro(x);
     if (f === 'nm') rAlu();
   } else {
     const s = stuBy(id);

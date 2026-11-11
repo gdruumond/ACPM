@@ -1,4 +1,4 @@
-import { test, expect, abrir, abrirSintetico, irPara, abrirEscala, lerEscala } from './fixtures.js';
+import { test, expect, abrir, abrirSintetico, abrirComExemplo, irPara, abrirEscala, lerEscala } from './fixtures.js';
 import { aluno, apenas, cenario, instrutor } from '../helpers/montar.js';
 
 test.describe('Recursos', () => {
@@ -51,32 +51,67 @@ test.describe('Recursos', () => {
 });
 
 test.describe('Instrutores', () => {
-  test('filtra por nome e por habilitação', async ({ page }) => {
+  test('filtra por nome e por habilitação, nas duas visões', async ({ page }) => {
     await abrirSintetico(page);
     await irPara(page, 'ins');
+    const dia = page.locator('#inst-dia tr[data-k="i"]:visible');
     await page.locator('[data-flt="inst"]').fill('instrutor 1');
-    await expect(page.locator('#inst .cd:visible')).toHaveCount(10);
+    await expect(dia).toHaveCount(10);
     await page.locator('[data-flt="inst"]').fill('');
     await page.locator('#flt-ins-hab').selectOption('mlte');
+    await expect(dia).toHaveCount(4);
+    await expect(dia.first()).toContainText('Instrutor 09');
+    await page.locator('#s-ins [data-vista-ins="cadastro"]').click();
     await expect(page.locator('#inst .cd:visible')).toHaveCount(4);
     await expect(page.locator('#inst .cd:visible .nm').first()).toHaveValue('Instrutor 09');
   });
 
-  test('cadastra instrutor e altera habilitações, peso e turno', async ({ page }) => {
+  test('disponibilidade do dia: a grade mostra as janelas e os voos de cada instrutor', async ({ page }) => {
+    await abrirComExemplo(page);
+    await irPara(page, 'ins');
+    await expect(page.locator('#s-ins [data-vista-ins="dia"]')).toHaveClass(/\bon\b/);
+    const linha = page.locator('#inst-dia tr[data-k="i"][data-id="10"]');
+    await expect(linha.locator('.voos')).toHaveText('2');
+    await expect(linha.locator('.cel.voo')).toHaveCount(2);
+    await expect(linha.locator('.cel').nth(1)).toHaveClass(/\bvoo\b/);
+    await linha.locator('[data-f="aw"][data-w="7"]').uncheck();
+    await expect(page.locator('#inst-dia tr[data-k="i"][data-id="10"] .cel').nth(7)).not.toHaveClass(/\bon\b/);
+    // Pelo teclado: a grade é refeita e o foco continua na mesma janela
+    await linha.locator('[data-f="aw"][data-w="7"]').focus();
+    await page.keyboard.press('Space');
+    await expect(page.locator('#inst-dia tr[data-k="i"][data-id="10"] .cel').nth(7)).toHaveClass(/\bon\b/);
+    await expect(page.locator('#inst-dia tr[data-id="10"] [data-f="aw"][data-w="7"]')).toBeFocused();
+  });
+
+  test('cadastra instrutor e altera habilitações (no painel), peso e turno', async ({ page }) => {
     await abrirSintetico(page);
     await irPara(page, 'ins');
     await page.locator('[data-act="addi"]').click();
-    const card = page.locator('#inst .cd').last();
+    // O instrutor novo aparece no cadastro, com o peso em destaque enquanto falta
+    await expect(page.locator('#s-ins [data-vista-ins="cadastro"]')).toHaveClass(/\bon\b/);
+    const linha = page.locator('#inst .cd').last();
     await expect(page.locator('#inst .cd')).toHaveCount(41);
-    await expect(card.locator('.nm')).toHaveValue('Novo instrutor');
-    await expect(card).toHaveAttribute('data-hab', 'grounds ground_pa34 local');
-    await card.locator('[data-f="hab"][data-h="c172"]').check();
-    await page.locator('#inst .cd').last().locator('[data-f="hab"][data-h="local"]').uncheck();
+    await expect(linha.locator('.nm')).toHaveValue('Novo instrutor');
+    await expect(linha).toHaveAttribute('data-hab', 'grounds ground_pa34 local');
+    await expect(linha.locator('[data-f="kg"]')).toHaveClass(/\bfalta\b/);
+
+    await linha.locator('[data-act="editar-habs"]').click();
+    const painel = page.locator('#painel-instrutor');
+    await expect(painel).toBeVisible();
+    await expect(painel.locator('h2')).toContainText('Novo instrutor');
+    await painel.locator('[data-f="hab"][data-h="c172"]').check();
+    await painel.locator('[data-f="hab"][data-h="local"]').uncheck();
     await expect(page.locator('#inst .cd').last()).toHaveAttribute('data-hab', 'grounds ground_pa34 c172');
+    await page.locator('#btn-fechar-painel-instrutor').click();
+    await expect(painel).toBeHidden();
+
     await page.locator('#inst .cd').last().locator('[data-f="kg"]').fill('80');
     await page.locator('#inst .cd').last().locator('[data-f="kg"]').blur();
-    await page.locator('#inst .cd').last().locator('[data-f="pre"]').selectOption('Manhã');
-    const janelas = page.locator('#inst .cd').last().locator('[data-f="aw"]');
+    await expect(page.locator('#inst .cd').last().locator('[data-f="kg"]')).not.toHaveClass(/\bfalta\b/);
+
+    await page.locator('#s-ins [data-vista-ins="dia"]').click();
+    await page.locator('#inst-dia tr[data-k="i"]').last().locator('[data-f="pre"]').selectOption('Manhã');
+    const janelas = page.locator('#inst-dia tr[data-k="i"]').last().locator('[data-f="aw"]');
     await expect(janelas).toHaveCount(9);
     for (let i = 0; i < 9; i++) {
       if (i < 4) await expect(janelas.nth(i)).toBeChecked();
@@ -100,7 +135,9 @@ test.describe('Instrutores', () => {
     expect(voos[0]).toContain('| Instrutor 02 |');
 
     await irPara(page, 'ins');
-    await page.locator('#inst .cd[data-id="2"] [data-f="hab"][data-h="sim_mono"]').uncheck();
+    await page.locator('#s-ins [data-vista-ins="cadastro"]').click();
+    await page.locator('#inst .cd[data-id="2"] [data-act="editar-habs"]').click();
+    await page.locator('#painel-instrutor [data-f="hab"][data-h="sim_mono"]').uncheck();
     await irPara(page, 'esc');
     await expect(page.locator('#out')).toContainText('nenhum instrutor ativo habilitado para Simulador em Sim. Mono (Simulador (Mono))');
   });
@@ -108,12 +145,12 @@ test.describe('Instrutores', () => {
   test('instrutor indisponível pode ser revertido pelo histórico', async ({ page }) => {
     await abrirSintetico(page);
     await irPara(page, 'ins');
-    await page.locator('#inst .cd').first().locator('[data-f="on"]').uncheck();
-    await expect(page.locator('#inst .cd').first()).toHaveClass(/\boff\b/);
+    await page.locator('#inst-dia tr[data-k="i"]').first().locator('[data-f="on"]').uncheck();
+    await expect(page.locator('#inst-dia tr[data-k="i"]').first()).toHaveClass(/\boff\b/);
     await page.locator('#btn-open-log').click();
     await page.locator('#audit-log-list [data-act="rev-log"]').first().click();
     await irPara(page, 'ins');
-    await expect(page.locator('#inst .cd').first()).not.toHaveClass(/\boff\b/);
+    await expect(page.locator('#inst-dia tr[data-k="i"]').first()).not.toHaveClass(/\boff\b/);
   });
 });
 

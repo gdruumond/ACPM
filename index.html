@@ -136,16 +136,35 @@
   </section>
 
   <!-- ABA 2: INSTRUTORES -->
-  <section id="s-ins">
+  <section id="s-ins" data-vista="dia">
     <h2>Instrutores</h2>
     <div class="bar">
-      <button class="btn edit-only" data-act="addi">+ Novo instrutor</button>
+      <div class="seg" role="group" aria-label="O que ver">
+        <button type="button" data-vista-ins="dia" class="on"><svg class="ico"><use href="#i-calendario"/></svg>Disponibilidade do dia</button>
+        <button type="button" data-vista-ins="cadastro"><svg class="ico"><use href="#i-instrutor"/></svg>Cadastro</button>
+      </div>
+      <span class="cresce"></span>
       <input type="search" class="flt-ctrl" data-flt="inst" placeholder="Buscar instrutor…" aria-label="Buscar instrutor">
       <select id="flt-ins-hab" class="flt-ctrl" aria-label="Filtrar por habilitação">
         <option value="">Todas as habilitações</option>
       </select>
+      <button class="btn edit-only" data-act="addi">+ Novo instrutor</button>
     </div>
-    <div class="grid g2" id="inst"></div>
+    <div class="vista-dia">
+      <p class="legenda-disp">
+        <span><i class="cel on"></i>disponível</span>
+        <span><i class="cel on voo"></i>com voo ou aula na escala</span>
+        <span><i class="cel"></i>não vem</span>
+        <span class="h">Clique numa janela para mudar a disponibilidade de hoje.</span>
+      </p>
+      <div class="tw"><table class="disp"><thead id="inst-dia-cab"></thead><tbody id="inst-dia"></tbody></table></div>
+    </div>
+    <div class="vista-cadastro">
+      <div class="tw"><table class="cadastro">
+        <thead><tr><th>Nome</th><th>Peso (kg)</th><th>Habilitações</th><th></th></tr></thead>
+        <tbody id="inst"></tbody>
+      </table></div>
+    </div>
   </section>
 
   <!-- ABA 3: ALUNOS -->
@@ -476,6 +495,9 @@
   <div class="audit-list" id="audit-log-list"></div>
   <button class="btn quiet edit-only" type="button" id="btn-clear-log">Limpar o histórico desta data</button>
 </aside>
+
+<!-- HABILITAÇÕES DE UM INSTRUTOR: painel lateral aberto pelo cadastro -->
+<aside class="gaveta" id="painel-instrutor" aria-labelledby="painel-instrutor-titulo" hidden></aside>
 
 <div id="toast-box" aria-live="polite"></div>
 

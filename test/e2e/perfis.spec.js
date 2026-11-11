@@ -15,7 +15,11 @@ test.describe('Perfis de acesso', () => {
     await expect(page.locator('#out .st-sel').first()).toBeDisabled();
     await irPara(page, 'ins');
     await expect(page.locator('[data-act="addi"]')).toBeHidden();
-    expect(await page.locator('#inst .cd [data-f="hab"]').first().evaluate(el => getComputedStyle(el).pointerEvents)).toBe('none');
+    // A grade do dia fica travada e as habilitações não abrem (o Gestor vê o resumo)
+    expect(await page.locator('#inst-dia .cel').first().evaluate(el => getComputedStyle(el).pointerEvents)).toBe('none');
+    await page.locator('#s-ins [data-vista-ins="cadastro"]').click();
+    await expect(page.locator('#inst [data-act="editar-habs"]').first()).toBeHidden();
+    await expect(page.locator('#inst .habs-resumo').first()).toBeVisible();
 
     await page.locator('#role-sel').selectOption('operador');
     await expect(page.locator('[data-act="addi"]')).toBeVisible();
