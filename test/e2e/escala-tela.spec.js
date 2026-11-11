@@ -1,5 +1,5 @@
 // Tela da Escala: Lista, Por avião e sala ou Por instrutor; resumo com erros e avisos agrupados; uma linha por voo.
-import { test, expect, abrir, abrirComExemplo, abrirEscala, irPara } from './fixtures.js';
+import { test, expect, abrir, abrirComExemplo, abrirEscala, irPara, lerEscala } from './fixtures.js';
 import { aluno, cenario, instrutor, GROUND_C152 } from '../helpers/montar.js';
 
 test.describe('Tela da Escala', () => {
@@ -67,6 +67,57 @@ test.describe('Tela da Escala', () => {
     await expect(linhas.nth(1).locator('td')).toHaveCount(3);
     await expect(linhas.nth(1).locator('.st-sel')).toHaveCount(1);
     await expect(linhas.nth(1).locator('td').nth(0)).toHaveText('Aluno 1001');
+  });
+
+  test('Categoria e Avião / sala: os dois começam em "Todos", e o segundo mostra só os da categoria escolhida', async ({ page }) => {
+    await abrirComExemplo(page);
+    await abrirEscala(page);
+    const categoria = page.locator('#flt-esc-cat'), recurso = page.locator('#flt-esc-eq');
+    await expect(categoria.locator('option')).toHaveText(['Todos', 'C152', 'C172', 'Simulador', 'PA-34', 'Sala Ground']);
+    await expect(categoria).toHaveValue('');
+    await expect(recurso).toHaveValue('');
+    await expect(recurso.locator('option').first()).toHaveText('Todos');
+    const avioesDasLinhas = async () => (await lerEscala(page)).linhas.map(l => l.split(' | ')).filter(c => c.length >= 5).map(c => c[3]);
+
+    await categoria.selectOption({ label: 'PA-34' });
+    const opcoes = await recurso.locator('option').allTextContents();
+    expect(opcoes[0]).toBe('Todos');
+    expect(opcoes.length).toBeGreaterThan(1);
+    expect(opcoes.slice(1).every(r => ['PR-VOM', 'PT-JOB', 'PT-KIW'].includes(r)), opcoes.join(', ')).toBe(true);
+    const pa34 = await avioesDasLinhas();
+    expect(pa34.length).toBeGreaterThan(0);
+    expect(pa34.every(a => a.endsWith(' PA-34')), pa34.join(', ')).toBe(true);
+
+    // Um avião da categoria; trocar de categoria volta o segundo filtro para "Todos"
+    await recurso.selectOption(opcoes[1]);
+    expect((await avioesDasLinhas()).every(a => a.startsWith(opcoes[1] + ' '))).toBe(true);
+    await categoria.selectOption({ label: 'Sala Ground' });
+    await expect(recurso).toHaveValue('');
+    await expect(recurso.locator('option')).toHaveText(['Todos', 'Sala Ground']);
+    expect(new Set(await avioesDasLinhas())).toEqual(new Set(['Sala Ground']));
+    await categoria.selectOption({ label: 'Todos' });
+    expect((await avioesDasLinhas()).length).toBeGreaterThan(pa34.length);
+  });
+
+  test('na Lista, cada horário recolhe e abre os voos dele (e continua assim quando a escala é refeita)', async ({ page }) => {
+    await abrirComExemplo(page);
+    await abrirEscala(page);
+    const botao = page.locator('#out tr.win').first().locator('button');
+    const voos = w => page.locator(`#out tbody tr[data-w="${w}"]:not(.win)`);
+    await expect(botao).toHaveAttribute('aria-expanded', 'true');
+    expect(await voos(0).count()).toBeGreaterThan(0);
+    await botao.click();
+    await expect(page.locator('#out tr.win').first().locator('button')).toHaveAttribute('aria-expanded', 'false');
+    await expect(voos(0).first()).toBeHidden();
+    expect(await voos(0).evaluateAll(trs => trs.every(tr => tr.hidden))).toBe(true);
+    await expect(voos(1).first()).toBeVisible();
+
+    await page.locator('#s-esc [data-tl="eq"]').click();
+    await page.locator('#s-esc [data-tl="lista"]').click();
+    await expect(page.locator('#out tr.win').first().locator('button')).toHaveAttribute('aria-expanded', 'false');
+    await expect(voos(0).first()).toBeHidden();
+    await page.locator('#out tr.win').first().locator('button').click();
+    await expect(voos(0).first()).toBeVisible();
   });
 
   test('cada alteração mostra a hora em que a escala foi refeita', async ({ page }) => {

@@ -53,6 +53,7 @@ test.describe('Escala', () => {
     expect(conteudo[0]).toBe('﻿');
     expect(conteudo).not.toMatch(/[^\r]\n/);
     expect(conteudo.slice(1).split('\r\n').join('\n') + '\n').toMatchSnapshot('escala-exemplo.csv');
+    await expect(page.locator('#toast-box .toast')).toHaveText('CSV exportado.');
   });
 
   test('emite o PDF da escala com título, quadros e mais de uma página', async ({ page }) => {
@@ -67,7 +68,10 @@ test.describe('Escala', () => {
       expect(conteudo, trecho).toContain(trecho);
     }
     expect(conteudo.match(/\/Type \/Page\b(?!s)/g).length).toBeGreaterThanOrEqual(2);
-    await expect(page.locator('#msg')).toHaveText('PDF emitido.');
+    // Uma notificação temporária, e não um texto fixo na barra
+    await expect(page.locator('#msg')).toHaveCount(0);
+    await expect(page.locator('#toast-box .toast')).toHaveText('PDF emitido.');
+    await expect(page.locator('#toast-box .toast')).toHaveCount(0, { timeout: 5000 });
   });
 
   test('mantém a escala após recarregar a página', async ({ page }) => {

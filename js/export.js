@@ -2,7 +2,7 @@
 import { hm, WLB, fmtH } from './format.js';
 import { sumUniqueOperationalHours, consolidateTimelineSlots } from './engine.js';
 import { S, RES, DATA } from './state.js';
-import { $, msg } from './dom.js';
+import { $, showToast } from './dom.js';
 import { HT } from './views/escala.js';
 import { montarCsv, nomeDoCsv } from './csv.js';
 
@@ -25,16 +25,16 @@ export async function sv(fn, data) {
 
 // CSV para o portal de agendamento: agrupado por avião, em ordem de horário (js/csv.js)
 export async function exp() {
-  if (!RES) { msg('Não há escala para exportar nesta data.'); return; }
+  if (!RES) { showToast('Não há escala para exportar nesta data.'); return; }
   const c = montarCsv(RES, S.fStatus || {});
-  if (await sv(nomeDoCsv(DATA), c)) { msg('CSV exportado.'); return; }
+  if (await sv(nomeDoCsv(DATA), c)) { showToast('CSV exportado.'); return; }
   $('#csv').value = c;
   $('#csvbox').hidden = false;
 }
 
 export async function pdf() {
-  if (!RES) { msg('Não há escala para o PDF nesta data.'); return; }
-  if (!window.jspdf) { msg('A biblioteca de PDF não carregou. Verifique a conexão e recarregue a página.'); return; }
+  if (!RES) { showToast('Não há escala para o PDF nesta data.'); return; }
+  if (!window.jspdf) { showToast('A biblioteca de PDF não carregou. Verifique a conexão e recarregue a página.'); return; }
 
   const doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const { out, al, tot } = RES;
@@ -89,6 +89,6 @@ export async function pdf() {
     doc.text(`ACPM - Escala de ${dt} - Página ${i} de ${n}`, pw - 14, ph - 6, { align: 'right' });
   }
 
-  if (await sv(`escala-acpm-${dt.split('/').reverse().join('-')}.pdf`, doc.output('blob'))) msg('PDF emitido.');
-  else msg('O download direto não está disponível neste modo de visualização.');
+  if (await sv(`escala-acpm-${dt.split('/').reverse().join('-')}.pdf`, doc.output('blob'))) showToast('PDF emitido.');
+  else showToast('O download direto não está disponível neste modo de visualização.');
 }

@@ -129,7 +129,11 @@
       <h3>Janelas de operação</h3>
       <div class="janelas" id="wins"></div>
     </div>
-    <h3 class="frota-titulo">Aviões e simuladores <small>horas desde a última revisão de 50 horas, no início desta data; a escala não passa das 50 horas</small></h3>
+    <div class="bar frota-cab">
+      <h3 class="frota-titulo">Aviões e simuladores <small>horas desde a última revisão de 50 horas, no início desta data; a escala não passa das 50 horas</small></h3>
+      <span class="cresce"></span>
+      <label class="flt-rotulo">Categoria <select id="flt-rec-cat" class="flt-ctrl"></select></label>
+    </div>
     <div class="tw" id="eqs">
       <table class="frota">
         <thead><tr><th>Disponível</th><th>Avião</th><th>Horas desde a revisão</th><th>Saldo até 50 h</th><th>Na escala do dia</th><th class="edit-only" aria-label="Revisão"></th></tr></thead>
@@ -262,14 +266,12 @@
       </div>
       <span class="h" id="escala-atualizada" role="status" hidden></span>
       <span class="cresce"></span>
-      <select id="flt-esc-eq" class="flt-ctrl" aria-label="Filtrar por avião ou sala">
-        <option value="">Todos os aviões e salas</option>
-      </select>
+      <label class="flt-rotulo">Categoria <select id="flt-esc-cat" class="flt-ctrl"></select></label>
+      <label class="flt-rotulo">Avião / sala <select id="flt-esc-eq" class="flt-ctrl"><option value="">Todos</option></select></label>
       <input type="search" id="flt-esc-q" class="flt-ctrl" placeholder="Buscar aluno, instrutor ou missão…" aria-label="Filtrar na escala">
       <button class="btn sec" id="btn-share-link" title="Copiar link compartilhável da escala (abre bloqueado como Gestor)"><svg class="ico"><use href="#i-compartilhar"/></svg>Compartilhar</button>
       <button class="btn sec" id="exp" title="Exportar o CSV para o lançamento no portal">CSV</button>
       <button class="btn sec" id="pdf" title="Emitir o PDF da escala para impressão">PDF</button>
-      <span id="msg" class="h" role="status"></span>
     </div>
 
     <div id="out">
@@ -381,7 +383,7 @@
         <li><b>Lista:</b> uma linha por voo, por horário. A turma de Ground ocupa uma linha só, com os alunos logo abaixo. A preferência aparece só quando o voo não ficou na 1ª (“2ª preferência” ou “horário livre”), e o peso fica em destaque quando chega perto do limite do avião.</li>
         <li><b>Por avião e sala</b> e <b>Por instrutor:</b> o mapa do dia, com a ocupação de cada um.</li>
       </ul>
-      <p>Filtre por avião ou sala, ou busque um aluno ou instrutor. Na lista, mude o status do voo ou use o ✕ do fim da linha (<i>Tirar da escala</i>, aparece ao passar o mouse) para tirar um voo; o Histórico permite restaurar. <i>CSV</i> gera o arquivo do lançamento no portal, agrupado por avião e com o peso; <i>PDF</i> gera a escala para impressão. No celular, a lista mostra um cartão por voo.</p>
+      <p>Filtre por categoria (C152, C172, Simulador, PA-34 ou Sala Ground) e, dentro dela, por avião ou sala, ou busque um aluno ou instrutor. Na lista, um clique no horário recolhe ou abre os voos dele. Na lista, mude o status do voo ou use o ✕ do fim da linha (<i>Tirar da escala</i>, aparece ao passar o mouse) para tirar um voo; o Histórico permite restaurar. <i>CSV</i> gera o arquivo do lançamento no portal, agrupado por avião e com o peso; <i>PDF</i> gera a escala para impressão. No celular, a lista mostra um cartão por voo.</p>
 
       <h4>Demanda</h4>
       <p>Uma linha por aluno. Ligue <i>Voa</i> para quem voa na data e preencha:</p>
@@ -401,7 +403,7 @@
       <h4>Recursos</h4>
       <p><b>Janelas de operação:</b> os horários em que um voo pode começar. Desligar uma janela tira esse horário da escala do dia.</p>
       <ul class="manual-lista-curta" id="manual-janelas"></ul>
-      <p><b>Aviões e simuladores:</b> desligado quer dizer indisponível (em manutenção). O PR-JPL só voa Parafuso. A tabela mostra quanto cada avião voa na escala do dia e o saldo até a revisão de 50 horas.</p>
+      <p><b>Aviões e simuladores:</b> desligado quer dizer indisponível (em manutenção). O PR-JPL só voa Parafuso. A tabela mostra quanto cada avião voa na escala do dia e o saldo até a revisão de 50 horas. Escolha uma categoria para ver só a frota dela; um clique no nome da categoria recolhe ou abre as linhas.</p>
       <p><b>Revisão de 50 horas:</b> informe as horas de cada avião desde a última revisão. A escala não passa das 50 horas: o avião para quando não tem saldo para mais um voo, e o aviso aparece na escala. Depois da revisão, clique em <i>Revisão feita</i> (aparece ao passar o mouse na linha) para zerar. A data seguinte começa com as horas desta data mais os voos dela que não foram cancelados. Avião sem as horas informadas fica sem esse controle.</p>
 
       <h4>Instrutores</h4>

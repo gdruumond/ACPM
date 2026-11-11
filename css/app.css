@@ -329,6 +329,18 @@ details.caixa.avisos summary { color: var(--wa); }
 .tabela-escala tr:hover .acao .x, .tabela-escala .acao .x:focus-visible { opacity: 1; }
 @media (hover: none) { .tabela-escala .acao .x { opacity: 1; } }
 #out[data-vista="lista"] .mapa, #out[data-vista="mapa"] .tabela-escala { display: none; }
+/* Horários da Lista e categorias da frota: um clique recolhe ou abre (a seta gira) */
+.win-btn, .grupo-btn {
+  display: flex; align-items: center; gap: 6px; width: 100%; padding: 0; border: 0; background: transparent;
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.win-btn .seta, .grupo-btn .seta { flex: none; transition: transform .15s; }
+.win-btn[aria-expanded="false"] .seta, .grupo-btn[aria-expanded="false"] .seta { transform: rotate(-90deg); }
+.tabela-escala tbody tr[hidden], table.frota tr[hidden] { display: none !important; }
+/* Filtros com rótulo visível (Categoria e Avião / sala começam os dois em "Todos") */
+.flt-rotulo { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--mu); }
+.frota-cab { margin: 16px 0 8px; }
+.frota-cab .frota-titulo { margin: 0; }
 /* O mapa rola dentro do próprio painel quando não cabe na tela */
 .mapa { overflow-x: auto; }
 .mapa .tl-wrap { min-width: 720px; }
@@ -338,7 +350,8 @@ details.caixa.avisos summary { color: var(--wa); }
   .seg { width: 100%; }
   .seg button { flex: 1; justify-content: center; padding: 6px 4px; font-size: 13.5px; }
   .seg .ico { display: none; }
-  #flt-esc-eq, #flt-esc-q { flex: 1 1 140px; min-width: 0; }
+  #s-esc .flt-rotulo, #flt-esc-q { flex: 1 1 140px; min-width: 0; }
+  .flt-rotulo select { flex: 1; min-width: 0; }
   .bar .cresce { display: none; }
   .resumo .st { width: 100%; justify-content: space-between; gap: 8px; }
   details.caixa { min-width: 0; flex-basis: 100%; }
@@ -1010,6 +1023,7 @@ body[data-backend="supabase"] #btn-bi-clr { display: none !important; }
   input[type="checkbox"]:not(.sw) { width: 24px; height: 24px; }
   .cel { height: 44px; min-width: 44px; }
   .fila li { min-height: 48px; }
+  .win-btn, .grupo-btn { min-height: 44px; }
   .tg { padding-right: 0; }
   .cal { gap: 2px; }
 }

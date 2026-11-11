@@ -1,4 +1,4 @@
-// Utilitários de DOM: seletor, avisos (toast e aviso fixo), mensagem de status e foco no último campo.
+// Utilitários de DOM: seletor, avisos (notificação temporária e aviso fixo) e foco no último campo.
 
 export const $ = s => document.querySelector(s);
 
@@ -27,8 +27,6 @@ export function fecharAviso(tipo) {
   avisoAtual = null;
   $('#aviso-sync').hidden = true;
 }
-
-export const msg = t => { const el = $('#msg'); if (el) el.textContent = t; if (t) showToast(t); };
 
 export const focusLast = sel => {
   const e = [...document.querySelectorAll(sel)].pop();

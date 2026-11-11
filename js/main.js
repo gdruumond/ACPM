@@ -19,13 +19,14 @@ import { isGroundMission, blank, rotuloDaDisponibilidade } from './rules.js';
 import { habilitacoesDoNivel, normalizarHabilitacoes, nomeDaHabilitacao, podeFazer } from './habilitacoes.js';
 import { ApiClient } from './storage.js';
 import { S, RES, AUDIT_LOG, DATA, setS, setRES, setAuditLog, setTLMode, isGestor, insBy, stuBy, getMissionTarget } from './state.js';
-import { $, showToast, msg, focusLast, mostrarAviso, avisoAberto } from './dom.js';
+import { $, showToast, focusLast, mostrarAviso, avisoAberto } from './dom.js';
 import { show } from './views/tabs.js';
 import { rBI, alternarTodosDoBI } from './views/bi.js';
-import { renderAuditPanel, rOut } from './views/escala.js';
+import { renderAuditPanel, rOut, alternarTempo } from './views/escala.js';
 import { singleDemandRowHTML, cnt, rDem, applyDemandFilters } from './views/demanda.js';
 import { rIns, rAlu, applyInstructorFilters, preencherFiltroDeHabilitacoes, mostrarVistaDosInstrutores, abrirPainelDoInstrutor, fecharPainelDoInstrutor, atualizarLinhaDoCadastro, atualizarLinhaDoAluno } from './views/cadastros.js';
-import { rRec } from './views/recursos.js';
+import { rRec, rRevisao, alternarGrupoDaFrota } from './views/recursos.js';
+import { opcoesDeCategoria } from './categorias.js';
 import { setRole, save, logChange, refazerEscala, escalaCalculada, marcarEscalaSoCalculada, gravarEscalaCalculada, abrirData, historicoParaPainel, carregarData, carregarBI } from './actions.js';
 import { exp, pdf } from './export.js';
 import { projetoSupabase } from './config-supabase.js';
@@ -57,6 +58,11 @@ document.addEventListener('click', e => {
     rOut();
     return;
   }
+  // Recolher e abrir: os horários da Lista (Escala) e as categorias da frota (Recursos)
+  const tempo = e.target.closest('[data-recolher-tempo]');
+  if (tempo) { alternarTempo(+tempo.dataset.recolherTempo); return; }
+  const grupo = e.target.closest('[data-recolher-grupo]');
+  if (grupo) { alternarGrupoDaFrota(grupo.dataset.recolherGrupo); return; }
   const vistaIns = e.target.closest('[data-vista-ins]');
   if (vistaIns) { mostrarVistaDosInstrutores(vistaIns.dataset.vistaIns); return; }
   const todosDoBI = e.target.closest('[data-bi-todos]');
@@ -248,6 +254,11 @@ preencherFiltroDeHabilitacoes();
 $('#flt-dem-mis').insertAdjacentHTML('beforeend', Object.keys(MIS).map(m => `<option value="${m}">${m}</option>`).join(''));
 $('#flt-ins-hab').onchange = applyInstructorFilters;
 $('#flt-esc-eq').onchange = () => rOut();
+// Categoria (Escala e Recursos); na Escala, o filtro de avião ou sala mostra só os da categoria escolhida
+$('#flt-esc-cat').innerHTML = opcoesDeCategoria();
+$('#flt-rec-cat').innerHTML = opcoesDeCategoria({ comGround: false });
+$('#flt-esc-cat').onchange = () => rOut();
+$('#flt-rec-cat').onchange = () => rRevisao();
 
 // Tema: um interruptor (sol e lua) no menu da conta. Sem escolha gravada, vale o tema do sistema
 const temaEscuro = () => {
@@ -549,7 +560,7 @@ document.addEventListener('click', e => {
       kind: 'setFly', stuId: s.id, mid, val: true, label: '↶ Restaurar'
     });
     rDem();
-    msg(`Inclusão de ${s.nm} (${target.mis}) removida.`);
+    showToast(`Tirado da escala: ${s.nm} (${target.mis}).`);
     return;
   }
 

@@ -50,6 +50,36 @@ test.describe('Recursos', () => {
   });
 });
 
+test.describe('Recursos: categoria e grupos recolhíveis', () => {
+  test('a categoria mostra só a frota dela; cada categoria recolhe e abre, e continua assim quando a escala é refeita', async ({ page }) => {
+    await abrirSintetico(page);
+    await irPara(page, 'rec');
+    const categoria = page.locator('#flt-rec-cat');
+    const linhasVisiveis = page.locator('#revisao tr[data-r]:visible');
+    await expect(categoria.locator('option')).toHaveText(['Todos', 'C152', 'C172', 'Simulador', 'PA-34']);
+    await expect(linhasVisiveis).toHaveCount(26);
+
+    await categoria.selectOption({ label: 'PA-34' });
+    await expect(linhasVisiveis).toHaveCount(3);
+    await expect(page.locator('#revisao tr.grupo:visible')).toHaveText([/^PA-34/]);
+    await categoria.selectOption({ label: 'Simulador' });
+    await expect(linhasVisiveis).toHaveCount(4);
+    await categoria.selectOption({ label: 'Todos' });
+    await expect(linhasVisiveis).toHaveCount(26);
+
+    const grupoC152 = () => page.locator('#revisao tr.grupo', { hasText: 'C152' }).locator('button');
+    await expect(grupoC152()).toHaveAttribute('aria-expanded', 'true');
+    await grupoC152().click();
+    await expect(grupoC152()).toHaveAttribute('aria-expanded', 'false');
+    await expect(linhasVisiveis).toHaveCount(13);
+    await page.locator('#eqs input[data-id="PR-VOM"]').uncheck();
+    await expect(grupoC152()).toHaveAttribute('aria-expanded', 'false');
+    await expect(linhasVisiveis).toHaveCount(13);
+    await grupoC152().click();
+    await expect(linhasVisiveis).toHaveCount(26);
+  });
+});
+
 test.describe('Instrutores', () => {
   test('filtra por nome e por habilitação, nas duas visões', async ({ page }) => {
     await abrirSintetico(page);
