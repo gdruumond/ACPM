@@ -1,7 +1,7 @@
 /**
  * Escala de Voo — ACPM: ponto de entrada (eventos da interface e inicialização).
  *
- *   js/config.js    Configurações operacionais (janelas, frota, missões, níveis A01–A09, limites)
+ *   js/config.js    Configurações operacionais (janelas, frota, missões, limites de peso)
  *   js/rules.js     Regras das missões (Ground School, nível mínimo, precedência, normalização)
  *   js/format.js    Formatação de horários, durações e opções de seleção
  *   js/engine.js    Motor de alocação determinístico (função pura)
@@ -32,6 +32,7 @@ import { projetoSupabase } from './config-supabase.js';
 import { CATEGORIAS_DO_RODIZIO, ajustarFilas } from './rodizio.js';
 import { rRodizio } from './views/rodizio.js';
 import { abrirConta, carregarContas, gerarSenha, mensagem } from './views/conta.js';
+import { rManual } from './views/manual.js';
 import { importarSolicitacoes, disponibilidadeDaSolicitacao } from './agenda.js';
 import { abrirAgenda, carregarMes, mudarMes, escolherDia, diaDaAgenda, lembrarRegistradoPor, podeEditarAgenda } from './views/agenda.js';
 import { ESQUEMA } from './migracoes.js';
@@ -238,6 +239,13 @@ armed('#btn-bi-clr', 'Confirmar limpeza', async () => {
 });
 
 // Minha conta: trocar a senha e o e-mail (modo compartilhado; vale para todos os perfis)
+// Manual: abre de qualquer aba (as tabelas de regras são montadas uma vez, a partir do código)
+rManual();
+$('#btn-manual').onclick = () => {
+  show('manual');
+  try { window.scrollTo(0, 0); } catch (x) {}
+};
+
 $('#btn-conta').onclick = () => { show('conta'); abrirConta(); };
 
 $('#form-senha').onsubmit = async e => {

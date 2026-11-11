@@ -159,7 +159,7 @@ Each step is test-first and updates the preview. Delivery in about three PRs (st
 4. [ ] Merge Phase 4. The first Operador login updates the saved data to format version 10: simulators renamed, qualifications from the levels (checker boxes unmarked), and the new per-day fields. Anyone with the site open since before the merge gets the "reload" warning on their next save.
 5. [ ] The operator marks the checkers (and reviews the qualifications) in Instrutores, types each aircraft's hours since the last 50-hour inspection in Recursos, and reviews the Rodízio queues (they start in roster order).
 
-### Phase 5: Accounts and administration (branch `fase-5`)
+### Phase 5: Accounts and administration (merged as PR #7; live in production since 2026-11-11)
 Request (2026-11-11): an account page where each person changes their own email and password, and an Administrador profile that creates and deletes accounts.
 Decisions: the Administrador does everything an Operador does, plus account management; email changes are confirmed by links to the old and new address, sent through custom SMTP (a Gmail account with an App Password); Pedro, Rayane and Gabriel become Administradores in production.
 - [x] **Administrador profile.** In the rules for writing schedules, the agenda and the history, it counts as an Operador; only it can list, create and delete accounts (`listar_contas`, `criar_conta`, `excluir_conta`). Nobody can delete their own account, so at least one administrator always remains. Deleted accounts keep their history and agenda records, which store the author's name. 28 pgTAP checks, plus a real-login check on the preview: an account created by the function logs in, and after deletion it can't.
@@ -167,9 +167,17 @@ Decisions: the Administrador does everything an Operador does, plus account mana
 - [x] **Usuários** (in Minha conta, Administradores only): the list of accounts with their last access, a form for a new account with a password generator, and deletion with confirmation.
 - [x] **Auth config on the preview:** custom SMTP (a Gmail account with an App Password, read from the Keychain at `supabase config push` so neither is in the repo), the email-change message in Portuguese (`supabase/templates/troca-de-email.html`) and `minimum_password_length = 12`. Checked live: a real email-change request was accepted and the emails were sent.
 - [x] **Production, before the merge (2026-11-11):** the same Auth config and the two migrations (`perfil_administrador`, `contas_e_administracao`). Both keep the current app working; checked with an Operador login on the live site (no writes, no errors).
-- [ ] **Production, after the merge:** make Pedro, Rayane and Gabriel Administradores. Not before: the current app shows an Administrador as read-only.
+- [x] **Production, after the merge (2026-11-11):** Pedro, Rayane and Gabriel are Administradores (promoted 10 minutes after the deploy, once no browser could still be running the old login code); checked live.
 
-### Phase 6: Later (nice to have)
+### Phase 6: Field feedback 2: automatic schedule, manual and usability (branch `fase-6`)
+Request (2026-11-11): remove "Preencher exemplo"; study and build schedule generation in the background, so the schedule is ready when the operator opens the Escala tab and "Gerar escala" can go; rewrite the outdated manual for a new operator and the manager; audit the usability and interface and refactor the design.
+Decisions: the audit comes first and Pedro and Gabriel approve the redesign; two PRs (PR 1: the first three items; PR 2: the redesign); the manual gets its own page.
+- [x] **"Preencher exemplo" removed.** The example demand lives on only in the tests (`test/helpers/exemplo.js`, the same sequence), loaded straight into the browser; the reference schedules did not change.
+- [x] **Automatic schedule.** Feasibility: the engine takes under 2 ms for 47 flights and 40 instructors (median 0.4 ms over 41 scenarios), so the schedule is simply recalculated after every change, with no background worker. Every change by an Operador or Administrador saves the data and the schedule together. A date with no saved schedule yet (for example, a new date copied from the previous one) shows the calculated schedule right away, for everyone, and is saved with the first change or when the CSV or PDF is exported, so it counts in the BI and in the next day's hours and Rodízio. Opening a date still writes nothing.
+- [x] **Manual** on its own page (the "Manual" button in the header): first steps (the daily routine), profiles, each tab, how the schedule is built, a section for the manager and FAQ. The rule tables (missions, equipment and required qualifications, windows, weight limits, Rodízio categories) are generated from the code (`js/manual.js`), so they change with the rules.
+- [ ] **Usability audit** (for Pedro and Gabriel to approve), then the redesign in PR 2.
+
+### Phase 7: Later (nice to have)
 - [ ] Track instructor and student qualifications and currency: last flight, medical/CMA expiry, student course phase. The engine then checks these instead of relying on manual levels.
 - [ ] Integrate with the Google Calendar that students already use, publishing each student's missions.
 - [ ] Make the app installable (PWA) for use on the apron with poor connectivity.

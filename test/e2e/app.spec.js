@@ -55,11 +55,38 @@ test.describe('Aplicação', () => {
     await expect(html).toHaveAttribute('data-theme', 'light');
   });
 
-  test('abre o manual do usuário na aba BI', async ({ page }) => {
+  test('o botão Manual abre, de qualquer aba, o manual com as regras em vigor', async ({ page }) => {
+    await abrir(page);
+    await irPara(page, 'dem');
+    await page.locator('#btn-manual').click();
+    const manual = page.locator('#s-manual');
+    await expect(manual).toBeVisible();
+    await expect(page.locator('#s-dem')).toBeHidden();
+
+    // As tabelas de regras saem do código (missões, janelas, pesos e rodízio)
+    await expect(page.locator('#manual-missoes tbody tr')).toHaveCount(18);
+    await expect(page.locator('#manual-missoes tbody tr', { hasText: 'Cheque PC MLTE IFR' })).toContainText('Checador MLTE IFR');
+    await expect(page.locator('#manual-janelas li')).toHaveCount(9);
+    await expect(page.locator('#manual-pesos')).toContainText('C152: 170 kg');
+    await expect(page.locator('#manual-rodizio li')).toHaveText(['Voos de cheque', 'Voo MLTE (PA-34)', 'Voo noturno', 'Voo C172']);
+
+    // Nada das regras antigas
+    const texto = await manual.innerText();
+    for (const antigo of ['A01', 'A09', 'Gerar escala', 'Preencher exemplo', 'Link Blindado']) expect(texto).not.toContain(antigo);
+    for (const secao of ['Primeiros passos', 'Perfis de acesso', 'Como a escala é montada', 'Para o gestor', 'Perguntas frequentes']) {
+      await expect(manual.locator('h3', { hasText: secao })).toHaveCount(1);
+    }
+
+    // O índice leva às seções e as abas continuam funcionando
+    await manual.locator('.manual-indice a[href="#manual-regras"]').click();
+    await expect(page.locator('#manual-regras')).toBeInViewport();
+    await irPara(page, 'esc');
+    await expect(manual).toBeHidden();
+  });
+
+  test('o manual saiu do fim da aba BI', async ({ page }) => {
     await abrir(page);
     await irPara(page, 'bi');
-    const manual = page.locator('details.manual-panel');
-    await manual.locator('summary').click();
-    await expect(manual.locator('.manual-card')).toHaveCount(6);
+    await expect(page.locator('#s-bi details, #s-bi .manual-panel')).toHaveCount(0);
   });
 });

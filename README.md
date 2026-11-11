@@ -3,6 +3,9 @@
 Planejamento da escala diária de voo, simulador e Ground School do ACPM.
 Publicada pelo GitHub Pages em https://gdruumond.github.io/ACPM/ (branch `main`, sem etapa de build).
 
+A escala é automática: cada alteração refaz a escala da data na hora (o motor leva milissegundos) e grava os dados e
+a escala juntos. O manual de uso está no botão "Manual", no topo do app.
+
 ## Modos de uso
 
 - **Compartilhado (site publicado):** login com e-mail e senha; os dados ficam no Supabase e todos veem as mesmas escalas
@@ -84,13 +87,14 @@ mais antigo do que o guardado. Nunca apague campos num passo: mantenha o que o p
 | `js/agenda.js` | Prazo da agenda de solicitações (13:00 do dia anterior) e a importação para a demanda |
 | `js/csv.js` | CSV da escala agrupado por avião, para o lançamento no portal do aeroclube |
 | `js/perfis.js` | Perfis de acesso e o que cada um pode fazer na tela |
-| `js/rules.js` | Regras das missões (Ground School, nível mínimo, precedência) |
+| `js/rules.js` | Regras das missões (Ground School, precedência, disponibilidade do aluno) |
 | `js/engine.js` | Motor de alocação (função pura) |
 | `js/storage.js` | Escala por data, migrações de dados e link compartilhado, sobre um backend (`js/backends/`: local ou Supabase) |
 | `js/dias.js` | Cadastro separado do dia, cópia do dia anterior, conversão dos dados da fase 2 e BI das escalas |
 | `js/migracoes.js` | Versões do formato dos dados guardados e os passos de uma versão para a seguinte |
 | `js/sessao.js`, `js/config-supabase.js` | Login, perfil de acesso e projeto Supabase de cada endereço |
-| `js/state.js`, `js/actions.js` | Estado da aplicação e ações (perfil, desfazer, histórico, gerar escala) |
+| `js/state.js`, `js/actions.js` | Estado da aplicação e ações (perfil, desfazer, histórico e a escala refeita a cada alteração) |
+| `js/manual.js` | Tabelas do manual geradas das regras (missões, habilitações exigidas, janelas, pesos e rodízio) |
 | `js/views/` | Renderização de cada aba |
 | `js/export.js` | CSV e PDF |
 | `js/main.js` | Eventos da interface e inicialização |
