@@ -120,15 +120,15 @@ body[data-role="gestor"] #s-rec .chip,
 body[data-role="gestor"] #s-ins .w,
 body[data-role="gestor"]:not([data-backend="supabase"]) #dt,
 body[data-role="gestor"] .st-sel,
-body[data-role="gestor"] main input:not(.flt-ctrl):not(.agenda-campo):not(#onlyfly):not(#bi-dt):not(#dt),
-body[data-role="gestor"] main select:not(.flt-ctrl):not(.agenda-campo) {
+body[data-role="gestor"] main input:not(.flt-ctrl):not(.agenda-campo):not(.conta-campo):not(#onlyfly):not(#bi-dt):not(#dt),
+body[data-role="gestor"] main select:not(.flt-ctrl):not(.agenda-campo):not(.conta-campo) {
   pointer-events: none !important;
   cursor: default !important;
 }
 body[data-role="gestor"]:not([data-backend="supabase"]) #dt,
 body[data-role="gestor"] .st-sel,
-body[data-role="gestor"] main input:not(.flt-ctrl):not(.agenda-campo):not(#onlyfly):not(#bi-dt):not(#dt),
-body[data-role="gestor"] main select:not(.flt-ctrl):not(.agenda-campo) {
+body[data-role="gestor"] main input:not(.flt-ctrl):not(.agenda-campo):not(.conta-campo):not(#onlyfly):not(#bi-dt):not(#dt),
+body[data-role="gestor"] main select:not(.flt-ctrl):not(.agenda-campo):not(.conta-campo) {
   opacity: 0.82;
 }
 body[data-shared="true"] #role-sel {
@@ -277,6 +277,16 @@ tr.st-Cancelado td { opacity: 0.45; text-decoration: line-through; }
 #form-agenda label { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
 #ag-erro { color: var(--er); margin: 0; grid-column: 1 / -1; }
 #ag-erro:empty { display: none; }
+/* Minha conta e Usuários */
+.conta { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); align-items: start; }
+.conta form { display: grid; gap: 8px; }
+#form-nova-conta { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); align-items: end; }
+.conta label, #form-nova-conta label { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.conta-msg { margin: 0; grid-column: 1 / -1; }
+.conta-msg:empty { display: none; }
+.conta-msg.erro { color: var(--er); }
+.conta-msg.ok { color: var(--ok); }
+
 body:not([data-agenda="edita"]) #form-agenda,
 body:not([data-agenda="edita"]) .agenda-acao { display: none !important; }
 
@@ -349,7 +359,8 @@ p.h { color: var(--mu); margin: 4px 0 8px; }
   padding: 3px 8px;
   font: inherit;
 }
-.x:hover { border-color: var(--er); color: var(--er); }
+.x:hover:not(:disabled) { border-color: var(--er); color: var(--er); }
+.x:disabled { opacity: .4; cursor: not-allowed; }
 .x.arm { background: var(--er); color: #fff; border-color: var(--er); }
 
 .w {
@@ -701,11 +712,12 @@ body[data-backend="supabase"] #btn-clear-log,
 body[data-backend="supabase"] #btn-bi-sim,
 body[data-backend="supabase"] #btn-bi-clr { display: none !important; }
 .hd-usuario { color: var(--hdT); font: 600 13px 'Barlow Semi Condensed', sans-serif; opacity: .9; }
-.aviso-sync {
+.aviso-sync, .aviso-link {
   display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;
   border: 1px solid var(--er); border-left-width: 5px; border-radius: 6px;
   background: var(--pn); color: var(--ink); padding: 10px 14px; margin-bottom: 12px; font-weight: 600;
 }
+.aviso-link.ok { border-color: var(--ok); }
 
 @media print {
   header, .bar, nav, section:not(#s-esc), textarea, #audit-panel, #toast-box { display: none !important; }

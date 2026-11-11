@@ -159,7 +159,16 @@ Each step is test-first and updates the preview. Delivery in about three PRs (st
 4. [ ] Merge Phase 4. The first Operador login updates the saved data to format version 10: simulators renamed, qualifications from the levels (checker boxes unmarked), and the new per-day fields. Anyone with the site open since before the merge gets the "reload" warning on their next save.
 5. [ ] The operator marks the checkers (and reviews the qualifications) in Instrutores, types each aircraft's hours since the last 50-hour inspection in Recursos, and reviews the Rodízio queues (they start in roster order).
 
-### Phase 5: Later (nice to have)
+### Phase 5: Accounts and administration (branch `fase-5`)
+Request (2026-11-11): an account page where each person changes their own email and password, and an Administrador profile that creates and deletes accounts.
+Decisions: the Administrador does everything an Operador does, plus account management; email changes are confirmed by links to the old and new address, sent through custom SMTP (a Gmail account with an App Password); Pedro, Rayane and Gabriel become Administradores in production.
+- [x] **Administrador profile.** In the rules for writing schedules, the agenda and the history, it counts as an Operador; only it can list, create and delete accounts (`listar_contas`, `criar_conta`, `excluir_conta`). Nobody can delete their own account, so at least one administrator always remains. Deleted accounts keep their history and agenda records, which store the author's name. 28 pgTAP checks, plus a real-login check on the preview: an account created by the function logs in, and after deletion it can't.
+- [x] **Minha conta:** change the password (the current password is checked first; at least 12 characters) and request an email change (confirmed by links sent to both addresses).
+- [x] **Usuários** (in Minha conta, Administradores only): the list of accounts with their last access, a form for a new account with a password generator, and deletion with confirmation.
+- [ ] Custom SMTP (Gmail App Password) on the preview and in production, so the email-change links are delivered; `minimum_password_length = 12` in the Auth config.
+- [ ] Production: apply the two migrations (`perfil_administrador`, `contas_e_administracao`) and make Pedro, Rayane and Gabriel Administradores.
+
+### Phase 6: Later (nice to have)
 - [ ] Track instructor and student qualifications and currency: last flight, medical/CMA expiry, student course phase. The engine then checks these instead of relying on manual levels.
 - [ ] Integrate with the Google Calendar that students already use, publishing each student's missions.
 - [ ] Make the app installable (PWA) for use on the apron with poor connectivity.

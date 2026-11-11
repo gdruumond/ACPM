@@ -6,6 +6,8 @@
 // - Erros de rede avisam por aoErro; a próxima alteração tenta gravar de novo (aoGravar avisa quando der certo)
 const DOCUMENTO_DIA = /^dia:(\d{4}-\d{2}-\d{2})$/;
 
+const erroComCodigo = error => Object.assign(new Error(error.message), { code: error.code || String(error.status || '') });
+
 export function criarBackendSupabase(cliente, { aoConflito = () => {}, aoErro = () => {}, aoGravar = () => {} } = {}) {
   const versoes = {};
   const pendentes = {};
@@ -42,6 +44,11 @@ export function criarBackendSupabase(cliente, { aoConflito = () => {}, aoErro = 
     } finally {
       delete emAndamento[documento];
     }
+  }
+
+  async function conferirSenha(email, senha) {
+    const { error } = await cliente.auth.signInWithPassword({ email, password: senha });
+    if (error) throw Object.assign(new Error('senha atual incorreta'), { code: 'senha_atual' });
   }
 
   return {
@@ -97,6 +104,39 @@ export function criarBackendSupabase(cliente, { aoConflito = () => {}, aoErro = 
         .eq('data', data).order('registrado_em', { ascending: false }).limit(200);
       if (error) throw new Error(error.message);
       return entradas;
+    },
+
+    // Contas: só administradores (o servidor confere); o código do erro é repassado
+    async listarContas() {
+      const { data, error } = await cliente.rpc('listar_contas');
+      if (error) throw erroComCodigo(error);
+      return data;
+    },
+
+    async criarConta({ email, senha, perfil, nome }) {
+      const { data, error } = await cliente.rpc('criar_conta', { p_email: email, p_senha: senha, p_perfil: perfil, p_nome: nome });
+      if (error) throw erroComCodigo(error);
+      return data;
+    },
+
+    async excluirConta(usuario) {
+      const { error } = await cliente.rpc('excluir_conta', { p_usuario: usuario });
+      if (error) throw erroComCodigo(error);
+    },
+
+    // Minha conta: confere a senha atual antes de trocar a senha ou o e-mail (o e-mail novo só vale depois de
+    // confirmado pelos links que o Supabase manda para o e-mail atual e para o novo)
+    async alterarSenha(email, atual, nova) {
+      await conferirSenha(email, atual);
+      const { error } = await cliente.auth.updateUser({ password: nova });
+      if (error) throw erroComCodigo(error);
+    },
+
+    async alterarEmail(email, atual, novo, redirecionarPara) {
+      await conferirSenha(email, atual);
+      const { data, error } = await cliente.auth.updateUser({ email: novo }, { emailRedirectTo: redirecionarPara });
+      if (error) throw erroComCodigo(error);
+      return data.user;
     },
 
     // Agenda de solicitações: o servidor aplica o prazo das 13:00 e quem pode registrar (o código do erro é repassado)

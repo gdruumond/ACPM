@@ -36,8 +36,9 @@ export const ApiClient = {
   autorAtual: null,
   // Link compartilhado: nada é gravado e a interface fica travada no perfil Gestor
   readOnly: false,
-  // Perfil da conta no modo compartilhado (operador, gestor ou secretaria); null no modo local
+  // Perfil e e-mail da conta no modo compartilhado (operador, gestor, secretaria ou administrador); null no modo local
   perfil: null,
+  emailAtual: null,
 
   createFreshState() {
     const state = {
@@ -147,6 +148,27 @@ export const ApiClient = {
 
   historicoDoDia(data) {
     return this.backend.listarHistorico(data);
+  },
+
+  // Contas (modo compartilhado): a própria conta e, para administradores, as contas de todos
+  contas() {
+    return this.backend.listarContas();
+  },
+
+  criarConta(dados) {
+    return this.backend.criarConta(dados);
+  },
+
+  excluirConta(usuario) {
+    return this.backend.excluirConta(usuario);
+  },
+
+  alterarSenha(atual, nova) {
+    return this.backend.alterarSenha(this.emailAtual, atual, nova);
+  },
+
+  alterarEmail(atual, novo, redirecionarPara) {
+    return this.backend.alterarEmail(this.emailAtual, atual, novo, redirecionarPara);
   },
 
   // Agenda de solicitações (no modo compartilhado, o servidor decide quem registra: secretaria e operadores)

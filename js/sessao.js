@@ -6,8 +6,9 @@ import { backendLocal } from './backends/local.js';
 import { setRole } from './actions.js';
 import { $, mostrarAviso, avisoAberto, fecharAviso } from './dom.js';
 import { amanhaISO } from './format.js';
+import { ROTULOS, operaEscala } from './perfis.js';
+import { retornoDoLink } from './retorno-do-link.js';
 
-const ROTULO = { operador: 'Operador', gestor: 'Gestor', secretaria: 'Secretaria' };
 
 function pedirLogin(cliente) {
   document.body.dataset.login = 'sim';
@@ -63,12 +64,32 @@ async function sair(cliente) {
   window.location.reload();
 }
 
+const AVISOS_DO_LINK = {
+  'falta-outro': 'Link confirmado. Para concluir a troca de e-mail, abra também o link enviado para o outro endereço.',
+  invalido: 'Este link de confirmação expirou ou já foi usado. Se a troca de e-mail não foi concluída, peça de novo em Minha conta.'
+};
+
+function avisarDoLink(texto, tipo) {
+  $('#aviso-link-texto').textContent = texto;
+  $('#aviso-link').className = `aviso-link ${tipo}`;
+  $('#aviso-link').hidden = false;
+  $('#btn-fechar-aviso-link').onclick = () => { $('#aviso-link').hidden = true; };
+}
+
 // Devolve true quando o app pode carregar os dados (conta com perfil); false deixa o aviso na tela
 export async function iniciarSessaoSupabase(projeto) {
   document.body.dataset.backend = 'supabase';
+  // Volta de um link de confirmação da troca de e-mail. A mensagem e o erro saem da URL antes de o supabase-js
+  // ler o fragmento (um recarregamento não repete o aviso); a sessão nova, quando vem, fica para ele
+  const retorno = retornoDoLink(window.location.hash);
+  if (retorno === 'falta-outro' || retorno === 'invalido') {
+    window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
+    avisarDoLink(AVISOS_DO_LINK[retorno], retorno === 'invalido' ? 'erro' : 'ok');
+  }
   const cliente = window.supabase.createClient(projeto.url, projeto.chave, { auth: { storageKey: `acpm-${projeto.nome}` } });
   const { data } = await cliente.auth.getSession();
   const sessao = data.session || await pedirLogin(cliente);
+  if (retorno === 'concluida') avisarDoLink(`Troca de e-mail concluída: agora você entra com ${sessao.user.email}.`, 'ok');
 
   const { data: perfil, error } = await cliente.from('perfis').select('perfil, nome').maybeSingle();
   if (error) throw new Error(`Não foi possível carregar o perfil: ${error.message}`);
@@ -88,15 +109,17 @@ export async function iniciarSessaoSupabase(projeto) {
     aoGravar: () => fecharAviso('erro')
   });
   $('#btn-share-link').title = 'Copiar o link da escala desta data (quem abrir entra com a própria conta)';
-  $('#usuario').textContent = `${perfil.nome || sessao.user.email} · ${ROTULO[perfil.perfil]}`;
+  $('#usuario').textContent = `${perfil.nome || sessao.user.email} · ${ROTULOS[perfil.perfil] || perfil.perfil}`;
   $('#usuario').hidden = false;
   $('#btn-sair').hidden = false;
+  $('#btn-conta').hidden = false;
   $('#btn-sair').onclick = () => sair(cliente);
   ApiClient.autorAtual = perfil.nome || sessao.user.email;
-  // Gestor e Secretaria só consultam a escala; a Secretaria registra pedidos na agenda
+  // Operador e Administrador editam a escala; Gestor e Secretaria só consultam (a Secretaria registra na agenda)
   ApiClient.perfil = perfil.perfil;
-  setRole(perfil.perfil === 'operador' ? 'operador' : 'gestor', perfil.perfil !== 'operador');
-  if (perfil.perfil === 'operador') await oferecerEnvioDosDadosLocais();
+  ApiClient.emailAtual = sessao.user.email;
+  setRole(operaEscala(perfil.perfil) ? 'operador' : 'gestor', !operaEscala(perfil.perfil));
+  if (operaEscala(perfil.perfil)) await oferecerEnvioDosDadosLocais();
   delete document.body.dataset.login;
   return true;
 }
