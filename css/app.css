@@ -66,13 +66,13 @@ header.topo {
   color: var(--hdT);
   padding: 8px 20px 0;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   grid-template-areas: "marca data ferramentas" "abas abas abas";
   align-items: center;
   column-gap: 12px;
   row-gap: 4px;
 }
-.topo-marca { grid-area: marca; margin: 0; font: 700 21px 'Barlow Semi Condensed', sans-serif; letter-spacing: .2px; white-space: nowrap; }
+.topo-marca { grid-area: marca; margin: 0; font: 700 21px 'Barlow Semi Condensed', sans-serif; letter-spacing: .2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topo-marca span { font-size: 13px; color: var(--ye); letter-spacing: .08em; margin-left: 4px; }
 .topo-data {
   grid-area: data; display: flex; align-items: center; gap: 2px;
@@ -164,7 +164,8 @@ body[data-perfil="secretaria"] #btn-open-log,
 body[data-perfil="secretaria"] #btn-share-link { display: none !important; }
 
 @media (max-width: 640px) {
-  header.topo { grid-template-columns: 1fr auto; grid-template-areas: "marca ferramentas" "data data" "abas abas"; padding: 8px 12px 0; }
+  header.topo { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "marca ferramentas" "data data" "abas abas"; padding: 8px 12px 0; }
+  .hd-sel { max-width: 110px; }
   .topo-marca { font-size: 18px; }
   .topo-marca span { display: none; }
   .topo-data { justify-content: space-between; }
@@ -318,6 +319,44 @@ details.caixa.avisos summary { color: var(--wa); }
 .tabela-escala tr:hover .acao .x, .tabela-escala .acao .x:focus-visible { opacity: 1; }
 @media (hover: none) { .tabela-escala .acao .x { opacity: 1; } }
 #out[data-vista="lista"] .mapa, #out[data-vista="mapa"] .tabela-escala { display: none; }
+/* O mapa rola dentro do próprio painel quando não cabe na tela */
+.mapa { overflow-x: auto; }
+.mapa .tl-wrap { min-width: 720px; }
+
+/* Celular: um cartão por voo (horário e status; aluno; missão; avião e instrutor), sem rolar para o lado */
+@media (max-width: 640px) {
+  .seg { width: 100%; }
+  .seg button { flex: 1; justify-content: center; padding: 6px 4px; font-size: 13.5px; }
+  .seg .ico { display: none; }
+  #flt-esc-eq, #flt-esc-q { flex: 1 1 140px; min-width: 0; }
+  .bar .cresce { display: none; }
+  .resumo .st { width: 100%; justify-content: space-between; gap: 8px; }
+  details.caixa { min-width: 0; flex-basis: 100%; }
+  .tabela-escala { overflow: visible; border: 0; background: transparent; }
+  .tabela-escala table { min-width: 0; }
+  .tabela-escala table, .tabela-escala tbody, .tabela-escala tr, .tabela-escala td { display: block; }
+  .tabela-escala thead { display: none; }
+  .tabela-escala tr.win td { border-radius: 6px; margin-top: 10px; }
+  .tabela-escala tbody tr:not(.win) {
+    display: grid; grid-template-columns: 1fr auto; column-gap: 8px; row-gap: 2px; align-items: center;
+    padding: 8px 12px; background: var(--pn); border: 1px solid var(--ln); border-radius: 8px; margin-top: 6px;
+  }
+  .tabela-escala tbody tr:not(.win) td { padding: 0; border: 0; white-space: normal; }
+  .tabela-escala .c-hr { grid-column: 1; grid-row: 1; font-weight: 600; }
+  .tabela-escala .c-status { grid-column: 2; grid-row: 1; justify-self: end; }
+  .tabela-escala .c-aluno { grid-column: 1; grid-row: 2; font-size: 16px; }
+  .tabela-escala .c-acao { grid-column: 2; grid-row: 2; justify-self: end; }
+  .tabela-escala .c-missao { grid-column: 1 / -1; grid-row: 3; color: var(--mu); }
+  .tabela-escala .c-aviao { grid-column: 1; grid-row: 4; }
+  .tabela-escala .c-instr { grid-column: 2; grid-row: 4; justify-self: end; }
+  .tabela-escala .c-instr::before { content: 'Instr. '; color: var(--mu); }
+  .tabela-escala .c-peso { grid-column: 1 / -1; grid-row: 5; }
+  .tabela-escala .c-peso:empty { display: none; }
+  /* Alunos da mesma turma: logo abaixo do cartão da turma, recuados */
+  .tabela-escala tr.membro { margin-left: 16px; margin-top: 4px; }
+  .tabela-escala tr.membro .c-aluno { grid-row: 1; }
+  .tabela-escala tr.membro .c-acao { grid-row: 2; }
+}
 
 .tw { overflow-x: auto; border: 1px solid var(--ln); border-radius: 8px; background: var(--pn); }
 table { border-collapse: collapse; width: 100%; min-width: 840px; }
@@ -753,7 +792,7 @@ p.h { color: var(--mu); margin: 4px 0 8px; }
 
 .bi-bar-wrap { width: 130px; background: var(--bg); height: 10px; border-radius: 5px; overflow: hidden; border: 1px solid var(--ln); display: inline-block; vertical-align: middle; margin-right: 6px; }
 .bi-bar-fill { height: 100%; background: var(--ac); }
-.bi-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 14px; }
+.bi-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(440px, 100%), 1fr)); gap: 14px; }
 
 /* Manual do Usuário Recolhível (Final da Aba 6) */
 /* Manual (botão no topo): leitura confortável, índice de seções e tabelas geradas das regras */

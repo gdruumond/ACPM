@@ -251,17 +251,17 @@ function tabela(voos) {
     const rs = grupo.length > 1 ? ` rowspan="${grupo.length}"` : '';
     const cancelado = voo => (statusDe(voo) === 'Cancelado' ? ' class="st-Cancelado"' : '');
     h += `<tr${cancelado(o)}>
-      <td class="hr"${rs}>${hm(o.a)}–${hm(o.b)} <small>${duracao(o)}</small>${preferencia(o)}</td>
-      <td><b>${esc(o.s)}</b></td>
-      <td${rs}>${esc(o.mis)}${grupo.length > 1 ? ` <small>Turma de ${grupo.length} alunos</small>` : ''}</td>
-      <td class="nw"${rs}>${esc(nomeDoRecurso(o.r))}${ehGround(o) ? '' : ` <small>${esc(o.eqType || '')}</small>`}</td>
-      <td class="nw"${rs}>${esc(o.ins)}</td>
-      <td class="nw"${rs}>${peso(o)}</td>
-      <td>${seletorDeStatus(o)}</td>
-      <td class="edit-only acao">${acao(o)}</td>
+      <td class="c-hr hr"${rs}>${hm(o.a)}–${hm(o.b)} <small>${duracao(o)}</small>${preferencia(o)}</td>
+      <td class="c-aluno"><b>${esc(o.s)}</b></td>
+      <td class="c-missao"${rs}>${esc(o.mis)}${grupo.length > 1 ? ` <small>Turma de ${grupo.length} alunos</small>` : ''}</td>
+      <td class="c-aviao nw"${rs}>${esc(nomeDoRecurso(o.r))}${ehGround(o) ? '' : ` <small>${esc(o.eqType || '')}</small>`}</td>
+      <td class="c-instr nw"${rs}>${esc(o.ins)}</td>
+      <td class="c-peso nw"${rs}>${peso(o)}</td>
+      <td class="c-status">${seletorDeStatus(o)}</td>
+      <td class="c-acao edit-only acao">${acao(o)}</td>
     </tr>`;
     for (const aluno of grupo.slice(1)) {
-      h += `<tr${cancelado(aluno)}><td><b>${esc(aluno.s)}</b></td><td>${seletorDeStatus(aluno)}</td><td class="edit-only acao">${acao(aluno)}</td></tr>`;
+      h += `<tr class="membro${statusDe(aluno) === 'Cancelado' ? ' st-Cancelado' : ''}"><td class="c-aluno"><b>${esc(aluno.s)}</b></td><td class="c-status">${seletorDeStatus(aluno)}</td><td class="c-acao edit-only acao">${acao(aluno)}</td></tr>`;
     }
   }
   return h + '</tbody></table></div>';

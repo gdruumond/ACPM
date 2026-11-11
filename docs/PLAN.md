@@ -181,7 +181,7 @@ Decisions: the audit comes first and Pedro and Gabriel approve the redesign; two
     2. [x] Header, global date and navigation: the date always on top, tabs in the order of use with attention badges, account menu, the app opens on Escala.
     3. [x] History as a side drawer over any tab; the "Inclusões na Escala" list goes.
     4. [x] Escala on the desktop: grouped errors and warnings, List / By aircraft / By instructor, one line per flight, Ground classes in one line, discreet status.
-    5. [ ] Escala on the phone (one card per flight) and no sideways scrolling (map and BI).
+    5. [x] Escala on the phone (one card per flight) and no sideways scrolling (map and BI).
     6. [ ] Demanda: "Só quem voa" on, import with the number of requests, 10 columns that fit, quiet fields, "Limpar demanda" in a menu.
     7. [ ] Recursos: one fleet table with availability, hours and balance until the 50-hour inspection.
     8. [ ] Instrutores: a day-availability grid and a registry table with an edit panel.
