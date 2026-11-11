@@ -1,7 +1,7 @@
 // Ações que alteram o estado: perfil de acesso, data da escala, desfazer, histórico de alterações, geração da
 // escala e BI.
 import { DEFAULT_LIM } from './config.js';
-import { isoMenosDias, fimDoMes } from './format.js';
+import { isoMenosDias, fimDoMes, rotuloDaData, hojeISO } from './format.js';
 import { runAllocationEngine } from './engine.js';
 import { ApiClient } from './storage.js';
 import { S, RES, AUDIT_LOG, BI_HISTORY, DATA, setS, setRES, setAuditLog, setBIHistory, setData, isGestor } from './state.js';
@@ -12,6 +12,7 @@ import { rDem } from './views/demanda.js';
 import { rIns, rAlu } from './views/cadastros.js';
 import { rRec, rRevisao } from './views/recursos.js';
 import { podeEditarAgenda } from './views/agenda.js';
+import { atualizarSelosDaEscala, atualizarSeloDaAgenda, lerPedidosDaData } from './views/selos.js';
 
 const historyStack = [];
 
@@ -20,6 +21,11 @@ export function abrirData(data) {
   setData(data);
   $('#dt').value = data;
   $('#bi-dt').value = data;
+  // No topo: "quarta-feira, 11/11" e "amanhã"
+  const { dia, relativo } = rotuloDaData(data, hojeISO());
+  $('#dt-rotulo').textContent = dia;
+  $('#dt-rel').textContent = relativo;
+  $('#dt-rel').hidden = !relativo;
 }
 
 export function setRole(role, lockShared = false) {
@@ -42,9 +48,13 @@ export function setRole(role, lockShared = false) {
   }
   // No modo compartilhado o gestor navega entre as datas (somente leitura)
   const dtInput = $('#dt');
-  if (dtInput) dtInput.disabled = isGestor() && document.body.dataset.backend !== 'supabase';
+  if (dtInput) {
+    dtInput.disabled = isGestor() && document.body.dataset.backend !== 'supabase';
+    $('#dt-ant').disabled = $('#dt-prox').disabled = dtInput.disabled;
+  }
   // Agenda: quem pode registrar pedidos (operadores e secretaria; no modo local, fora do perfil Gestor)
   document.body.dataset.agenda = podeEditarAgenda() ? 'edita' : 'consulta';
+  atualizarSeloDaAgenda();
 }
 
 export function limparDesfazer() {
@@ -137,6 +147,8 @@ export async function carregarData(data) {
   setAuditLog(historico);
   limparDesfazer();
   rRec(); rIns(); rAlu(); rDem(); renderAuditPanel(); rOut();
+  atualizarSelosDaEscala();
+  lerPedidosDaData();
   await carregarBI();
 }
 
@@ -198,4 +210,5 @@ export function refazerEscala() {
   rOut();
   renderAuditPanel();
   rBI();
+  atualizarSelosDaEscala();
 }

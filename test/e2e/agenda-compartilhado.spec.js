@@ -36,8 +36,10 @@ test.describe('Agenda de Solicitações (modo compartilhado)', () => {
     await expect(page.locator('#form-agenda [type="submit"]')).toBeDisabled();
     await expect(page.locator('#ag-excecao')).toBeHidden();
 
-    await page.locator('#nav button[data-t="rec"]').click();
-    expect(await page.locator('#eqs input[data-id="PR-BTB"]').evaluate(el => getComputedStyle(el).pointerEvents)).toBe('none');
+    // Ela só vê a Agenda e a Escala, que só consulta
+    await expect(page.locator('#nav button:visible .aba-rotulo')).toHaveText(['Escala', 'Agenda']);
+    await page.locator('#nav button[data-t="esc"]').click();
+    await expect(page.locator('body')).toHaveAttribute('data-role', 'gestor');
     expect(servidor.gravacoes).toEqual([]);
   });
 

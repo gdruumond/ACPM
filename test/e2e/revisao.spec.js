@@ -10,6 +10,7 @@ const tresVoosNoPPLJV = () => cenario({
 });
 
 async function informarHoras(page, matricula, horas) {
+  await irPara(page, 'rec');
   const campo = page.locator(`#revisao input[data-id="${matricula}"]`);
   await campo.fill(horas);
   await campo.dispatchEvent('change');

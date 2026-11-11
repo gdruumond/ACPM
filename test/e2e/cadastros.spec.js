@@ -17,6 +17,7 @@ test.describe('Recursos', () => {
 
   test('aeronave em manutenção fica registrada no histórico e persiste', async ({ page }) => {
     await abrirSintetico(page);
+    await irPara(page, 'rec');
     const chip = page.locator('#eqs label:has(input[data-id="PR-BTB"])');
     await chip.locator('input').uncheck();
     await expect(chip).toHaveClass(/\boff\b/);
@@ -29,6 +30,7 @@ test.describe('Recursos', () => {
 
   test('desativa uma janela de operação', async ({ page }) => {
     await abrirSintetico(page);
+    await irPara(page, 'rec');
     const janela = page.locator('#wins label').nth(3);
     await janela.locator('input').uncheck();
     await expect(janela).toHaveClass(/\boff\b/);

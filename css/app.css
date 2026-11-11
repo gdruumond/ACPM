@@ -60,56 +60,118 @@ body {
   font: 15px/1.45 'Barlow', system-ui, -apple-system, sans-serif;
 }
 
-header {
+/* Topo: marca, a data em uso no meio e as ferramentas à direita; as abas logo abaixo */
+header.topo {
   background: var(--hd);
   color: var(--hdT);
-  padding: 10px 20px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+  padding: 8px 20px 0;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  grid-template-areas: "marca data ferramentas" "abas abas abas";
   align-items: center;
-  justify-content: space-between;
+  column-gap: 12px;
+  row-gap: 4px;
 }
-h1 { margin: 0; font: 600 22px 'Barlow Semi Condensed', sans-serif; letter-spacing: .2px; }
-
-.hd-tools { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.topo-marca { grid-area: marca; margin: 0; font: 700 21px 'Barlow Semi Condensed', sans-serif; letter-spacing: .2px; white-space: nowrap; }
+.topo-marca span { font-size: 13px; color: var(--ye); letter-spacing: .08em; margin-left: 4px; }
+.topo-data {
+  grid-area: data; display: flex; align-items: center; gap: 2px;
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.16); border-radius: 8px; padding: 2px;
+}
+.topo-ico { width: 32px; height: 32px; border: 0; background: transparent; color: var(--hdT); border-radius: 6px; cursor: pointer; display: grid; place-items: center; }
+.topo-ico:hover:not(:disabled) { background: rgba(255,255,255,.1); }
+.topo-ico:disabled { opacity: .35; cursor: default; }
+.topo-data-campo {
+  position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 6px;
+  font: 600 15.5px 'Barlow Semi Condensed', sans-serif; white-space: nowrap; cursor: pointer;
+}
+.topo-data-campo:hover { background: rgba(255,255,255,.1); }
+.topo-data-rel { font: 700 12px 'Barlow', sans-serif; background: var(--ye); color: #12263A; border-radius: 10px; padding: 1px 8px; }
+/* O campo de data cobre o rótulo: um clique abre o calendário do navegador */
+#dt { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; padding: 0; border: 0; cursor: pointer; }
+#dt:disabled { cursor: default; }
+.hd-tools { grid-area: ferramentas; display: flex; gap: 4px; align-items: center; justify-content: flex-end; }
 .hd-btn, .hd-sel {
-  background: rgba(255,255,255,0.08);
-  color: var(--hdT);
-  border: 1px solid rgba(255,255,255,0.2);
-  padding: 5px 10px;
-  border-radius: 4px;
-  font: 600 13px 'Barlow Semi Condensed', sans-serif;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-.hd-sel option { background: var(--hd); color: var(--hdT); }
-.hd-btn:hover:not(:disabled) { background: rgba(255,255,255,0.18); }
-.hd-btn:disabled, .hd-sel:disabled { opacity: 0.65; cursor: not-allowed; }
-.badge-cnt {
-  background: var(--ye);
-  color: #12263A;
-  border-radius: 10px;
-  padding: 0 6px;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-nav { display: flex; gap: 4px; flex-wrap: wrap; }
-nav button {
   background: transparent;
   color: var(--hdT);
   border: 1px solid transparent;
-  padding: 6px 13px;
-  border-radius: 4px;
-  font: 600 15px 'Barlow Semi Condensed', sans-serif;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font: 600 14px 'Barlow Semi Condensed', sans-serif;
   cursor: pointer;
-  transition: background .15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
-nav button:hover:not(.on) { background: rgba(255,255,255,0.08); }
-nav button.on { background: var(--ye); color: #12263A; }
+.hd-sel { border-color: rgba(255,255,255,.2); }
+.hd-sel option { background: var(--hd); color: var(--hdT); }
+.hd-btn:hover:not(:disabled) { background: rgba(255,255,255,.1); }
+.hd-btn:disabled, .hd-sel:disabled { opacity: 0.65; cursor: not-allowed; }
+/* Desfazer só aparece quando há o que desfazer */
+#btn-undo:disabled { display: none; }
+.badge-cnt {
+  background: rgba(255,255,255,.18);
+  color: var(--hdT);
+  border-radius: 10px;
+  padding: 0 7px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Menu da conta */
+.menu-conta { position: relative; margin-left: 4px; }
+.hd-conta {
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); color: var(--hdT);
+  border-radius: 18px; padding: 3px 8px 3px 3px; font: 600 14px 'Barlow Semi Condensed', sans-serif;
+}
+.hd-conta:hover { background: rgba(255,255,255,.14); }
+.hd-avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--ye); color: #12263A; display: grid; place-items: center; font: 700 12px 'Barlow', sans-serif; }
+.hd-usuario { display: flex; flex-direction: column; line-height: 1.1; text-align: left; }
+.hd-usuario small { font: 500 11.5px 'Barlow', sans-serif; opacity: .75; }
+.hd-usuario .hd-sep { display: none; }
+.menu-itens {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 100; min-width: 210px; padding: 4px;
+  display: flex; flex-direction: column; background: var(--pn); color: var(--ink);
+  border: 1px solid var(--ln); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.18);
+}
+.menu-itens button {
+  text-align: left; background: transparent; border: 0; border-radius: 6px; padding: 8px 12px;
+  font: 500 14.5px 'Barlow', sans-serif; color: var(--ink); cursor: pointer;
+}
+.menu-itens button:hover, .menu-itens button:focus-visible { background: var(--info-bg); }
+#btn-sair { color: var(--er); }
+
+/* Abas: sem número, na ordem de uso; a ativa sublinhada em amarelo; selos de atenção */
+nav#nav { grid-area: abas; display: flex; align-items: center; gap: 2px; margin: 0 -8px; overflow-x: auto; scrollbar-width: none; }
+nav#nav::-webkit-scrollbar { display: none; }
+nav#nav button {
+  background: transparent; color: #C9D6E2; border: 0; border-bottom: 3px solid transparent; border-radius: 0;
+  padding: 9px 12px 8px; font: 600 15px 'Barlow Semi Condensed', sans-serif; cursor: pointer; white-space: nowrap;
+  display: inline-flex; gap: 6px; align-items: center; transition: color .15s;
+}
+nav#nav button:hover:not(.on) { color: #fff; }
+nav#nav button.on { color: #fff; border-bottom-color: var(--ye); }
+.aba-sep { width: 1px; height: 18px; background: rgba(255,255,255,.15); margin: 0 6px; flex: none; }
+.aba-selo { min-width: 18px; height: 18px; border-radius: 9px; padding: 0 5px; font: 700 11px/18px 'Barlow', sans-serif; background: rgba(255,255,255,.18); color: #fff; text-align: center; }
+.aba-selo.aviso { background: var(--ye); color: #12263A; }
+.aba-selo.erro { background: #E5484D; color: #fff; }
+
+/* A Secretaria trabalha na agenda: só a Agenda e a Escala (que ela consulta) */
+body[data-perfil="secretaria"] #nav button:not([data-t="age"]):not([data-t="esc"]),
+body[data-perfil="secretaria"] .aba-sep,
+body[data-perfil="secretaria"] #btn-open-log,
+body[data-perfil="secretaria"] #btn-share-link { display: none !important; }
+
+@media (max-width: 640px) {
+  header.topo { grid-template-columns: 1fr auto; grid-template-areas: "marca ferramentas" "data data" "abas abas"; padding: 8px 12px 0; }
+  .topo-marca { font-size: 18px; }
+  .topo-marca span { display: none; }
+  .topo-data { justify-content: space-between; }
+  .hd-txt, .hd-usuario, .hd-seta { display: none; }
+  .hd-conta { padding: 3px; }
+  .hd-btn { padding: 6px 8px; }
+}
 
 /* Ícones de traço do sprite em index.html */
 .ico { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; vertical-align: -3px; }
@@ -697,7 +759,8 @@ details.pn summary { cursor: pointer; font: 600 16px 'Barlow Semi Condensed', sa
 body[data-login] #s-login { display: block; }
 body[data-login] main > section:not(#s-login),
 body[data-login] #nav,
-body[data-login] .hd-tools > :not(#btn-theme) { display: none !important; }
+body[data-login] .topo-data,
+body[data-login] .hd-tools > :not(.menu-conta) { display: none !important; }
 body[data-backend="supabase"] #role-sel { display: none; }
 .login label { display: block; margin-bottom: 12px; font-weight: 600; }
 .login input { display: block; width: 100%; margin-top: 4px; }

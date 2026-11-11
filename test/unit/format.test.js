@@ -1,6 +1,6 @@
 import { describe, it, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { hm, fmtH, fmtDurLabel, WLB, pad, esc, amanhaISO, isoMenosDias, fimDoMes } from '../../js/format.js';
+import { hm, fmtH, fmtDurLabel, WLB, pad, esc, amanhaISO, hojeISO, isoMenosDias, fimDoMes, rotuloDaData } from '../../js/format.js';
 
 describe('Formatação', () => {
   it('minutos do dia em HH:MM', () => {
@@ -38,5 +38,19 @@ describe('Formatação', () => {
     assert.equal(isoMenosDias('2026-03-02', 2), '2026-02-28');
     assert.equal(isoMenosDias('2027-01-01', 1), '2026-12-31');
     assert.deepEqual(['2026-11-11', '2026-12-01', '2026-02-10', '2028-02-10'].map(fimDoMes), ['2026-11-30', '2026-12-31', '2026-02-28', '2028-02-29']);
+  });
+
+  it('hoje no fuso local', () => {
+    mock.timers.enable({ apis: ['Date'], now: new Date('2026-12-31T15:00:00Z') });
+    try { assert.equal(hojeISO(), '2026-12-31'); } finally { mock.timers.reset(); }
+  });
+
+  it('rótulo da data em uso: dia da semana, dia/mês (com o ano, se for outro) e hoje, amanhã ou ontem', () => {
+    assert.deepEqual(rotuloDaData('2026-11-11', '2026-11-10'), { dia: 'quarta-feira, 11/11', relativo: 'amanhã' });
+    assert.deepEqual(rotuloDaData('2026-11-10', '2026-11-10'), { dia: 'terça-feira, 10/11', relativo: 'hoje' });
+    assert.deepEqual(rotuloDaData('2026-11-09', '2026-11-10'), { dia: 'segunda-feira, 09/11', relativo: 'ontem' });
+    assert.deepEqual(rotuloDaData('2026-11-15', '2026-11-10'), { dia: 'domingo, 15/11', relativo: '' });
+    assert.deepEqual(rotuloDaData('2027-01-04', '2026-12-31'), { dia: 'segunda-feira, 04/01/2027', relativo: '' });
+    assert.deepEqual(rotuloDaData('2027-01-01', '2026-12-31'), { dia: 'sexta-feira, 01/01/2027', relativo: 'amanhã' });
   });
 });

@@ -1,5 +1,5 @@
 // Minha conta (trocar a senha e o e-mail) e Usuários (o administrador cria e exclui contas), no modo compartilhado.
-import { test, expect, prepararContexto, vigiarErros, AMANHA } from './fixtures.js';
+import { test, expect, prepararContexto, vigiarErros, abrirMenuDaConta, AMANHA, irPara } from './fixtures.js';
 import { instalarSupabaseFalso, documentosAtuais, CONTAS } from './supabase-falso.js';
 import { estadoSintetico } from '../helpers/estado.js';
 
@@ -14,6 +14,7 @@ async function entrar(page, conta, senha = conta.senha) {
 }
 
 async function abrirMinhaConta(page) {
+  await abrirMenuDaConta(page);
   await page.locator('#btn-conta').click();
   await expect(page.locator('#s-conta')).toBeVisible();
 }
@@ -46,6 +47,7 @@ test.describe('Minha conta', () => {
     expect(servidor.senhaDe(CONTAS.operador)).toBe('uma senha nova bem longa');
     await expect(page.locator('#senha-atual')).toHaveValue('');
 
+    await abrirMenuDaConta(page);
     await page.locator('#btn-sair').click();
     await expect(page.locator('#form-login')).toBeVisible();
     await page.locator('#login-email').fill(CONTAS.operador.email);
@@ -117,6 +119,31 @@ test.describe('Volta dos links de confirmação da troca de e-mail', () => {
   });
 });
 
+test.describe('Menu da conta', () => {
+  test('reúne Minha conta, o tema e Sair; Esc fecha o menu', async ({ page, context }) => {
+    await instalarSupabaseFalso(context, documentosAtuais(estadoSintetico(), AMANHA));
+    await entrar(page, CONTAS.operador);
+    await expect(page.locator('#menu-conta')).toBeHidden();
+    await abrirMenuDaConta(page);
+    await expect(page.locator('#menu-conta [role="menuitem"]:visible')).toHaveText(['Minha conta', 'Tema claro ou escuro', 'Sair']);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#menu-conta')).toBeHidden();
+    await abrirMenuDaConta(page);
+    await page.locator('#s-esc h2').click();
+    await expect(page.locator('#menu-conta')).toBeHidden();
+  });
+
+  test('o administrador tem Usuários no menu, que leva direto à lista de contas', async ({ page, context }) => {
+    await instalarSupabaseFalso(context, documentosAtuais(estadoSintetico(), AMANHA));
+    await entrar(page, CONTAS.administrador);
+    await abrirMenuDaConta(page);
+    await expect(page.locator('#menu-conta [role="menuitem"]:visible')).toHaveText(['Minha conta', 'Usuários', 'Tema claro ou escuro', 'Sair']);
+    await page.locator('#btn-usuarios').click();
+    await expect(page.locator('#usuarios')).toBeVisible();
+    await expect(page.locator('#lista-contas tbody tr')).toHaveCount(5);
+  });
+});
+
 test.describe('Usuários (administrador)', () => {
   test('o administrador cria e exclui contas; não exclui a própria', async ({ page, context }) => {
     const servidor = await instalarSupabaseFalso(context, documentosAtuais(estadoSintetico(), AMANHA));
@@ -149,6 +176,7 @@ test.describe('Usuários (administrador)', () => {
   test('o administrador também opera a escala', async ({ page, context }) => {
     const servidor = await instalarSupabaseFalso(context, documentosAtuais(estadoSintetico(), AMANHA));
     await entrar(page, CONTAS.administrador);
+    await irPara(page, 'rec');
     await expect(page.locator('#wins input[data-a="win"]').first()).toBeAttached();
     await page.locator('#eqs input[data-id="PR-BTB"]').uncheck();
     await expect.poll(() => servidor.dias.get(AMANHA).conteudo.av['PR-BTB']).toBe(false);

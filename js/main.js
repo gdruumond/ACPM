@@ -33,6 +33,7 @@ import { CATEGORIAS_DO_RODIZIO, ajustarFilas } from './rodizio.js';
 import { rRodizio } from './views/rodizio.js';
 import { abrirConta, carregarContas, gerarSenha, mensagem } from './views/conta.js';
 import { rManual } from './views/manual.js';
+import { atualizarSelosDaEscala, lerPedidosDaData } from './views/selos.js';
 import { importarSolicitacoes, disponibilidadeDaSolicitacao } from './agenda.js';
 import { abrirAgenda, carregarMes, mudarMes, escolherDia, diaDaAgenda, lembrarRegistradoPor, podeEditarAgenda } from './views/agenda.js';
 import { ESQUEMA } from './migracoes.js';
@@ -154,6 +155,38 @@ $('#dt').onchange = e => {
     showToast('Não foi possível abrir essa data. Verifique a conexão e tente de novo.');
   });
 };
+// ‹ e ›: o dia anterior e o seguinte. Um clique no rótulo da data abre o calendário do navegador
+const irParaDia = dias => {
+  const dt = $('#dt');
+  if (dt.disabled) return;
+  dt.value = isoMenosDias(DATA, -dias);
+  dt.dispatchEvent(new Event('change'));
+};
+$('#dt-ant').onclick = () => irParaDia(-1);
+$('#dt-prox').onclick = () => irParaDia(1);
+$('#dt').addEventListener('click', e => { try { e.target.showPicker(); } catch (x) {} });
+
+// Menu da conta: abre e fecha no botão; Esc ou um clique fora fecham
+const menuConta = $('#menu-conta');
+function fecharMenuDaConta() {
+  menuConta.hidden = true;
+  $('#btn-menu-conta').setAttribute('aria-expanded', 'false');
+}
+$('#btn-menu-conta').onclick = () => {
+  const abrir = menuConta.hidden;
+  menuConta.hidden = !abrir;
+  $('#btn-menu-conta').setAttribute('aria-expanded', String(abrir));
+  const primeiro = abrir && menuConta.querySelector('[role="menuitem"]:not([hidden])');
+  if (primeiro) primeiro.focus();
+};
+menuConta.addEventListener('click', e => { if (e.target.closest('[role="menuitem"]')) fecharMenuDaConta(); });
+document.addEventListener('click', e => { if (!menuConta.hidden && !e.target.closest('.menu-conta')) fecharMenuDaConta(); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || menuConta.hidden) return;
+  fecharMenuDaConta();
+  $('#btn-menu-conta').focus();
+});
+
 $('#bi-dt').onchange = () => carregarBI();
 $('#bi-flt-eq').onchange = () => rBI();
 $('#flt-dem-mis').onchange = applyDemandFilters;
@@ -247,6 +280,12 @@ $('#btn-manual').onclick = () => {
 };
 
 $('#btn-conta').onclick = () => { show('conta'); abrirConta(); };
+// Usuários (administrador): a mesma página, direto na lista de contas
+$('#btn-usuarios').onclick = async () => {
+  show('conta');
+  await abrirConta();
+  $('#usuarios').scrollIntoView({ block: 'start' });
+};
 
 $('#form-senha').onsubmit = async e => {
   e.preventDefault();
@@ -373,6 +412,7 @@ async function registrarPedido(excecao) {
   $('#ag-aluno').value = '';
   showToast(excecao ? 'Pedido registrado pela Exceção da Coordenação.' : 'Pedido registrado.');
   await carregarMes();
+  lerPedidosDaData();
 }
 $('#form-agenda').onsubmit = e => { e.preventDefault(); registrarPedido(false); };
 $('#ag-excecao').onclick = () => registrarPedido(true);
@@ -392,6 +432,7 @@ async function cancelarPedido(b) {
     $('#ag-erro').textContent = 'Não foi possível cancelar o pedido. Verifique a conexão e tente de novo.';
   }
   await carregarMes();
+  lerPedidosDaData();
 }
 
 document.addEventListener('click', e => {
@@ -776,5 +817,7 @@ document.addEventListener('change', e => {
   } else {
     rOut();
   }
+  atualizarSelosDaEscala();
+  lerPedidosDaData();
   carregarBI();
 })();

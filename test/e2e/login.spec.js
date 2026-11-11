@@ -1,4 +1,4 @@
-import { test, expect, prepararContexto, vigiarErros, irPara, confirmar, AMANHA } from './fixtures.js';
+import { test, expect, prepararContexto, vigiarErros, irPara, confirmar, AMANHA, abrirMenuDaConta } from './fixtures.js';
 import { instalarSupabaseFalso, documentosAtuais, CONTAS } from './supabase-falso.js';
 import { estadoSintetico } from '../helpers/estado.js';
 
@@ -42,7 +42,7 @@ test.describe('Login e perfis (modo compartilhado)', () => {
     const servidor = await instalarSupabaseFalso(context, comDados());
     await page.goto(URL_APP);
     await entrar(page, CONTAS.operador);
-    await expect(page.locator('#s-rec')).toBeVisible();
+    await expect(page.locator('#s-esc')).toBeVisible();
     await expect(page.locator('#usuario')).toHaveText('Operador de Teste · Operador');
     await expect(page.locator('#inst .cd')).toHaveCount(40);
     await expect(page.locator('#role-sel')).toBeHidden();
@@ -88,6 +88,7 @@ test.describe('Login e perfis (modo compartilhado)', () => {
     await page.reload();
     await expect(page.locator('#usuario')).toHaveText('Operador de Teste · Operador');
     await expect(page.locator('#form-login')).toBeHidden();
+    await abrirMenuDaConta(page);
     await page.locator('#btn-sair').click();
     await expect(page.locator('#form-login')).toBeVisible();
     expect(servidor.saidas, 'as sessões em outros aparelhos continuam').toEqual(['local']);

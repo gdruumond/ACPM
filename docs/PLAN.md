@@ -178,7 +178,7 @@ Decisions: the audit comes first and Pedro and Gabriel approve the redesign; two
 - [x] **Usability audit** for Pedro and Gabriel (a shared document: findings by severity, before/after prototype and measurements). PR 1 merged as PR #8 (2026-11-11).
 - [x] **Redesign approved in full** (2026-11-11): all 10 increments go into PR 2 (branch `fase-6-redesenho`). The engine, the data, the PDF and the CSV do not change.
     1. [x] Visual base: white panels, lighter borders, light table headers, tags in sentence case, line icons instead of emoji.
-    2. [ ] Header, global date and navigation: the date always on top, tabs in the order of use with attention badges, account menu, the app opens on Escala.
+    2. [x] Header, global date and navigation: the date always on top, tabs in the order of use with attention badges, account menu, the app opens on Escala.
     3. [ ] History as a side drawer over any tab; the "Inclusões na Escala" list goes.
     4. [ ] Escala on the desktop: grouped errors and warnings, List / By aircraft / By instructor, one line per flight, Ground classes in one line, discreet status.
     5. [ ] Escala on the phone (one card per flight) and no sideways scrolling (map and BI).

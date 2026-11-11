@@ -28,36 +28,58 @@
   <symbol id="i-conta" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3"/><path d="M6.5 18.5a6.5 6.5 0 0 1 11 0"/></symbol>
   <symbol id="i-esquerda" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
   <symbol id="i-direita" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></symbol>
+  <symbol id="i-baixo" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
   <symbol id="i-aviso" viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/></symbol>
 </svg>
 
-<header>
-  <h1>Escala de Voo — ACPM</h1>
+<header class="topo">
+  <h1 class="topo-marca">Escala de Voo <span>ACPM</span></h1>
+  <!-- A data em uso: o contexto de todas as abas -->
+  <div class="topo-data" role="group" aria-label="Data da escala">
+    <button class="topo-ico" type="button" id="dt-ant" aria-label="Dia anterior" title="Dia anterior"><svg class="ico"><use href="#i-esquerda"/></svg></button>
+    <label class="topo-data-campo" title="Escolher a data">
+      <svg class="ico"><use href="#i-calendario"/></svg>
+      <span id="dt-rotulo"></span>
+      <span class="topo-data-rel" id="dt-rel" hidden></span>
+      <input type="date" id="dt" aria-label="Data da escala">
+    </label>
+    <button class="topo-ico" type="button" id="dt-prox" aria-label="Próximo dia" title="Próximo dia"><svg class="ico"><use href="#i-direita"/></svg></button>
+  </div>
   <div class="hd-tools">
     <select class="hd-sel" id="role-sel" aria-label="Perfil de acesso">
       <option value="operador">Operador</option>
       <option value="gestor">Gestor</option>
     </select>
-    <span class="hd-usuario" id="usuario" hidden></span>
-    <button class="hd-btn" id="btn-manual" title="Como usar a escala e as regras que ela segue"><svg class="ico"><use href="#i-manual"/></svg>Manual</button>
-    <button class="hd-btn" id="btn-conta" hidden title="Trocar a senha ou o e-mail">Minha conta</button>
-    <button class="hd-btn" id="btn-sair" hidden title="Encerrar a sessão">Sair</button>
-    <button class="hd-btn edit-only" id="btn-undo" disabled title="Desfazer última alteração"><svg class="ico"><use href="#i-desfazer"/></svg>Desfazer</button>
-    <button class="hd-btn" id="btn-open-log" title="Ver inclusões e histórico do dia">
-      <svg class="ico"><use href="#i-historico"/></svg>Histórico <span class="badge-cnt" id="log-cnt">0</span>
-    </button>
-    <button class="hd-btn" id="btn-share-link" title="Copiar link compartilhável da escala (abre bloqueado como Gestor)"><svg class="ico"><use href="#i-compartilhar"/></svg>Compartilhar</button>
-    <button class="hd-btn" id="btn-theme" title="Alternar tema claro/escuro"><svg class="ico"><use href="#i-tema"/></svg>Tema</button>
+    <button class="hd-btn edit-only" id="btn-undo" disabled title="Desfazer a última alteração"><svg class="ico"><use href="#i-desfazer"/></svg><span class="hd-txt">Desfazer</span></button>
+    <button class="hd-btn" id="btn-open-log" title="Alterações desta data"><svg class="ico"><use href="#i-historico"/></svg><span class="hd-txt">Histórico</span><span class="badge-cnt" id="log-cnt">0</span></button>
+    <button class="hd-btn" id="btn-manual" title="Como usar a escala e as regras que ela segue"><svg class="ico"><use href="#i-manual"/></svg><span class="hd-txt">Manual</span></button>
+    <!-- Menu da conta: Minha conta, Usuários (administrador), tema e Sair -->
+    <div class="menu-conta">
+      <button class="hd-conta" type="button" id="btn-menu-conta" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-conta" title="Conta e preferências">
+        <span class="hd-avatar" id="usuario-iniciais" aria-hidden="true"><svg class="ico"><use href="#i-conta"/></svg></span>
+        <span class="hd-usuario" id="usuario" hidden></span>
+        <svg class="ico hd-seta" aria-hidden="true"><use href="#i-baixo"/></svg>
+      </button>
+      <div class="menu-itens" id="menu-conta" role="menu" hidden>
+        <button type="button" role="menuitem" id="btn-conta" hidden>Minha conta</button>
+        <button type="button" role="menuitem" id="btn-usuarios" hidden>Usuários</button>
+        <button type="button" role="menuitem" id="btn-theme">Tema claro ou escuro</button>
+        <button type="button" role="menuitem" id="btn-sair" hidden>Sair</button>
+      </div>
+    </div>
   </div>
-  <nav id="nav">
-    <button data-t="rec" class="on">1 · Recursos</button>
-    <button data-t="ins">2 · Instrutores</button>
-    <button data-t="alu">3 · Alunos</button>
-    <button data-t="age">4 · Agenda</button>
-    <button data-t="dem">5 · Demanda</button>
-    <button data-t="esc">6 · Escala</button>
-    <button data-t="rod">7 · Rodízio</button>
-    <button data-t="bi">8 · BI</button>
+  <!-- Abas na ordem de uso: a escala e o que a alimenta no dia; o cadastro; o BI -->
+  <nav id="nav" aria-label="Abas">
+    <button data-t="esc" class="on"><span class="aba-rotulo">Escala</span><span class="aba-selo" id="selo-esc" hidden></span></button>
+    <button data-t="dem"><span class="aba-rotulo">Demanda</span></button>
+    <button data-t="age"><span class="aba-rotulo">Agenda</span><span class="aba-selo" id="selo-age" hidden></span></button>
+    <span class="aba-sep" aria-hidden="true"></span>
+    <button data-t="rec"><span class="aba-rotulo">Recursos</span><span class="aba-selo" id="selo-rec" hidden></span></button>
+    <button data-t="ins"><span class="aba-rotulo">Instrutores</span></button>
+    <button data-t="alu"><span class="aba-rotulo">Alunos</span></button>
+    <button data-t="rod"><span class="aba-rotulo">Rodízio</span></button>
+    <span class="aba-sep" aria-hidden="true"></span>
+    <button data-t="bi"><span class="aba-rotulo">BI</span></button>
   </nav>
 </header>
 
@@ -97,14 +119,13 @@
   </section>
 
   <!-- ABA 1: RECURSOS -->
-  <section id="s-rec" class="on">
+  <section id="s-rec">
     <h2>Janelas de operação</h2>
     <div class="pn">
       <div class="chips" id="wins"></div>
     </div>
     <div id="eqs"></div>
     <div id="revisao"></div>
-    <div class="bar"><button class="btn" data-go="ins">Próximo: Instrutores →</button></div>
   </section>
 
   <!-- ABA 2: INSTRUTORES -->
@@ -118,7 +139,6 @@
       </select>
     </div>
     <div class="grid g2" id="inst"></div>
-    <div class="bar"><button class="btn" data-go="alu">Próximo: Alunos →</button></div>
   </section>
 
   <!-- ABA 3: ALUNOS -->
@@ -129,7 +149,6 @@
       <input type="search" class="flt-ctrl" data-flt="alu" placeholder="Buscar aluno…" aria-label="Buscar aluno">
     </div>
     <div class="grid g2" id="alu"></div>
-    <div class="bar"><button class="btn" data-go="dem">Próximo: Demanda →</button></div>
   </section>
 
   <!-- ABA 4: DEMANDA -->
@@ -191,12 +210,12 @@
   </section>
 
   <!-- ABA 5: ESCALA -->
-  <section id="s-esc">
+  <section id="s-esc" class="on">
     <h2>Escala do dia</h2>
     <div class="bar">
+      <button class="btn sec" id="btn-share-link" title="Copiar link compartilhável da escala (abre bloqueado como Gestor)"><svg class="ico"><use href="#i-compartilhar"/></svg>Compartilhar</button>
       <button class="btn sec" id="exp">Exportar CSV</button>
       <button class="btn sec" id="pdf">Emitir PDF</button>
-      <label class="chip">Data <input type="date" id="dt"></label>
       <select id="flt-esc-eq" class="flt-ctrl" aria-label="Filtrar por equipamento">
         <option value="">Todos os equipamentos</option>
       </select>
