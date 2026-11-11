@@ -158,13 +158,19 @@ test.describe('Alunos', () => {
   test('cadastra, bloqueia instrutor e exclui aluno com confirmação', async ({ page }) => {
     await abrirSintetico(page);
     await irPara(page, 'alu');
+    await expect(page.locator('#s-alu thead th')).toHaveText(['Nome', 'Peso (kg)', 'Não escalar com', '']);
     await page.locator('[data-act="adds"]').click();
-    const card = page.locator('#alu .cd');
-    await expect(card).toHaveCount(1);
-    await expect(card.locator('.nm')).toHaveValue('Novo aluno');
+    const linha = page.locator('#alu .cd');
+    await expect(linha).toHaveCount(1);
+    await expect(linha.locator('.nm')).toHaveValue('Novo aluno');
+    await expect(linha.locator('[data-f="kg"]')).toHaveClass(/\bfalta\b/);
 
-    await card.locator('[data-f="bl"]').selectOption({ label: 'Instrutor 03' });
+    const naoEscalar = linha.locator('[data-f="bl"]');
+    await expect(naoEscalar.locator('option').first()).toHaveText('Não escalar com…');
+    await naoEscalar.selectOption({ label: 'Instrutor 03' });
     await expect(page.locator('#alu .cd .tg')).toHaveText(/Instrutor 03/);
+    // O foco continua no campo, para bloquear outro em seguida
+    await expect(page.locator('#alu .cd [data-f="bl"]')).toBeFocused();
     await page.locator('#alu .cd [data-act="unbl"]').click();
     await expect(page.locator('#alu .cd .tg')).toHaveCount(0);
 

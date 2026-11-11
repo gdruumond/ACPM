@@ -11,7 +11,7 @@ import { renderAuditPanel, rOut } from './views/escala.js';
 import { rDem } from './views/demanda.js';
 import { rIns, rInsDia, rAlu } from './views/cadastros.js';
 import { rRec, rRevisao } from './views/recursos.js';
-import { podeEditarAgenda } from './views/agenda.js';
+import { podeEditarAgenda, rAgenda } from './views/agenda.js';
 import { atualizarSelosDaEscala, atualizarSeloDaAgenda, lerPedidosDaData } from './views/selos.js';
 
 const historyStack = [];
@@ -151,7 +151,7 @@ export async function carregarData(data) {
   setAuditLog(historico);
   limparDesfazer();
   $('#escala-atualizada').hidden = true;
-  rRec(); rIns(); rAlu(); rDem(); renderAuditPanel(); rOut();
+  rRec(); rIns(); rAlu(); rDem(); renderAuditPanel(); rOut(); rAgenda();
   atualizarSelosDaEscala();
   lerPedidosDaData();
   await carregarBI();

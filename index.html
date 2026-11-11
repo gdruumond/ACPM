@@ -29,6 +29,8 @@
   <symbol id="i-esquerda" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
   <symbol id="i-direita" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></symbol>
   <symbol id="i-baixo" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-cima" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
+  <symbol id="i-topo" viewBox="0 0 24 24"><path d="M5 4h14"/><path d="M7 14l5-5 5 5"/><path d="M12 9v11"/></symbol>
   <symbol id="i-aviso" viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/></symbol>
 </svg>
 
@@ -171,10 +173,14 @@
   <section id="s-alu">
     <h2>Alunos</h2>
     <div class="bar">
-      <button class="btn edit-only" data-act="adds">+ Novo aluno</button>
       <input type="search" class="flt-ctrl" data-flt="alu" placeholder="Buscar aluno…" aria-label="Buscar aluno">
+      <span class="cresce"></span>
+      <button class="btn edit-only" data-act="adds">+ Novo aluno</button>
     </div>
-    <div class="grid g2" id="alu"></div>
+    <div class="tw"><table class="cadastro alunos">
+      <thead><tr><th>Nome</th><th>Peso (kg)</th><th>Não escalar com</th><th></th></tr></thead>
+      <tbody id="alu"></tbody>
+    </table></div>
   </section>
 
   <!-- ABA 4: DEMANDA -->
@@ -196,6 +202,7 @@
           <button class="x" type="button" id="ag-excecao" hidden title="Registra fora do prazo das 13:00 (fica marcado para auditoria)">Exceção da Coordenação</button>
           <p id="ag-erro" role="alert"></p>
         </form>
+        <button class="btn edit-only" type="button" id="agenda-importar" hidden></button>
         <div class="tw" id="agenda-lista"></div>
       </div>
     </div>
@@ -274,7 +281,7 @@
 
   <section id="s-rod">
     <h2>Rodízio</h2>
-    <p class="h">Filas das escalas que remuneram melhor, entre os instrutores habilitados. Cada voo da categoria vai para o primeiro da fila que estiver livre (no mesmo dia, quem ainda não voou nela vem antes de quem já voou). Quem voar na categoria vai para o fim da fila na data seguinte; voo cancelado não conta. Use os botões para ajustar a ordem, por exemplo quando um voo foi cancelado pela meteorologia.</p>
+    <p class="h">Cada voo destas categorias vai para o primeiro livre da fila; quem voa vai para o fim na data seguinte. <a href="#manual-aba-rodizio" data-manual="manual-aba-rodizio">Como funciona o rodízio</a></p>
     <div id="rodizio" class="rodizio"></div>
   </section>
 
@@ -373,7 +380,7 @@
       <p>Cada cartão tem a caixa <i>Disponível no dia</i> (ao lado do nome), o peso, os horários em que o instrutor está disponível (o <i>Turno rápido</i> marca vários de uma vez) e as habilitações. O instrutor só recebe uma missão se tiver as habilitações que ela exige (veja a tabela em <a href="#manual-regras">Como a escala é montada</a>) e se estiver disponível durante o voo inteiro.</p>
 
       <h4>3 · Alunos</h4>
-      <p>Nome e peso de cada aluno; o peso entra no limite de peso de cada avião. Em <i>Bloquear</i>, escolha instrutores que não devem voar com o aluno.</p>
+      <p>Nome e peso de cada aluno; o peso entra no limite de peso de cada avião. Em <i>Não escalar com</i>, escolha instrutores que não devem voar com o aluno.</p>
 
       <h4>4 · Agenda</h4>
       <p>A agenda de pedidos da secretaria, com um calendário. Cada pedido tem o aluno, a missão, a disponibilidade do aluno e quem anotou. O pedido para o dia seguinte só pode ser registrado até as 13:00 (horário de Brasília); depois disso, só para os próximos dias. Operadores e Administradores podem registrar fora do prazo com a <i>Exceção da Coordenação</i>, que fica marcada no pedido.</p>
@@ -392,7 +399,7 @@
       <h4>6 · Escala</h4>
       <p>O resumo do dia (missões pedidas, atendidas, horas e alertas), os alertas, a tabela oficial e o mapa de ocupação por avião ou por instrutor. Cada alerta diz por que um pedido não entrou: avião em manutenção, falta de instrutor habilitado no horário, peso acima do limite e assim por diante. Na tabela, mude o status do voo ou use <i>Excluir</i> para tirar um voo da escala (o Histórico permite restaurar). <i>Exportar CSV</i> gera o arquivo do lançamento no portal, agrupado por avião e com o peso; <i>Emitir PDF</i> gera a escala para impressão.</p>
 
-      <h4>7 · Rodízio</h4>
+      <h4 id="manual-aba-rodizio">7 · Rodízio</h4>
       <p>Filas para dividir com justiça, entre os instrutores habilitados, os voos que remuneram melhor:</p>
       <ul class="manual-lista-curta" id="manual-rodizio"></ul>
       <p>Cada voo da categoria vai para o primeiro da fila que estiver livre (no mesmo dia, quem ainda não voou nela vem antes). Quem voou vai para o fim da fila na data seguinte; voo cancelado não conta. Use os botões para ajustar a ordem, por exemplo quando um voo foi cancelado pela meteorologia.</p>

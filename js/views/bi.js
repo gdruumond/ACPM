@@ -12,6 +12,18 @@ export function getDaysDiff(d1Str, d2Str) {
   return Math.round((d1 - d2) / 86400000);
 }
 
+// Horas por avião e por instrutor: os 10 maiores, com "Ver todos" para abrir a lista inteira
+const MAIORES = 10;
+const verTodos = { eq: false, ins: false };
+export function alternarTodosDoBI(tabela) {
+  verTodos[tabela] = !verTodos[tabela];
+  rBI();
+}
+const botaoVerTodos = (tabela, total) => (total > MAIORES
+  ? `<button class="btn quiet" type="button" data-bi-todos="${tabela}">${verTodos[tabela] ? `Ver só os ${MAIORES} maiores` : `Ver todos (${total})`}</button>`
+  : '');
+const visiveis = (tabela, lista) => (verTodos[tabela] ? lista : lista.slice(0, MAIORES));
+
 export function rBI() {
   const container = $('#bi-content');
   if (!container) return;
@@ -106,11 +118,11 @@ export function rBI() {
     <div class="bi-grid-2">
       <div class="pn">
         <h3>Horas por avião e sala (dia, semana e mês)</h3>
-        <div class="tw" style="max-height:440px;overflow-y:auto">
-          <table style="min-width:100%">
+        <div class="tw">
+          <table style="min-width:100%" data-bi="eq">
             <thead><tr><th>Avião / sala</th><th>Tipo</th><th>Dia</th><th>Semana</th><th>Mês</th><th>Uso</th></tr></thead>
             <tbody>
-              ${eqList.map(e => {
+              ${visiveis('eq', eqList).map(e => {
                 const pct = Math.round((e.m / maxEqM) * 100);
                 const disp = (e.reg !== GROUND_REG && !S.av[e.reg]) ? ' <span class="tag fb">Manut.</span>' : '';
                 const acro = e.reg === ACROBAT_REG ? ' <span class="tag">Acrobat</span>' : '';
@@ -126,15 +138,16 @@ export function rBI() {
             </tbody>
           </table>
         </div>
+        ${botaoVerTodos('eq', eqList.length)}
       </div>
 
       <div class="pn">
         <h3>Horas por instrutor (dia, semana e mês)</h3>
-        <div class="tw" style="max-height:440px;overflow-y:auto">
-          <table style="min-width:100%">
+        <div class="tw">
+          <table style="min-width:100%" data-bi="ins">
             <thead><tr><th>Instrutor</th><th>Dia</th><th>Semana</th><th>Mês</th><th>Carga</th></tr></thead>
             <tbody>
-              ${insList.map(x => {
+              ${visiveis('ins', insList).map(x => {
                 const pct = Math.round((x.m / maxInsM) * 100);
                 return `<tr>
                   <td><b>${esc(x.nm)}</b></td>
@@ -147,6 +160,7 @@ export function rBI() {
             </tbody>
           </table>
         </div>
+        ${botaoVerTodos('ins', insList.length)}
       </div>
     </div>
 

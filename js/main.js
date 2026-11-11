@@ -21,10 +21,10 @@ import { ApiClient } from './storage.js';
 import { S, RES, AUDIT_LOG, DATA, setS, setRES, setAuditLog, setTLMode, isGestor, insBy, stuBy, getMissionTarget } from './state.js';
 import { $, showToast, msg, focusLast, mostrarAviso, avisoAberto } from './dom.js';
 import { show } from './views/tabs.js';
-import { rBI } from './views/bi.js';
+import { rBI, alternarTodosDoBI } from './views/bi.js';
 import { renderAuditPanel, rOut } from './views/escala.js';
 import { singleDemandRowHTML, cnt, rDem, applyDemandFilters } from './views/demanda.js';
-import { stuHTML, rIns, rAlu, applyInstructorFilters, preencherFiltroDeHabilitacoes, mostrarVistaDosInstrutores, abrirPainelDoInstrutor, fecharPainelDoInstrutor, atualizarLinhaDoCadastro } from './views/cadastros.js';
+import { rIns, rAlu, applyInstructorFilters, preencherFiltroDeHabilitacoes, mostrarVistaDosInstrutores, abrirPainelDoInstrutor, fecharPainelDoInstrutor, atualizarLinhaDoCadastro, atualizarLinhaDoAluno } from './views/cadastros.js';
 import { rRec } from './views/recursos.js';
 import { setRole, pushHistory, save, logChange, undoLastAction, refazerEscala, escalaCalculada, marcarEscalaSoCalculada, gravarEscalaCalculada, abrirData, historicoParaPainel, carregarData, carregarBI } from './actions.js';
 import { exp, pdf } from './export.js';
@@ -35,7 +35,7 @@ import { abrirConta, carregarContas, gerarSenha, mensagem } from './views/conta.
 import { rManual } from './views/manual.js';
 import { atualizarSelosDaEscala, lerPedidosDaData } from './views/selos.js';
 import { importarSolicitacoes, disponibilidadeDaSolicitacao } from './agenda.js';
-import { abrirAgenda, carregarMes, mudarMes, escolherDia, diaDaAgenda, lembrarRegistradoPor, podeEditarAgenda } from './views/agenda.js';
+import { abrirAgenda, carregarMes, mudarMes, escolherDia, diaDaAgenda, lembrarRegistradoPor, podeEditarAgenda, rAgenda } from './views/agenda.js';
 import { ESQUEMA } from './migracoes.js';
 import { iniciarSessaoSupabase } from './sessao.js';
 
@@ -58,7 +58,16 @@ document.addEventListener('click', e => {
     return;
   }
   const vistaIns = e.target.closest('[data-vista-ins]');
-  if (vistaIns) mostrarVistaDosInstrutores(vistaIns.dataset.vistaIns);
+  if (vistaIns) { mostrarVistaDosInstrutores(vistaIns.dataset.vistaIns); return; }
+  const todosDoBI = e.target.closest('[data-bi-todos]');
+  if (todosDoBI) { alternarTodosDoBI(todosDoBI.dataset.biTodos); return; }
+  // Links para uma parte do Manual
+  const manual = e.target.closest('[data-manual]');
+  if (manual) {
+    e.preventDefault();
+    show('manual');
+    $('#' + manual.dataset.manual).scrollIntoView({ block: 'start' });
+  }
 });
 
 // Painel das habilitações de um instrutor: ✕ e Esc fecham (o foco volta para o botão que abriu)
@@ -406,8 +415,9 @@ document.addEventListener('click', e => {
   else escolherDia(cal.dataset.dia);
 });
 
-// Demanda: traz os pedidos da agenda da secretaria para a data aberta (só acrescenta; não importa o mesmo pedido de novo)
-$('#importar-agenda').onclick = async () => {
+// Demanda e Agenda: traz os pedidos da agenda da secretaria para a data aberta (só acrescenta; não importa o mesmo
+// pedido de novo)
+async function importarDaAgenda() {
   if (isGestor()) return;
   let solicitacoes;
   try {
@@ -426,10 +436,12 @@ $('#importar-agenda').onclick = async () => {
   pendentes.filter(s => S.stu.some(x => x.id === s.aluno)).forEach(s => {
     logChange('inc', `Agenda: ${s.aluno_nome} incluído (${s.missao} · ${rotuloDaDisponibilidade(disponibilidadeDaSolicitacao(s))})`);
   });
-  save(); rDem();
+  save(); rDem(); rAgenda();
   showToast(`${resumo.novos + resumo.atualizados} pedido(s) da agenda na demanda` +
     (resumo.semAluno ? ` · ${resumo.semAluno} de aluno que não está mais no cadastro` : '') + '.');
-};
+}
+$('#importar-agenda').onclick = importarDaAgenda;
+$('#agenda-importar').onclick = importarDaAgenda;
 
 // Agenda: registrar um pedido (pela exceção da coordenação, fora do prazo) e cancelar (com confirmação)
 async function registrarPedido(excecao) {
@@ -624,8 +636,8 @@ document.addEventListener('click', e => {
     const s = stuBy(id);
     const blkIns = insBy(+b.dataset.b);
     s.bl = s.bl.filter(v => v !== +b.dataset.b);
-    save(); c.outerHTML = stuHTML(s);
-    logChange('mod', `Desbloqueado ${blkIns ? blkIns.nm : ''} para ${s.nm}`);
+    save(); atualizarLinhaDoAluno(s, { naoEscalar: true });
+    logChange('mod', `${s.nm}: volta a ser escalado com ${blkIns ? blkIns.nm : ''}`);
   } else if (a === 'deli' || a === 'dels') {
     if (activeTimers.has(b)) clearTimeout(activeTimers.get(b));
     if (!b.dataset.arm) {
@@ -752,9 +764,9 @@ document.addEventListener('change', e => {
       } else if (f === 'bl' && t.value) {
         s.bl.push(+t.value);
         const ins = insBy(+t.value);
-        logChange('exc', `${s.nm} bloqueou ${ins ? ins.nm : ''}`);
+        logChange('exc', `${s.nm}: não escalar com ${ins ? ins.nm : ''}`);
       }
-      save(); c.outerHTML = stuHTML(s);
+      save(); atualizarLinhaDoAluno(s, { naoEscalar: f === 'bl' });
       if (f === 'nm') rDem();
     } else {
       const target = getMissionTarget(id, mid);

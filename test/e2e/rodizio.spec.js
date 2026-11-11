@@ -26,4 +26,20 @@ test.describe('Rodízio', () => {
     await irPara(page, 'esc');
     expect(await instrutorDoVoo(page)).toContain('| Instrutor 02 |');
   });
+
+  test('compacto: os botões aparecem com o mouse ou o foco e a explicação leva ao Manual', async ({ page }) => {
+    await abrir(page, { estado: cenario({ ins: [doC172(1), doC172(2)] }) });
+    await irPara(page, 'rod');
+    const segundo = page.locator('#rodizio [data-cat="c172"] li').nth(1);
+    const opacidade = () => segundo.locator('.acoes').evaluate(el => getComputedStyle(el).opacity);
+    await page.mouse.move(0, 0);
+    expect(await opacidade()).toBe('0');
+    await segundo.hover();
+    await expect.poll(opacidade).toBe('1');
+    await expect(segundo.locator('[data-act="fila-inicio"]')).toHaveAttribute('aria-label', 'Pôr Instrutor 02 no início da fila');
+
+    await page.locator('#s-rod [data-manual="manual-aba-rodizio"]').click();
+    await expect(page.locator('#s-manual')).toBeVisible();
+    await expect(page.locator('#manual-aba-rodizio')).toBeInViewport();
+  });
 });

@@ -150,25 +150,39 @@ export function fecharPainelDoInstrutor(devolverFoco = false) {
   if (devolverFoco && botao) botao.focus();
 }
 
-export const stuHTML = s => `<div class="cd" data-k="s" data-id="${s.id}" data-nm="${esc(s.nm.toLowerCase())}">
-  <div class="r1">
-    <input class="nm" data-f="nm" value="${esc(s.nm)}" aria-label="Nome">
-    <input type="number" min="0" max="200" data-f="kg" value="${s.kg || ''}" placeholder="Peso kg" aria-label="Peso em kg">
-    <button class="x edit-only" data-act="dels" aria-label="Excluir">✕</button>
-  </div>
-  <div class="bl">
-    ${s.bl.map(b => insBy(b) ? `<span class="tg">${esc(insBy(b).nm)}<button class="edit-only" data-act="unbl" data-b="${b}" aria-label="Remover bloqueio">✕</button></span>` : '').join('')}
-    <select data-f="bl" class="edit-only"><option value="">+ Bloquear…</option>${S.ins.filter(x => !s.bl.includes(x.id)).map(x => `<option value="${x.id}">${esc(x.nm)}</option>`).join('')}</select>
-  </div>
-</div>`;
+// Alunos: uma tabela (nome, peso e os instrutores com quem o aluno não deve ser escalado)
+function naoEscalarCom(s) {
+  return s.bl.map(b => insBy(b) ? `<span class="tg">${esc(insBy(b).nm)}<button class="edit-only" data-act="unbl" data-b="${b}" aria-label="Voltar a escalar com ${esc(insBy(b).nm)}">✕</button></span>` : '').join('') +
+    `<select data-f="bl" class="edit-only" aria-label="Não escalar com"><option value="">Não escalar com…</option>${S.ins.filter(x => !s.bl.includes(x.id)).map(x => `<option value="${x.id}">${esc(x.nm)}</option>`).join('')}</select>`;
+}
+
+const linhaDoAluno = s => `<tr class="cd" data-k="s" data-id="${s.id}" data-nm="${esc(s.nm.toLowerCase())}">
+  <td><input class="nm" data-f="nm" value="${esc(s.nm)}" aria-label="Nome do aluno"></td>
+  <td><input type="number" min="0" max="200" data-f="kg" value="${s.kg || ''}" placeholder="sem peso" aria-label="Peso de ${esc(s.nm)} em kg"${s.kg ? '' : ' class="falta"'}></td>
+  <td><div class="bl">${naoEscalarCom(s)}</div></td>
+  <td class="acoes"><button class="x edit-only" data-act="dels" aria-label="Excluir ${esc(s.nm)}">✕</button></td>
+</tr>`;
 
 export const rAlu = () => {
-  if (!S.stu.length) {
-    $('#alu').innerHTML = `<p class="h" style="grid-column:1/-1">Nenhum aluno cadastrado. Clique em “+ Novo aluno” acima para cadastrar.</p>`;
-    return;
-  }
-  $('#alu').innerHTML = S.stu.map(stuHTML).join('');
+  $('#alu').innerHTML = S.stu.length ? S.stu.map(linhaDoAluno).join('')
+    : '<tr><td colspan="4" class="h">Nenhum aluno cadastrado. Clique em “+ Novo aluno” acima para cadastrar.</td></tr>';
 };
+
+// Atualiza a linha do aluno no lugar. "Não escalar com" é refeito só quando muda, e o foco volta para o seletor
+export function atualizarLinhaDoAluno(s, { naoEscalar = false } = {}) {
+  const linha = document.querySelector(`#alu tr.cd[data-id="${s.id}"]`);
+  if (!linha) return;
+  linha.dataset.nm = s.nm.toLowerCase();
+  linha.querySelector('[data-f="nm"]').value = s.nm;
+  const kg = linha.querySelector('[data-f="kg"]');
+  kg.value = s.kg || '';
+  kg.classList.toggle('falta', !s.kg);
+  kg.setAttribute('aria-label', `Peso de ${s.nm} em kg`);
+  linha.querySelector('[data-act="dels"]').setAttribute('aria-label', `Excluir ${s.nm}`);
+  if (!naoEscalar) return;
+  linha.querySelector('.bl').innerHTML = naoEscalarCom(s);
+  linha.querySelector('[data-f="bl"]').focus();
+}
 
 // Filtro da aba Instrutores: uma opção por habilitação
 export function preencherFiltroDeHabilitacoes() {

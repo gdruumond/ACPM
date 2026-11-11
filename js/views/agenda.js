@@ -1,7 +1,8 @@
-// Aba 4 · Agenda de Solicitações: a agenda de papel da secretaria, digitalizada. Calendário do mês com os pedidos de
-// cada dia, a lista do dia escolhido e o registro de pedidos, com o prazo das 13:00 do dia anterior.
+// Agenda de Solicitações: a agenda de papel da secretaria, digitalizada. Calendário do mês com os pedidos de cada dia,
+// a lista do dia escolhido (com a situação de cada pedido na demanda) e o registro de pedidos, com o prazo das 13:00
+// do dia anterior.
 import { MIS, WIN } from '../config.js';
-import { S, isGestor } from '../state.js';
+import { S, DATA, isGestor } from '../state.js';
 import { ApiClient } from '../storage.js';
 import { $ } from '../dom.js';
 import { esc, opts } from '../format.js';
@@ -19,6 +20,8 @@ let pedidos = [];
 // administradores e a secretaria. A exceção da coordenação é de quem opera a escala (o servidor confere de novo)
 export const podeEditarAgenda = () => (ApiClient.perfil ? registraNaAgenda(ApiClient.perfil) : !isGestor());
 export const podeUsarExcecao = () => (ApiClient.perfil ? operaEscala(ApiClient.perfil) : !isGestor());
+// Importar para a demanda também é de quem opera a escala
+const podeImportar = podeUsarExcecao;
 export const diaDaAgenda = () => diaEscolhido;
 
 const ddmm = iso => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
@@ -108,18 +111,33 @@ function calendarioHTML() {
     }).join('')}</div>`;
 }
 
+// Na data aberta no topo, a situação de cada pedido: já importado para a demanda ou ainda não (nas outras datas a
+// demanda não está carregada)
+const importado = p => (S.importadas || []).includes(p.id);
+const pendentesDaDataAberta = () => (diaEscolhido === DATA ? pedidos.filter(p => p.data === DATA && !p.cancelada_em && !importado(p)) : []);
+function situacao(p) {
+  // Cancelado: a etiqueta numa linha; quem cancelou e quando ficam na dica (e para o leitor de tela)
+  if (p.cancelada_em) {
+    const detalhe = `por ${esc(p.cancelada_por)} em ${quando(p.cancelada_em)}`;
+    return `<span class="tag" title="Cancelado ${detalhe}">Cancelado</span><span class="sr"> ${detalhe}</span>`;
+  }
+  if (p.data !== DATA) return '';
+  return importado(p) ? '<span class="tag grp">Na demanda</span>' : '<span class="tag fb">Ainda não importado</span>';
+}
+
 function listaHTML() {
   const doDia = pedidos.filter(p => p.data === diaEscolhido);
   if (!doDia.length) return '<p class="h">Nenhum pedido para esta data.</p>';
-  return `<table><thead><tr><th>Registrado em</th><th>Aluno</th><th>Fase / missão</th><th>Disponibilidade</th><th>Registrado por</th><th>Observação</th><th>Situação</th><th></th></tr></thead>
+  // Uma linha por pedido: a observação fica sob o nome do aluno e a conta que registrou, na dica de "Registrado por"
+  // (quase sempre é a mesma em todas as linhas)
+  return `<table><thead><tr><th>Registrado em</th><th>Aluno</th><th>Fase / missão</th><th>Disponibilidade</th><th>Registrado por</th><th>Situação</th><th></th></tr></thead>
     <tbody>${doDia.map(p => `<tr${p.cancelada_em ? ' class="cancel"' : ''}>
       <td>${quando(p.registrado_em)}</td>
-      <td><b>${esc(p.aluno_nome)}</b></td>
+      <td><b>${esc(p.aluno_nome)}</b>${p.observacao ? `<small class="obs">${esc(p.observacao)}</small>` : ''}</td>
       <td>${esc(p.missao)}</td>
       <td>${esc(disponibilidade(p))}</td>
-      <td>${esc(p.registrado_por)}${p.conta ? ` <span class="sm">(conta: ${esc(p.conta)})</span>` : ''}</td>
-      <td>${esc(p.observacao || '')}</td>
-      <td>${p.cancelada_em ? `Cancelado por ${esc(p.cancelada_por)} em ${quando(p.cancelada_em)}` : ''}${p.excecao ? ' <span class="tag fb">Exceção da coordenação</span>' : ''}</td>
+      <td class="por"${p.conta && p.conta !== p.registrado_por ? ` title="Conta: ${esc(p.conta)}"` : ''}>${esc(p.registrado_por)}${p.excecao ? ' <span class="tag fb">Exceção da coordenação</span>' : ''}</td>
+      <td class="situacao">${situacao(p)}</td>
       <td>${p.cancelada_em ? '' : `<button class="x agenda-acao" data-act="cancelar-pedido" data-id="${p.id}">Cancelar</button>`}</td>
     </tr>`).join('')}</tbody></table>`;
 }
@@ -130,6 +148,9 @@ export function rAgenda() {
   $('#agenda-data').textContent = dataPorExtenso(diaEscolhido);
   $('#agenda-cal').innerHTML = calendarioHTML();
   $('#agenda-lista').innerHTML = listaHTML();
+  const pendentes = pendentesDaDataAberta().length;
+  $('#agenda-importar').hidden = !pendentes || !podeImportar();
+  $('#agenda-importar').textContent = `Importar ${pendentes} ${pendentes === 1 ? 'pedido' : 'pedidos'} para a demanda`;
 
   // Formulário: alunos do cadastro, missões, disponibilidade e quem anotou (lembrado neste computador)
   const aluno = $('#ag-aluno').value;
