@@ -31,7 +31,7 @@ export const singleDemandRowHTML = (stu, d, mid = 0) => {
     <td>${firstCell}</td>
     <td><label class="alvo"><input type="checkbox" class="sw" data-f="fly"${d.fly ? ' checked' : ''} aria-label="${esc(stu.nm)} vai voar"></label></td>
     <td><select data-f="mis" title="${esc(exige)}" aria-label="Missão${de}">${opts(Object.keys(MIS).map(m => [m, m]), d.mis)}</select></td>
-    <td><select data-f="eq"${isGnd ? ' disabled' : ''} aria-label="Avião ou sala${de}">${allowedEqOptionsForMission(d.mis, d.eq)}</select></td>
+    <td><select data-f="eq"${isGnd ? ' disabled' : ''} aria-label="Recurso${de}">${allowedEqOptionsForMission(d.mis, d.eq)}</select></td>
     <td><select data-f="p1" aria-label="1ª preferência${de}">${wopt(d.p1, 1)}</select></td>
     <td><select data-f="p2" aria-label="2ª preferência${de}">${wopt(d.p2, 1)}</select></td>
     <td><select data-f="jan" aria-label="Disponibilidade${de}">${opts(DISPONIBILIDADES, d.jan || '')}</select></td>

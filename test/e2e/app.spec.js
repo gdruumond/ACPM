@@ -3,7 +3,9 @@ import { test, expect, abrir, irPara, abrirMenuDaConta } from './fixtures.js';
 test.describe('Aplicação', () => {
   test('abre na Escala, com as abas na ordem de uso e sem números', async ({ page }) => {
     await abrir(page);
-    await expect(page).toHaveTitle('Escala de Voo — ACPM');
+    await expect(page).toHaveTitle('AutoEscala - ACPM');
+    await expect(page.locator('meta[name="application-name"]')).toHaveAttribute('content', 'AutoEscala - ACPM');
+    await expect(page.locator('meta[name="apple-mobile-web-app-title"]')).toHaveAttribute('content', 'AutoEscala');
     await expect(page.locator('#nav button .aba-rotulo')).toHaveText(['Escala', 'Demanda', 'Agenda', 'Recursos', 'Instrutores', 'Alunos', 'Rodízio', 'BI']);
     await expect(page.locator('#s-esc')).toBeVisible();
     await expect(page.locator('#nav button[data-t="esc"]')).toHaveClass(/\bon\b/);
@@ -12,7 +14,7 @@ test.describe('Aplicação', () => {
     await expect(page.locator('#btn-undo')).toHaveCount(0);
   });
 
-  test('o logo do ACPM no topo e como ícone da página; logo, "Escala de Voo" e "ACPM" alinhados', async ({ page }) => {
+  test('o logo do ACPM no topo e como ícone da página; no topo, a águia e "AutoEscala", alinhados, sem a sigla', async ({ page }) => {
     await abrir(page);
     const icone = page.locator('link[rel="icon"]');
     await expect(icone).toHaveAttribute('href', 'img/favicon-32.png');
@@ -22,7 +24,9 @@ test.describe('Aplicação', () => {
     await expect(logo).toBeVisible();
     await expect(logo).toHaveAttribute('alt', '');
     expect(await logo.evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true);
-    const centros = await page.evaluate(() => ['.topo-logo', '.topo-titulo', '.topo-sigla'].map(s => {
+    await expect(page.locator('.topo-marca')).toHaveText('AutoEscala');
+    await expect(page.locator('.topo-sigla')).toHaveCount(0);
+    const centros = await page.evaluate(() => ['.topo-logo', '.topo-titulo'].map(s => {
       const r = document.querySelector(s).getBoundingClientRect();
       return r.top + r.height / 2;
     }));
@@ -128,11 +132,12 @@ test.describe('Aplicação', () => {
     await expect(page.locator('#manual-pesos')).toContainText('C152: 170 kg');
     await expect(page.locator('#manual-rodizio li')).toHaveText(['Voos de cheque', 'Voo MLTE (PA-34)', 'Voo noturno', 'Voo C172']);
 
+    await expect(manual.locator('h2')).toHaveText('Manual do AutoEscala');
     // Nada das regras e dos nomes antigos
     const texto = await manual.innerText();
     for (const antigo of ['A01', 'A09', 'Gerar escala', 'Preencher exemplo', 'Link Blindado', 'Importar Solicitações da Agenda',
       'Vai voar?', 'Início pref', 'Exportar CSV', 'Emitir PDF', 'Turno rápido', 'Cada cartão', 'campo Data', 'Equipamento', 'Bloquear',
-      'Sessões', 'sessão', 'Desfazer']) {
+      'Sessões', 'sessão', 'Desfazer', 'Escala de Voo', 'Por avião e sala', 'Avião / sala', 'Aviões e salas']) {
       expect(texto, antigo).not.toContain(antigo);
     }
     await expect(manual.locator('h3')).toHaveText(['Primeiros passos: a rotina do operador', 'Perfis de acesso', 'As abas',
@@ -140,7 +145,7 @@ test.describe('Aplicação', () => {
     // As abas na ordem do app, sem números, com os nomes novos dos botões e das vistas
     await expect(manual.locator('#manual-abas h4')).toHaveText(['Escala', 'Demanda', 'Agenda', 'Recursos', 'Instrutores', 'Alunos', 'Rodízio', 'BI']);
     for (const novo of ['menu da conta', 'Pôr um aluno na demanda', 'Disponibilidade do dia', 'Editar habilitações', 'Não escalar com',
-      'Ainda não importado', 'Atualizada às', 'Ver todos', 'Compartilhar']) {
+      'Ainda não importado', 'Atualizada às', 'Ver todos', 'Compartilhar', 'Por recurso']) {
       expect(texto, novo).toContain(novo);
     }
 
@@ -149,6 +154,18 @@ test.describe('Aplicação', () => {
     await expect(page.locator('#manual-regras')).toBeInViewport();
     await irPara(page, 'esc');
     await expect(manual).toBeHidden();
+  });
+
+  test('o manual tem a largura das outras páginas e fica centralizado', async ({ page }) => {
+    await abrir(page);
+    await irPara(page, 'rec');
+    const outra = await page.locator('#s-rec .pn').first().boundingBox();
+    await page.locator('#btn-manual').click();
+    const cartao = await page.locator('#s-manual .pn').first().boundingBox();
+    expect(Math.round(cartao.x)).toBe(Math.round(outra.x));
+    expect(Math.round(cartao.width)).toBe(Math.round(outra.width));
+    const largura = await page.evaluate(() => document.documentElement.clientWidth);
+    expect(Math.abs(cartao.x - (largura - cartao.x - cartao.width))).toBeLessThanOrEqual(1);
   });
 
   test('o manual saiu do fim da aba BI', async ({ page }) => {

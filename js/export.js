@@ -27,7 +27,7 @@ export async function sv(fn, data) {
 export async function exp() {
   if (!RES) { showToast('Não há escala para exportar nesta data.'); return; }
   const c = montarCsv(RES, S.fStatus || {});
-  if (await sv(nomeDoCsv(DATA), c)) { showToast('CSV exportado.'); return; }
+  if (await sv(nomeDoCsv(DATA), c)) { showToast('CSV exportado.', 'ok'); return; }
   $('#csv').value = c;
   $('#csvbox').hidden = false;
 }
@@ -38,6 +38,8 @@ export async function pdf() {
 
   const doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const { out, al, tot } = RES;
+  // O documento é a escala de voo do dia; o programa que o gerou, o AutoEscala (nos metadados do PDF)
+  doc.setProperties({ title: `Escala de Voo - ACPM - ${DATA.split('-').reverse().join('/')}`, creator: 'AutoEscala - ACPM' });
   const rej = al.filter(a => a.t === 'err').length;
   const dt = DATA.split('-').reverse().join('/');
   const H = { fillColor: [18, 38, 58] };
@@ -89,6 +91,6 @@ export async function pdf() {
     doc.text(`ACPM - Escala de ${dt} - Página ${i} de ${n}`, pw - 14, ph - 6, { align: 'right' });
   }
 
-  if (await sv(`escala-acpm-${dt.split('/').reverse().join('-')}.pdf`, doc.output('blob'))) showToast('PDF emitido.');
+  if (await sv(`escala-acpm-${dt.split('/').reverse().join('-')}.pdf`, doc.output('blob'))) showToast('PDF emitido.', 'ok');
   else showToast('O download direto não está disponível neste modo de visualização.');
 }

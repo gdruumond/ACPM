@@ -53,7 +53,7 @@ test.describe('Escala', () => {
     expect(conteudo[0]).toBe('﻿');
     expect(conteudo).not.toMatch(/[^\r]\n/);
     expect(conteudo.slice(1).split('\r\n').join('\n') + '\n').toMatchSnapshot('escala-exemplo.csv');
-    await expect(page.locator('#toast-box .toast')).toHaveText('CSV exportado.');
+    await expect(page.locator('#toast-box .toast.ok')).toHaveText('CSV exportado.');
   });
 
   test('emite o PDF da escala com título, quadros e mais de uma página', async ({ page }) => {
@@ -64,13 +64,16 @@ test.describe('Escala', () => {
     // O jsPDF grava o conteúdo sem compressão: os textos ASCII aparecem literalmente no arquivo
     const conteudo = pdf.toString('latin1');
     for (const trecho of ['Escala de Voo - ACPM', 'Data da escala: 11/11/2026', 'Quadro por instrutor',
-      'Quadro por equipamento / sala', 'Aluno 01', 'Instrutor 10', 'SALA-GROUND', 'PR-JPL']) {
+      'Quadro por equipamento / sala', 'Aluno 01', 'Instrutor 10', 'SALA-GROUND', 'PR-JPL', '/Creator (AutoEscala - ACPM)']) {
       expect(conteudo, trecho).toContain(trecho);
     }
     expect(conteudo.match(/\/Type \/Page\b(?!s)/g).length).toBeGreaterThanOrEqual(2);
     // Uma notificação temporária, e não um texto fixo na barra
     await expect(page.locator('#msg')).toHaveCount(0);
-    await expect(page.locator('#toast-box .toast')).toHaveText('PDF emitido.');
+    // Verde (deu certo), e não o amarelo dos avisos; maior que antes
+    const aviso = page.locator('#toast-box .toast.ok');
+    await expect(aviso).toHaveText('PDF emitido.');
+    expect(await aviso.evaluate(el => getComputedStyle(el).fontSize)).toBe('15px');
     await expect(page.locator('#toast-box .toast')).toHaveCount(0, { timeout: 5000 });
   });
 

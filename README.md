@@ -1,4 +1,4 @@
-# Escala de Voo — ACPM
+# AutoEscala - ACPM
 
 Planejamento da escala diária de voo, simulador e Ground School do ACPM.
 Publicada pelo GitHub Pages em https://gdruumond.github.io/ACPM/ (branch `main`, sem etapa de build).

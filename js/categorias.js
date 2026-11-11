@@ -11,6 +11,8 @@ export const CATEGORIAS = [
   { id: 'ground', nome: 'Sala Ground', tipos: [] }
 ];
 
+export const nomeDoRecurso = r => (r === GROUND_REG ? 'Sala Ground' : r);
+
 export function categoriaDoRecurso(r) {
   if (r === GROUND_REG) return 'ground';
   const categoria = CATEGORIAS.find(c => c.tipos.some(tipo => (EQ[tipo] || []).includes(r)));

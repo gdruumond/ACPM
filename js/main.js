@@ -1,5 +1,5 @@
 /**
- * Escala de Voo — ACPM: ponto de entrada (eventos da interface e inicialização).
+ * AutoEscala - ACPM: ponto de entrada (eventos da interface e inicialização).
  *
  *   js/config.js    Configurações operacionais (janelas, frota, missões, limites de peso)
  *   js/rules.js     Regras das missões (Ground School, nível mínimo, precedência, normalização)
@@ -146,7 +146,7 @@ $('#btn-share-link').onclick = async () => {
   const url = compartilhado ? linkDaData(DATA) : ApiClient.encodeShareableURL(S, DATA);
   try {
     await navigator.clipboard.writeText(url);
-    showToast(compartilhado ? 'Link da escala copiado (quem abrir entra com a própria conta).' : 'Link de Gestor (somente leitura) copiado!');
+    showToast(compartilhado ? 'Link da escala copiado (quem abrir entra com a própria conta).' : 'Link de Gestor (somente leitura) copiado!', 'ok');
   } catch (e) {
     prompt(compartilhado ? 'Copie o link da escala:' : 'Copie o link abaixo (abre bloqueado no perfil Gestor):', url);
   }
@@ -173,7 +173,7 @@ $('#btn-clear-log').onclick = async () => {
   await ApiClient.backend.limparHistorico(DATA);
   setAuditLog([]);
   renderAuditPanel();
-  showToast('Histórico limpo.');
+  showToast('Histórico limpo.', 'ok');
 };
 
 // Cada data tem a sua escala: trocar a data abre a escala daquela data (o gestor do modo compartilhado também navega).
@@ -249,13 +249,15 @@ $('#incluir-aluno').addEventListener('input', e => { if (e.inputType === 'insert
 
 $('#bi-dt').onchange = () => carregarBI();
 $('#bi-flt-eq').onchange = () => rBI();
+$('#bi-flt-cat').onchange = () => rBI();
 $('#flt-dem-mis').onchange = applyDemandFilters;
 preencherFiltroDeHabilitacoes();
 $('#flt-dem-mis').insertAdjacentHTML('beforeend', Object.keys(MIS).map(m => `<option value="${m}">${m}</option>`).join(''));
 $('#flt-ins-hab').onchange = applyInstructorFilters;
 $('#flt-esc-eq').onchange = () => rOut();
-// Categoria (Escala e Recursos); na Escala, o filtro de avião ou sala mostra só os da categoria escolhida
+// Categoria (Escala, Recursos e BI); na Escala e no BI, o filtro de recurso mostra só os da categoria escolhida
 $('#flt-esc-cat').innerHTML = opcoesDeCategoria();
+$('#bi-flt-cat').innerHTML = opcoesDeCategoria();
 $('#flt-rec-cat').innerHTML = opcoesDeCategoria({ comGround: false });
 $('#flt-esc-cat').onchange = () => rOut();
 $('#flt-rec-cat').onchange = () => rRevisao();
@@ -331,7 +333,7 @@ armed('#btn-bi-sim', 'Confirmar simulação', async () => {
     await ApiClient.backend.gravar(`dia:${iso}`, { simulado: true, resultado: { out: flights, al: [], tot: numFlights, rej: 0, data: iso }, esquema: ESQUEMA });
   }
   await carregarBI();
-  showToast('Histórico de 30 dias simulado.');
+  showToast('Histórico de 30 dias simulado.', 'ok');
 });
 
 // Só no modo local: remove os dias simulados (as escalas reais continuam)
@@ -339,7 +341,7 @@ armed('#btn-bi-clr', 'Confirmar limpeza', async () => {
   if (isGestor() || !ApiClient.backend.removerDiasSimulados) return;
   await ApiClient.backend.removerDiasSimulados();
   await carregarBI();
-  showToast('Dias simulados removidos do BI.');
+  showToast('Dias simulados removidos do BI.', 'ok');
 });
 
 // Minha conta: trocar a senha e o e-mail (modo compartilhado; vale para todos os perfis)
@@ -414,7 +416,7 @@ async function excluirConta(b) {
   if (!confirmado(b, 'Confirmar exclusão')) return;
   try {
     await ApiClient.excluirConta(b.dataset.id);
-    showToast(`Conta de ${b.dataset.email} excluída.`);
+    showToast(`Conta de ${b.dataset.email} excluída.`, 'ok');
   } catch (err) {
     showToast(err.code === '22023' ? 'Não é possível excluir a própria conta.' : 'Não foi possível excluir a conta. Verifique a conexão e tente de novo.');
   }
@@ -451,7 +453,7 @@ async function importarDaAgenda() {
   });
   save(); rDem(); rAgenda();
   showToast(`${resumo.novos + resumo.atualizados} pedido(s) da agenda na demanda` +
-    (resumo.semAluno ? ` · ${resumo.semAluno} de aluno que não está mais no cadastro` : '') + '.');
+    (resumo.semAluno ? ` · ${resumo.semAluno} de aluno que não está mais no cadastro` : '') + '.', 'ok');
 }
 $('#importar-agenda').onclick = importarDaAgenda;
 $('#agenda-importar').onclick = importarDaAgenda;
@@ -483,7 +485,7 @@ async function registrarPedido(excecao) {
   lembrarRegistradoPor(por);
   $('#ag-obs').value = '';
   $('#ag-aluno').value = '';
-  showToast(excecao ? 'Pedido registrado pela Exceção da Coordenação.' : 'Pedido registrado.');
+  showToast(excecao ? 'Pedido registrado pela Exceção da Coordenação.' : 'Pedido registrado.', 'ok');
   await carregarMes();
   lerPedidosDaData();
 }
@@ -500,7 +502,7 @@ async function cancelarPedido(b) {
   }
   try {
     await ApiClient.cancelarSolicitacao(+b.dataset.id, por);
-    showToast('Pedido cancelado.');
+    showToast('Pedido cancelado.', 'ok');
   } catch (err) {
     $('#ag-erro').textContent = 'Não foi possível cancelar o pedido. Verifique a conexão e tente de novo.';
   }
@@ -536,7 +538,7 @@ document.addEventListener('click', e => {
     save();
     rDem();
     logChange('inc', `Missão extra adicionada para ${s.nm}`);
-    showToast(`Nova missão adicionada para ${s.nm}.`);
+    showToast(`Nova missão adicionada para ${s.nm}.`, 'ok');
     return;
   }
 
@@ -560,7 +562,7 @@ document.addEventListener('click', e => {
       kind: 'setFly', stuId: s.id, mid, val: true, label: '↶ Restaurar'
     });
     rDem();
-    showToast(`Tirado da escala: ${s.nm} (${target.mis}).`);
+    showToast(`Tirado da escala: ${s.nm} (${target.mis}).`, 'ok');
     return;
   }
 

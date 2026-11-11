@@ -62,7 +62,7 @@ export function save() {
   escalaSoCalculada = false;
   // A barra da escala mostra quando ela foi refeita
   const agora = new Date();
-  $('#escala-atualizada').textContent = `Atualizada às ${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
+  $('#escala-atualizada-texto').textContent = `Atualizada às ${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
   $('#escala-atualizada').hidden = false;
 }
 

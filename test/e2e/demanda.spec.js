@@ -24,7 +24,7 @@ test.describe('Demanda', () => {
   test('9 colunas que cabem na tela (sem Sessões); "Limpar demanda" fica no menu Mais', async ({ page }) => {
     await abrirComExemplo(page);
     await irPara(page, 'dem');
-    await expect(page.locator('#s-dem thead th')).toHaveText(['Aluno', 'Voa', 'Missão', 'Avião / sala', '1ª preferência', '2ª preferência', 'Disponibilidade', 'Duração', 'Prioridade']);
+    await expect(page.locator('#s-dem thead th')).toHaveText(['Aluno', 'Voa', 'Missão', 'Recurso', '1ª preferência', '2ª preferência', 'Disponibilidade', 'Duração', 'Prioridade']);
     await expect(page.locator('#dem [data-f="ss"]')).toHaveCount(0);
     expect(await page.evaluate(() => document.querySelector('#s-dem .tw').scrollWidth <= document.querySelector('#s-dem .tw').clientWidth)).toBe(true);
     await expect(page.locator('#clr')).toBeHidden();

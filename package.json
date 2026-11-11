@@ -1,7 +1,7 @@
 {
-  "name": "acpm-escala",
+  "name": "autoescala-acpm",
   "private": true,
-  "description": "Escala de Voo — ACPM (aplicação estática servida pelo GitHub Pages)",
+  "description": "AutoEscala - ACPM (aplicação estática servida pelo GitHub Pages)",
   "type": "module",
   "engines": {
     "node": ">=22"

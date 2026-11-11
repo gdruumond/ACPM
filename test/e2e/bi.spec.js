@@ -23,15 +23,36 @@ test.describe('Dashboard BI', () => {
     await expect(page.locator('#bi-content .st > div').nth(2)).not.toHaveText(mesAntes);
     expect(json(await lerBI(page))).toMatchSnapshot('bi-30-dias.json');
 
-    await page.locator('#bi-flt-eq').selectOption('C172');
+    await page.locator('#bi-flt-cat').selectOption('C172');
     await page.locator('#bi-flt-ins').fill('instrutor 0');
     expect(json(await lerBI(page))).toMatchSnapshot('bi-filtrado.json');
 
     // "Limpar BI" tira só os dias simulados: o BI volta a mostrar apenas a escala gerada
-    await page.locator('#bi-flt-eq').selectOption('');
+    await page.locator('#bi-flt-cat').selectOption('');
     await page.locator('#bi-flt-ins').fill('');
     await confirmar(page, '#btn-bi-clr');
     await expect.poll(async () => json(await lerBI(page))).toBe(antes);
+  });
+
+  test('os filtros seguem a Escala: Categoria e, dentro dela, Recurso; nada de "aviões e salas"', async ({ page }) => {
+    await abrirComExemplo(page);
+    await irPara(page, 'bi');
+    expect(await page.locator('#s-bi').innerText()).not.toMatch(/avi(ão|ões) (e|ou|\/) sala/i);
+    await expect(page.locator('#s-bi label.flt-rotulo > span')).toHaveText(['Categoria', 'Recurso']);
+    await expect(page.locator('#bi-content h3').first()).toHaveText('Horas por recurso (dia, semana e mês)');
+    await expect(page.locator('#bi-content [data-bi="eq"] thead th').first()).toHaveText('Recurso');
+    const categoria = page.locator('#bi-flt-cat'), recurso = page.locator('#bi-flt-eq');
+    await expect(categoria.locator('option')).toHaveText(['Todos', 'C152', 'C172', 'Simulador', 'PA-34', 'Sala Ground']);
+    await expect(recurso).toHaveValue('');
+    await categoria.selectOption({ label: 'PA-34' });
+    await expect(recurso.locator('option')).toHaveText(['Todos', 'PR-VOM', 'PT-JOB', 'PT-KIW']);
+    await expect(page.locator('#bi-content [data-bi="eq"] tbody tr')).toHaveCount(3);
+    await recurso.selectOption('PR-VOM');
+    await expect(page.locator('#bi-content [data-bi="eq"] tbody tr')).toHaveCount(1);
+    await expect(page.locator('#bi-content [data-bi="eq"] tbody tr')).toContainText('PR-VOM');
+    await categoria.selectOption({ label: 'Simulador' });
+    await expect(recurso).toHaveValue('');
+    await expect(page.locator('#bi-content [data-bi="eq"] tbody tr')).toHaveCount(4);
   });
 
   test('horas por avião e por instrutor: os 10 maiores e "Ver todos"', async ({ page }) => {

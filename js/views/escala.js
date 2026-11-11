@@ -1,8 +1,8 @@
-// Aba Escala: resumo do dia, a lista dos voos (ou o mapa por avião e sala ou por instrutor) e o histórico da data.
+// Aba Escala: resumo do dia, a lista dos voos (ou o mapa por recurso ou por instrutor) e o histórico da data.
 import { FLIGHT_STATUSES, GROUND_REG } from '../config.js';
 import { hm, WLB, fmtH, esc } from '../format.js';
 import { isGroundMission } from '../rules.js';
-import { categoriaDoRecurso } from '../categorias.js';
+import { categoriaDoRecurso, nomeDoRecurso } from '../categorias.js';
 import { sumUniqueOperationalHours, consolidateTimelineSlots } from '../engine.js';
 import { S, RES, AUDIT_LOG, TL_MODE, isGestor } from '../state.js';
 import { $ } from '../dom.js';
@@ -160,7 +160,6 @@ export function renderAuditPanel() {
 }
 
 const PERTO_DO_LIMITE_KG = 10;
-export const nomeDoRecurso = r => (r === GROUND_REG ? 'Sala Ground' : r);
 const ehGround = o => o.isGround || isGroundMission(o.mis);
 const duracao = o => (ehGround(o) ? '1h30' : fmtH(o.h)) + (o.ss && o.ss !== '1/1' ? ` · sessão ${o.ss}` : '');
 const statusDe = o => (S.fStatus && S.fStatus[o.fKey]) || o.status || 'Confirmado';
@@ -251,7 +250,7 @@ function tabela(voos) {
   const porTempo = {};
   grupos.forEach(g => { porTempo[g[0].w] = (porTempo[g[0].w] || 0) + 1; });
 
-  let h = `<div class="tw tabela-escala"><table><thead><tr><th>Horário</th><th>Aluno</th><th>Missão</th><th>Avião / sala</th><th>Instrutor</th><th>Peso</th><th>Status</th><th class="edit-only" aria-label="Ação"></th></tr></thead><tbody>`;
+  let h = `<div class="tw tabela-escala"><table><thead><tr><th>Horário</th><th>Aluno</th><th>Missão</th><th>Recurso</th><th>Instrutor</th><th>Peso</th><th>Status</th><th class="edit-only" aria-label="Ação"></th></tr></thead><tbody>`;
   let tempo = -1;
   for (const grupo of grupos) {
     const o = grupo[0];
@@ -291,7 +290,7 @@ export function rOut() {
   }
   const { out, al, tot } = RES;
 
-  // Filtros: a categoria e, dentro dela, um avião ou sala (só os que estão na escala da data)
+  // Filtros: a categoria e, dentro dela, um recurso (só os que estão na escala da data)
   const categoria = ($('#flt-esc-cat') && $('#flt-esc-cat').value) || '';
   const daCategoria = r => !categoria || categoriaDoRecurso(r) === categoria;
   const usados = [...new Set(out.map(o => o.r))].filter(daCategoria).sort();

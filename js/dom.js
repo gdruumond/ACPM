@@ -2,12 +2,14 @@
 
 export const $ = s => document.querySelector(s);
 
-export function showToast(text) {
+// Notificação temporária. tipo 'ok': deu certo (verde, com o sinal de certo); sem tipo: aviso (amarelo)
+export function showToast(text, tipo = '') {
   const box = $('#toast-box');
   if (!box) return;
   const el = document.createElement('div');
-  el.className = 'toast';
-  el.textContent = text;
+  el.className = tipo ? `toast ${tipo}` : 'toast';
+  if (tipo === 'ok') el.innerHTML = '<svg class="ico" aria-hidden="true"><use href="#i-ok"/></svg>';
+  el.append(text);
   box.appendChild(el);
   setTimeout(() => { el.remove(); }, 2800);
 }
