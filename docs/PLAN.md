@@ -175,7 +175,18 @@ Decisions: the audit comes first and Pedro and Gabriel approve the redesign; two
 - [x] **"Preencher exemplo" removed.** The example demand lives on only in the tests (`test/helpers/exemplo.js`, the same sequence), loaded straight into the browser; the reference schedules did not change.
 - [x] **Automatic schedule.** Feasibility: the engine takes under 2 ms for 47 flights and 40 instructors (median 0.4 ms over 41 scenarios), so the schedule is simply recalculated after every change, with no background worker. Every change by an Operador or Administrador saves the data and the schedule together. A date with no saved schedule yet (for example, a new date copied from the previous one) shows the calculated schedule right away, for everyone, and is saved with the first change or when the CSV or PDF is exported, so it counts in the BI and in the next day's hours and Rodízio. Opening a date still writes nothing.
 - [x] **Manual** on its own page (the "Manual" button in the header): first steps (the daily routine), profiles, each tab, how the schedule is built, a section for the manager and FAQ. The rule tables (missions, equipment and required qualifications, windows, weight limits, Rodízio categories) are generated from the code (`js/manual.js`), so they change with the rules.
-- [ ] **Usability audit** (for Pedro and Gabriel to approve), then the redesign in PR 2.
+- [x] **Usability audit** for Pedro and Gabriel (a shared document: findings by severity, before/after prototype and measurements). PR 1 merged as PR #8 (2026-11-11).
+- [x] **Redesign approved in full** (2026-11-11): all 10 increments go into PR 2 (branch `fase-6-redesenho`). The engine, the data, the PDF and the CSV do not change.
+    1. [x] Visual base: white panels, lighter borders, light table headers, tags in sentence case, line icons instead of emoji.
+    2. [x] Header, global date and navigation: the date always on top, tabs in the order of use with attention badges, account menu, the app opens on Escala.
+    3. [x] History as a side drawer over any tab; the "Inclusões na Escala" list goes.
+    4. [x] Escala on the desktop: grouped errors and warnings, List / By aircraft / By instructor, one line per flight, Ground classes in one line, discreet status.
+    5. [x] Escala on the phone (one card per flight) and no sideways scrolling (map and BI).
+    6. [x] Demanda: "Só quem voa" on, import with the number of requests, 10 columns that fit, quiet fields, "Limpar demanda" in a menu.
+    7. [x] Recursos: one fleet table with availability, hours and balance until the 50-hour inspection.
+    8. [x] Instrutores: a day-availability grid and a registry table with an edit panel.
+    9. [x] Small items: Agenda shows whether each request is already in the Demanda; Alunos as a table; compact Rodízio; BI in one column on the phone; the Secretaria sees only Agenda and Escala.
+    10. [x] Accessibility and wording: labels for screen readers, 44 px touch targets on the phone, the Manual with the new names.
 
 ### Phase 7: Later (nice to have)
 - [ ] Track instructor and student qualifications and currency: last flight, medical/CMA expiry, student course phase. The engine then checks these instead of relying on manual levels.

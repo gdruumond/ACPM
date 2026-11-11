@@ -33,4 +33,18 @@ test.describe('Dashboard BI', () => {
     await confirmar(page, '#btn-bi-clr');
     await expect.poll(async () => json(await lerBI(page))).toBe(antes);
   });
+
+  test('horas por avião e por instrutor: os 10 maiores e "Ver todos"', async ({ page }) => {
+    await abrirComExemplo(page);
+    await irPara(page, 'bi');
+    for (const tabela of ['eq', 'ins']) {
+      const linhas = page.locator(`#bi-content [data-bi="${tabela}"] tbody tr`);
+      await expect(linhas).toHaveCount(10);
+      const verTodos = page.locator(`#bi-content [data-bi-todos="${tabela}"]`);
+      await expect(verTodos).toHaveText(/^Ver todos \(\d+\)$/);
+      await verTodos.click();
+      expect(await linhas.count()).toBeGreaterThan(10);
+      await expect(page.locator(`#bi-content [data-bi-todos="${tabela}"]`)).toHaveText('Ver só os 10 maiores');
+    }
+  });
 });

@@ -21,10 +21,10 @@ import { ApiClient } from './storage.js';
 import { S, RES, AUDIT_LOG, DATA, setS, setRES, setAuditLog, setTLMode, isGestor, insBy, stuBy, getMissionTarget } from './state.js';
 import { $, showToast, msg, focusLast, mostrarAviso, avisoAberto } from './dom.js';
 import { show } from './views/tabs.js';
-import { rBI } from './views/bi.js';
+import { rBI, alternarTodosDoBI } from './views/bi.js';
 import { renderAuditPanel, rOut } from './views/escala.js';
 import { singleDemandRowHTML, cnt, rDem, applyDemandFilters } from './views/demanda.js';
-import { insHTML, stuHTML, rIns, rAlu, applyInstructorFilters, preencherFiltroDeHabilitacoes } from './views/cadastros.js';
+import { rIns, rAlu, applyInstructorFilters, preencherFiltroDeHabilitacoes, mostrarVistaDosInstrutores, abrirPainelDoInstrutor, fecharPainelDoInstrutor, atualizarLinhaDoCadastro, atualizarLinhaDoAluno } from './views/cadastros.js';
 import { rRec } from './views/recursos.js';
 import { setRole, pushHistory, save, logChange, undoLastAction, refazerEscala, escalaCalculada, marcarEscalaSoCalculada, gravarEscalaCalculada, abrirData, historicoParaPainel, carregarData, carregarBI } from './actions.js';
 import { exp, pdf } from './export.js';
@@ -33,8 +33,9 @@ import { CATEGORIAS_DO_RODIZIO, ajustarFilas } from './rodizio.js';
 import { rRodizio } from './views/rodizio.js';
 import { abrirConta, carregarContas, gerarSenha, mensagem } from './views/conta.js';
 import { rManual } from './views/manual.js';
+import { atualizarSelosDaEscala, lerPedidosDaData } from './views/selos.js';
 import { importarSolicitacoes, disponibilidadeDaSolicitacao } from './agenda.js';
-import { abrirAgenda, carregarMes, mudarMes, escolherDia, diaDaAgenda, lembrarRegistradoPor, podeEditarAgenda } from './views/agenda.js';
+import { abrirAgenda, carregarMes, mudarMes, escolherDia, diaDaAgenda, lembrarRegistradoPor, podeEditarAgenda, rAgenda } from './views/agenda.js';
 import { ESQUEMA } from './migracoes.js';
 import { iniciarSessaoSupabase } from './sessao.js';
 
@@ -54,7 +55,27 @@ document.addEventListener('click', e => {
   if (tlBtn) {
     setTLMode(tlBtn.dataset.tl);
     rOut();
+    return;
   }
+  const vistaIns = e.target.closest('[data-vista-ins]');
+  if (vistaIns) { mostrarVistaDosInstrutores(vistaIns.dataset.vistaIns); return; }
+  const todosDoBI = e.target.closest('[data-bi-todos]');
+  if (todosDoBI) { alternarTodosDoBI(todosDoBI.dataset.biTodos); return; }
+  // Links para uma parte do Manual
+  const manual = e.target.closest('[data-manual]');
+  if (manual) {
+    e.preventDefault();
+    show('manual');
+    $('#' + manual.dataset.manual).scrollIntoView({ block: 'start' });
+  }
+});
+
+// Painel das habilitações de um instrutor: ✕ e Esc fecham (o foco volta para o botão que abriu)
+document.addEventListener('click', e => {
+  if (e.target.closest('#btn-fechar-painel-instrutor')) fecharPainelDoInstrutor(true);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !$('#painel-instrutor').hidden) fecharPainelDoInstrutor(true);
 });
 
 document.addEventListener('input', e => {
@@ -126,11 +147,20 @@ $('#btn-share-link').onclick = async () => {
   }
 };
 
-$('#btn-open-log').onclick = () => {
-  show('esc');
-  const p = $('#audit-panel');
-  if (p) { p.open = true; p.scrollIntoView({ behavior: 'smooth' }); }
-};
+// Histórico: gaveta lateral sobre a aba aberta; o botão abre e fecha, ✕ e Esc fecham
+const gavetaDoHistorico = $('#historico');
+function mostrarHistorico(abrir) {
+  gavetaDoHistorico.hidden = !abrir;
+  $('#btn-open-log').setAttribute('aria-expanded', String(abrir));
+  if (!abrir) return;
+  $('#historico-data').textContent = $('#dt-rotulo').textContent;
+  $('#btn-fechar-historico').focus();
+}
+$('#btn-open-log').onclick = () => mostrarHistorico(gavetaDoHistorico.hidden);
+$('#btn-fechar-historico').onclick = () => mostrarHistorico(false);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !gavetaDoHistorico.hidden) mostrarHistorico(false);
+});
 
 // Só no modo local: no modo compartilhado o histórico é permanente (o botão fica oculto)
 $('#btn-clear-log').onclick = async () => {
@@ -154,6 +184,65 @@ $('#dt').onchange = e => {
     showToast('Não foi possível abrir essa data. Verifique a conexão e tente de novo.');
   });
 };
+// ‹ e ›: o dia anterior e o seguinte. Um clique no rótulo da data abre o calendário do navegador
+const irParaDia = dias => {
+  const dt = $('#dt');
+  if (dt.disabled) return;
+  dt.value = isoMenosDias(DATA, -dias);
+  dt.dispatchEvent(new Event('change'));
+};
+$('#dt-ant').onclick = () => irParaDia(-1);
+$('#dt-prox').onclick = () => irParaDia(1);
+$('#dt').addEventListener('click', e => { try { e.target.showPicker(); } catch (x) {} });
+
+// Menus suspensos (conta e "Mais" da Demanda): abrem e fecham no botão; Esc ou um clique fora fecham
+function ligarMenu(botao, menu, { fecharAoEscolher = true } = {}) {
+  const fechar = () => { menu.hidden = true; botao.setAttribute('aria-expanded', 'false'); };
+  botao.onclick = () => {
+    const abrir = menu.hidden;
+    menu.hidden = !abrir;
+    botao.setAttribute('aria-expanded', String(abrir));
+    const primeiro = abrir && menu.querySelector('[role="menuitem"]:not([hidden])');
+    if (primeiro) primeiro.focus();
+  };
+  if (fecharAoEscolher) menu.addEventListener('click', e => { if (e.target.closest('[role="menuitem"]')) fechar(); });
+  document.addEventListener('click', e => { if (!menu.hidden && !menu.contains(e.target) && !botao.contains(e.target)) fechar(); });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape' || menu.hidden) return;
+    fechar();
+    botao.focus();
+  });
+  return fechar;
+}
+ligarMenu($('#btn-menu-conta'), $('#menu-conta'));
+// "Limpar demanda" pede confirmação no próprio menu (dois cliques): o menu só fecha depois
+const fecharMenuMais = ligarMenu($('#btn-mais-dem'), $('#menu-mais-dem'), { fecharAoEscolher: false });
+
+// "Pôr um aluno na demanda": quem ainda não voa passa a voar na data, com o pedido que já tinha
+function incluirAluno() {
+  const campo = $('#incluir-aluno');
+  const nome = campo.value.trim().toLowerCase();
+  if (!nome || isGestor()) return;
+  const s = S.stu.find(x => x.nm.toLowerCase() === nome);
+  if (!s) { showToast('Aluno não encontrado. Cadastre-o na aba Alunos.'); return; }
+  campo.value = '';
+  if (s.fly) { showToast(`${s.nm} já está na demanda.`); return; }
+  pushHistory();
+  s.fly = true;
+  save();
+  logChange('inc', `${s.nm} incluído na demanda`, { kind: 'setFly', stuId: s.id, mid: 0, val: false, label: '↶ Reverter' });
+  rDem();
+  const linha = document.querySelector(`#dem tr[data-k="d"][data-id="${s.id}"][data-mid="0"]`);
+  if (linha) linha.scrollIntoView({ block: 'center' });
+}
+$('#incluir-aluno').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  incluirAluno();
+});
+// Escolher um nome da lista inclui na hora
+$('#incluir-aluno').addEventListener('input', e => { if (e.inputType === 'insertReplacementText') incluirAluno(); });
+
 $('#bi-dt').onchange = () => carregarBI();
 $('#bi-flt-eq').onchange = () => rBI();
 $('#flt-dem-mis').onchange = applyDemandFilters;
@@ -176,6 +265,7 @@ armed('#clr', 'Confirmar limpeza', () => {
   S.stu.forEach(d => { Object.assign(d, blank()); d.extra = []; });
   save(); rDem();
   logChange('exc', 'Demanda limpa');
+  fecharMenuMais();
 });
 
 // Só no modo local: grava 30 dias simulados (marcados como simulados) nas datas que ainda não têm escala
@@ -247,6 +337,12 @@ $('#btn-manual').onclick = () => {
 };
 
 $('#btn-conta').onclick = () => { show('conta'); abrirConta(); };
+// Usuários (administrador): a mesma página, direto na lista de contas
+$('#btn-usuarios').onclick = async () => {
+  show('conta');
+  await abrirConta();
+  $('#usuarios').scrollIntoView({ block: 'start' });
+};
 
 $('#form-senha').onsubmit = async e => {
   e.preventDefault();
@@ -319,8 +415,9 @@ document.addEventListener('click', e => {
   else escolherDia(cal.dataset.dia);
 });
 
-// Demanda: traz os pedidos da agenda da secretaria para a data aberta (só acrescenta; não importa o mesmo pedido de novo)
-$('#importar-agenda').onclick = async () => {
+// Demanda e Agenda: traz os pedidos da agenda da secretaria para a data aberta (só acrescenta; não importa o mesmo
+// pedido de novo)
+async function importarDaAgenda() {
   if (isGestor()) return;
   let solicitacoes;
   try {
@@ -339,10 +436,12 @@ $('#importar-agenda').onclick = async () => {
   pendentes.filter(s => S.stu.some(x => x.id === s.aluno)).forEach(s => {
     logChange('inc', `Agenda: ${s.aluno_nome} incluído (${s.missao} · ${rotuloDaDisponibilidade(disponibilidadeDaSolicitacao(s))})`);
   });
-  save(); rDem();
+  save(); rDem(); rAgenda();
   showToast(`${resumo.novos + resumo.atualizados} pedido(s) da agenda na demanda` +
     (resumo.semAluno ? ` · ${resumo.semAluno} de aluno que não está mais no cadastro` : '') + '.');
-};
+}
+$('#importar-agenda').onclick = importarDaAgenda;
+$('#agenda-importar').onclick = importarDaAgenda;
 
 // Agenda: registrar um pedido (pela exceção da coordenação, fora do prazo) e cancelar (com confirmação)
 async function registrarPedido(excecao) {
@@ -373,6 +472,7 @@ async function registrarPedido(excecao) {
   $('#ag-aluno').value = '';
   showToast(excecao ? 'Pedido registrado pela Exceção da Coordenação.' : 'Pedido registrado.');
   await carregarMes();
+  lerPedidosDaData();
 }
 $('#form-agenda').onsubmit = e => { e.preventDefault(); registrarPedido(false); };
 $('#ag-excecao').onclick = () => registrarPedido(true);
@@ -392,6 +492,7 @@ async function cancelarPedido(b) {
     $('#ag-erro').textContent = 'Não foi possível cancelar o pedido. Verifique a conexão e tente de novo.';
   }
   await carregarMes();
+  lerPedidosDaData();
 }
 
 document.addEventListener('click', e => {
@@ -445,7 +546,7 @@ document.addEventListener('click', e => {
     pushHistory();
     target.fly = false;
     save();
-    logChange('exc', `${s.nm} excluído da escala (${target.mis} · ${target.eq})`, {
+    logChange('exc', `Tirado da escala: ${s.nm} (${target.mis} · ${target.eq})`, {
       kind: 'setFly', stuId: s.id, mid, val: true, label: '↶ Restaurar'
     });
     rDem();
@@ -511,10 +612,17 @@ document.addEventListener('click', e => {
     return;
   }
 
+  if (a === 'editar-habs') {
+    abrirPainelDoInstrutor(+b.dataset.id);
+    return;
+  }
+
+  // O instrutor novo aparece no cadastro, com o nome selecionado para digitar
   if (a === 'addi') {
     pushHistory();
     const newIns = { id: S.nid++, nm: 'Novo instrutor', on: true, hab: habilitacoesDoNivel(1), kg: 0, aw: WIN.map((_, i) => i < 8) };
     S.ins.push(newIns);
+    mostrarVistaDosInstrutores('cadastro');
     save(); rIns(); rAlu(); focusLast('#inst .nm');
     logChange('inc', `Instrutor adicionado: ${newIns.nm}`);
   } else if (a === 'adds') {
@@ -528,8 +636,8 @@ document.addEventListener('click', e => {
     const s = stuBy(id);
     const blkIns = insBy(+b.dataset.b);
     s.bl = s.bl.filter(v => v !== +b.dataset.b);
-    save(); c.outerHTML = stuHTML(s);
-    logChange('mod', `Desbloqueado ${blkIns ? blkIns.nm : ''} para ${s.nm}`);
+    save(); atualizarLinhaDoAluno(s, { naoEscalar: true });
+    logChange('mod', `${s.nm}: volta a ser escalado com ${blkIns ? blkIns.nm : ''}`);
   } else if (a === 'deli' || a === 'dels') {
     if (activeTimers.has(b)) clearTimeout(activeTimers.get(b));
     if (!b.dataset.arm) {
@@ -542,6 +650,7 @@ document.addEventListener('click', e => {
     pushHistory();
     if (a === 'deli') {
       const target = insBy(id);
+      if (+$('#painel-instrutor').dataset.id === id) fecharPainelDoInstrutor();
       S.ins = S.ins.filter(x => x.id !== id);
       S.stu.forEach(s => s.bl = s.bl.filter(v => v !== id));
       logChange('exc', `Instrutor excluído: ${target ? target.nm : id}`);
@@ -598,7 +707,7 @@ document.addEventListener('change', e => {
       });
     } else if (a === 'horas') {
       // Horas desde a última revisão de 50 horas; vazio: sem controle para o avião
-      const reg = t.dataset.id;
+      const reg = t.dataset.horas;
       const horas = t.value === '' ? null : Math.round(Math.max(0, +t.value) * 10) / 10;
       if (horas === null || Number.isNaN(horas)) delete S.horas[reg];
       else S.horas[reg] = horas;
@@ -638,7 +747,9 @@ document.addEventListener('change', e => {
       if (!t.value) return;
       x.aw = WIN.map((_, i) => PRE[t.value].includes(i));
     }
-    save(); c.outerHTML = insHTML(x);
+    // A grade do dia é refeita com a escala; a linha do cadastro é atualizada no lugar
+    save();
+    atualizarLinhaDoCadastro(x);
     if (f === 'nm') rAlu();
   } else {
     const s = stuBy(id);
@@ -653,9 +764,9 @@ document.addEventListener('change', e => {
       } else if (f === 'bl' && t.value) {
         s.bl.push(+t.value);
         const ins = insBy(+t.value);
-        logChange('exc', `${s.nm} bloqueou ${ins ? ins.nm : ''}`);
+        logChange('exc', `${s.nm}: não escalar com ${ins ? ins.nm : ''}`);
       }
-      save(); c.outerHTML = stuHTML(s);
+      save(); atualizarLinhaDoAluno(s, { naoEscalar: f === 'bl' });
       if (f === 'nm') rDem();
     } else {
       const target = getMissionTarget(id, mid);
@@ -776,5 +887,7 @@ document.addEventListener('change', e => {
   } else {
     rOut();
   }
+  atualizarSelosDaEscala();
+  lerPedidosDaData();
   carregarBI();
 })();

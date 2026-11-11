@@ -68,8 +68,37 @@ test.describe('Agenda de Solicitações', () => {
     await cancelar.click();
     await expect(cancelar).toHaveText('Confirmar cancelamento');
     await cancelar.click();
-    await expect(page.locator('#agenda-lista tbody tr').first()).toContainText('Cancelado por Maria');
+    const linha = page.locator('#agenda-lista tbody tr').first();
+    await expect(linha.locator('.situacao')).toHaveText('Cancelado por Maria em 10/11 12:00');
+    await expect(linha.locator('.situacao .tag')).toHaveAttribute('title', 'Cancelado por Maria em 10/11 12:00');
     await expect(page.locator('#agenda-cal [data-dia="2026-11-11"] .qtd')).toHaveCount(0);
+    // Numa linha só, esmaecido
+    await expect(linha).toHaveClass(/\bcancel\b/);
+    expect(await linha.evaluate(el => el.getBoundingClientRect().height)).toBeLessThan(50);
+  });
+
+  test('a coluna Situação diz se o pedido já está na demanda; o operador importa pela própria agenda', async ({ page }) => {
+    await abrir(page, { estado: cenario({ stu: [aluno(1000, { fly: false }), aluno(1001, { fly: false })] }) });
+    await irPara(page, 'age');
+    await registrar(page, { aluno: 'Aluno 1000' });
+    await registrar(page, { aluno: 'Aluno 1001', janela: 'tarde' });
+    const situacao = page.locator('#agenda-lista tbody tr .situacao');
+    await expect(situacao).toHaveText(['Ainda não importado', 'Ainda não importado']);
+    const importar = page.locator('#agenda-importar');
+    await expect(importar).toHaveText('Importar 2 pedidos para a demanda');
+    await importar.click();
+    await expect(situacao).toHaveText(['Na demanda', 'Na demanda']);
+    await expect(importar).toBeHidden();
+    await expect(page.locator('#selo-age')).toBeHidden();
+    await irPara(page, 'dem');
+    await expect(page.locator('#dem tr[data-k="d"][data-id="1001"] [data-f="fly"]')).toBeChecked();
+
+    // Outra data (não é a aberta no topo): sem situação e sem importar
+    await irPara(page, 'age');
+    await page.locator('#agenda-cal [data-dia="2026-11-12"]').click();
+    await registrar(page, { aluno: 'Aluno 1000' });
+    await expect(situacao).toHaveText(['']);
+    await expect(importar).toBeHidden();
   });
 
   test('"Importar Solicitações da Agenda" põe os pedidos da data na demanda, prontos para a escala', async ({ page }) => {

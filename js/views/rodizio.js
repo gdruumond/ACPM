@@ -1,4 +1,5 @@
-// Aba 7 · Rodízio: as filas de cada categoria (na data aberta), quem já voa nelas na escala e os botões para ajustar.
+// Rodízio: as filas de cada categoria (na data aberta), quem já voa nelas na escala e os botões para ajustar a ordem
+// (aparecem com o mouse ou o foco).
 import { CATEGORIAS_DO_RODIZIO, categoriaDoRodizio, ajustarFilas } from '../rodizio.js';
 import { S, RES } from '../state.js';
 import { $ } from '../dom.js';
@@ -18,9 +19,9 @@ export function rRodizio() {
         ${naEscala ? `<span class="tag grp">${naEscala} ${naEscala === 1 ? 'voo' : 'voos'} nesta data</span>` : ''}
         ${x.on ? '' : '<span class="tag fb">indisponível</span>'}
         <span class="acoes edit-only">
-          <button class="x" data-act="fila-subir" data-cat="${id}" data-id="${insId}" aria-label="Subir ${esc(x.nm)}"${i === 0 ? ' disabled' : ''}>↑</button>
-          <button class="x" data-act="fila-descer" data-cat="${id}" data-id="${insId}" aria-label="Descer ${esc(x.nm)}"${i === fila.length - 1 ? ' disabled' : ''}>↓</button>
-          <button class="x" data-act="fila-inicio" data-cat="${id}" data-id="${insId}"${i === 0 ? ' disabled' : ''}>Para o início</button>
+          <button class="x" data-act="fila-subir" data-cat="${id}" data-id="${insId}" aria-label="Subir ${esc(x.nm)}" title="Subir"${i === 0 ? ' disabled' : ''}><svg class="ico"><use href="#i-cima"/></svg></button>
+          <button class="x" data-act="fila-descer" data-cat="${id}" data-id="${insId}" aria-label="Descer ${esc(x.nm)}" title="Descer"${i === fila.length - 1 ? ' disabled' : ''}><svg class="ico"><use href="#i-baixo"/></svg></button>
+          <button class="x" data-act="fila-inicio" data-cat="${id}" data-id="${insId}" aria-label="Pôr ${esc(x.nm)} no início da fila" title="Pôr no início da fila"${i === 0 ? ' disabled' : ''}><svg class="ico"><use href="#i-topo"/></svg></button>
         </span>
       </li>`;
     }).join('');

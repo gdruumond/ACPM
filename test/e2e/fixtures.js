@@ -72,6 +72,12 @@ export async function irPara(page, aba) {
   await expect(page.locator(`#s-${aba}`)).toBeVisible();
 }
 
+// Minha conta, Usuários, Tema e Sair ficam no menu da conta, no topo
+export async function abrirMenuDaConta(page) {
+  await page.locator('#btn-menu-conta').click();
+  await expect(page.locator('#menu-conta')).toBeVisible();
+}
+
 // Botões "armados" exigem dois cliques (o primeiro muda o texto para "Confirmar …")
 export async function confirmar(page, seletor) {
   const botao = page.locator(seletor);

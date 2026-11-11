@@ -5,8 +5,8 @@ import { criarBackendSupabase } from './backends/supabase.js';
 import { backendLocal } from './backends/local.js';
 import { setRole } from './actions.js';
 import { $, mostrarAviso, avisoAberto, fecharAviso } from './dom.js';
-import { amanhaISO } from './format.js';
-import { ROTULOS, operaEscala } from './perfis.js';
+import { amanhaISO, esc } from './format.js';
+import { ROTULOS, operaEscala, gerenciaContas } from './perfis.js';
 import { retornoDoLink } from './retorno-do-link.js';
 
 
@@ -76,6 +76,12 @@ function avisarDoLink(texto, tipo) {
   $('#btn-fechar-aviso-link').onclick = () => { $('#aviso-link').hidden = true; };
 }
 
+// Iniciais do primeiro e do último nome (ou a primeira letra do e-mail)
+const iniciais = nome => {
+  const partes = nome.split(/[\s@.]+/).filter(Boolean);
+  return ((partes[0] || '?')[0] + (partes.length > 1 && !nome.includes('@') ? partes[partes.length - 1][0] : '')).toUpperCase();
+};
+
 // Devolve true quando o app pode carregar os dados (conta com perfil); false deixa o aviso na tela
 export async function iniciarSessaoSupabase(projeto) {
   document.body.dataset.backend = 'supabase';
@@ -109,10 +115,15 @@ export async function iniciarSessaoSupabase(projeto) {
     aoGravar: () => fecharAviso('erro')
   });
   $('#btn-share-link').title = 'Copiar o link da escala desta data (quem abrir entra com a própria conta)';
-  $('#usuario').textContent = `${perfil.nome || sessao.user.email} · ${ROTULOS[perfil.perfil] || perfil.perfil}`;
+  // No menu da conta: o nome e o perfil (o texto continua "Nome · Perfil"), as iniciais e os itens da conta
+  const nome = perfil.nome || sessao.user.email;
+  $('#usuario').innerHTML = `<b>${esc(nome)}</b><span class="hd-sep"> · </span><small>${esc(ROTULOS[perfil.perfil] || perfil.perfil)}</small>`;
   $('#usuario').hidden = false;
+  $('#usuario-iniciais').textContent = iniciais(nome);
   $('#btn-sair').hidden = false;
   $('#btn-conta').hidden = false;
+  $('#btn-usuarios').hidden = !gerenciaContas(perfil.perfil);
+  document.body.dataset.perfil = perfil.perfil;
   $('#btn-sair').onclick = () => sair(cliente);
   ApiClient.autorAtual = perfil.nome || sessao.user.email;
   // Operador e Administrador editam a escala; Gestor e Secretaria só consultam (a Secretaria registra na agenda)

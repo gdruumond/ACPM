@@ -10,7 +10,8 @@ const tresVoosNoPPLJV = () => cenario({
 });
 
 async function informarHoras(page, matricula, horas) {
-  const campo = page.locator(`#revisao input[data-id="${matricula}"]`);
+  await irPara(page, 'rec');
+  const campo = page.locator(`#revisao input[data-horas="${matricula}"]`);
   await campo.fill(horas);
   await campo.dispatchEvent('change');
 }
@@ -30,7 +31,7 @@ test.describe('Revisão de 50 horas', () => {
     await botao.click();
     await expect(botao).toHaveText('Confirmar revisão');
     await botao.click();
-    await expect(page.locator('#revisao input[data-id="PP-LJV"]')).toHaveValue('0');
+    await expect(page.locator('#revisao input[data-horas="PP-LJV"]')).toHaveValue('0');
     await expect(page.locator('#audit-log-list')).toContainText('PP-LJV: revisão de 50 horas feita (horas zeradas)');
     await irPara(page, 'esc');
     expect((await lerEscala(page)).linhas.filter(l => l.includes('PP-LJV'))).toHaveLength(3);
@@ -44,7 +45,7 @@ test.describe('Revisão de 50 horas', () => {
     await page.locator('#dt').dispatchEvent('change');
     await expect(page.locator('#bi-dt')).toHaveValue('2026-11-12');
     await irPara(page, 'rec');
-    await expect(page.locator('#revisao input[data-id="PP-LJV"]')).toHaveValue('13');
-    await expect(page.locator('#revisao input[data-id="PR-BTB"]')).toHaveValue('', { timeout: 1000 });
+    await expect(page.locator('#revisao input[data-horas="PP-LJV"]')).toHaveValue('13');
+    await expect(page.locator('#revisao input[data-horas="PR-BTB"]')).toHaveValue('', { timeout: 1000 });
   });
 });

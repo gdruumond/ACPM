@@ -151,6 +151,7 @@ test.describe('Escala por data (modo compartilhado)', () => {
   test('o histórico mostra quem fez cada alteração', async ({ page, context }) => {
     await instalarSupabaseFalso(context, documentosAtuais(estadoSintetico(), AMANHA));
     await entrar(page, CONTAS.operador);
+    await irPara(page, 'rec');
     await page.locator('#eqs input[data-id="PR-BTB"]').uncheck();
     await page.reload();
     await expect(page.locator('#wins input[data-a="win"]').first()).toBeAttached();

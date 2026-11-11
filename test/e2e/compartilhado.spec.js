@@ -35,6 +35,7 @@ test.describe('Modo compartilhado: gravação, conflitos e link da escala', () =
     const doColega = structuredClone(servidor.dias.get(AMANHA).conteudo);
     doColega.av['PR-IGU'] = false;
     servidor.alterarDiaPorOutraPessoa(AMANHA, doColega);
+    await irPara(page, 'rec');
     await page.locator('#eqs input[data-id="PR-BTB"]').uncheck();
     await expect(page.locator('#aviso-sync')).toBeVisible();
     await expect(page.locator('#aviso-sync')).toContainText('Outra pessoa alterou a escala');
@@ -62,6 +63,7 @@ test.describe('Modo compartilhado: gravação, conflitos e link da escala', () =
     await entrar(page, CONTAS.operador);
 
     servidor.falharGravacoes(1);
+    await irPara(page, 'rec');
     await page.locator('#eqs input[data-id="PR-BTB"]').uncheck();
     await expect(page.locator('#aviso-sync')).toContainText('Não foi possível salvar');
     await page.locator('#eqs input[data-id="PR-IGU"]').uncheck();

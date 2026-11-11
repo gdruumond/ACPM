@@ -3,7 +3,7 @@
 // Roda só quando as senhas das contas estão no ambiente; os demais testes E2E usam o modo local.
 //   BASE_URL=https://thephfernandes.github.io/ACPM/ ACPM_SENHA_OPERADOR=... ACPM_SENHA_GESTOR=... ACPM_SENHA_SECRETARIA=... ACPM_SENHA_ADMIN=... \
 //     npx playwright test test/e2e/publicado.spec.js --workers=1
-import { test, expect, AMANHA } from './fixtures.js';
+import { test, expect, abrirMenuDaConta, AMANHA } from './fixtures.js';
 
 const CONTAS = {
   operador: { email: process.env.ACPM_EMAIL_OPERADOR || 'operador.previa@example.com', senha: process.env.ACPM_SENHA_OPERADOR, rotulo: 'Operador' },
@@ -22,6 +22,7 @@ test.describe('Site publicado (login real)', () => {
       await expect(page.locator('#usuario')).toContainText(`· ${conta.rotulo}`);
       await expect(page.locator('body')).toHaveAttribute('data-role', perfil);
       await expect(page.locator('#inst .cd').first()).toBeAttached();
+      await abrirMenuDaConta(page);
       await page.locator('#btn-sair').click();
       // Sair recarrega a página: na rede real, os módulos podem levar mais que o tempo padrão para carregar
       await expect(page.locator('#form-login')).toBeVisible({ timeout: 20000 });
@@ -39,6 +40,7 @@ test.describe('Site publicado (login real)', () => {
     await expect(page.locator('#form-agenda')).toBeVisible();
     await expect(page.locator('#ag-aluno option')).not.toHaveCount(0);
     await expect(page.locator('#agenda-prazo')).not.toBeEmpty();
+    await abrirMenuDaConta(page);
     await page.locator('#btn-sair').click();
   });
 
@@ -49,9 +51,11 @@ test.describe('Site publicado (login real)', () => {
     await page.locator('#login-senha').fill(process.env.ACPM_SENHA_ADMIN);
     await page.locator('#btn-entrar').click();
     await expect(page.locator('#usuario')).toContainText('· Administrador');
+    await abrirMenuDaConta(page);
     await page.locator('#btn-conta').click();
     await expect(page.locator('#usuarios')).toBeVisible();
     await expect(page.locator('#lista-contas tbody tr')).not.toHaveCount(0);
+    await abrirMenuDaConta(page);
     await page.locator('#btn-sair').click();
   });
 
@@ -72,6 +76,7 @@ test.describe('Site publicado (login real)', () => {
     // A prévia não tem alunos: a escala calculada da data nova fica vazia
     await expect(page.locator('#out')).toContainText('Nenhum voo nesta data');
     await expect(page.locator('#inst .cd')).toHaveCount(instrutores);
+    await abrirMenuDaConta(page);
     await page.locator('#btn-sair').click();
   });
 });

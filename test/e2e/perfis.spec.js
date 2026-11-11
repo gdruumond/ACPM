@@ -15,7 +15,11 @@ test.describe('Perfis de acesso', () => {
     await expect(page.locator('#out .st-sel').first()).toBeDisabled();
     await irPara(page, 'ins');
     await expect(page.locator('[data-act="addi"]')).toBeHidden();
-    expect(await page.locator('#inst .cd [data-f="hab"]').first().evaluate(el => getComputedStyle(el).pointerEvents)).toBe('none');
+    // A grade do dia fica travada e as habilitações não abrem (o Gestor vê o resumo)
+    expect(await page.locator('#inst-dia .cel').first().evaluate(el => getComputedStyle(el).pointerEvents)).toBe('none');
+    await page.locator('#s-ins [data-vista-ins="cadastro"]').click();
+    await expect(page.locator('#inst [data-act="editar-habs"]').first()).toBeHidden();
+    await expect(page.locator('#inst .habs-resumo').first()).toBeVisible();
 
     await page.locator('#role-sel').selectOption('operador');
     await expect(page.locator('[data-act="addi"]')).toBeVisible();
@@ -47,7 +51,7 @@ test.describe('Perfis de acesso', () => {
     await expect(gestor.locator('#s-esc')).toBeVisible();
     await expect(gestor.locator('body')).toHaveAttribute('data-shared', 'true');
     await expect(gestor.locator('#role-sel')).toBeDisabled();
-    await expect(gestor.locator('#role-sel option')).toHaveText(['🔒 Gestor (Somente Leitura)']);
+    await expect(gestor.locator('#role-sel option')).toHaveText(['Gestor (somente leitura)']);
     expect(await lerEscala(gestor)).toEqual(escalaOperador);
     expect(erros).toEqual([]);
     await contexto.close();

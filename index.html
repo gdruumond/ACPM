@@ -13,33 +13,75 @@
 </head>
 <body data-role="operador">
 
-<header>
-  <h1>Escala de Voo — ACPM</h1>
+<!-- Ícones de traço (no lugar de emojis): <svg class="ico"><use href="#i-nome"/></svg> -->
+<svg xmlns="http://www.w3.org/2000/svg" hidden>
+  <symbol id="i-historico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-manual" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/></symbol>
+  <symbol id="i-compartilhar" viewBox="0 0 24 24"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></symbol>
+  <symbol id="i-tema" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></symbol>
+  <symbol id="i-desfazer" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></symbol>
+  <symbol id="i-calendario" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-aviao" viewBox="0 0 24 24"><path d="M12 2.5c.8 0 1.5.7 1.5 1.5v5.5l7 4v2l-7-2v4.2l2 1.6V21L12 20l-3.5 1v-1.7l2-1.6v-4.2l-7 2v-2l7-4V4c0-.8.7-1.5 1.5-1.5z"/></symbol>
+  <symbol id="i-instrutor" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="i-lista" viewBox="0 0 24 24"><path d="M9 6h12M9 12h12M9 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+  <symbol id="i-sair" viewBox="0 0 24 24"><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></symbol>
+  <symbol id="i-conta" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3"/><path d="M6.5 18.5a6.5 6.5 0 0 1 11 0"/></symbol>
+  <symbol id="i-esquerda" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
+  <symbol id="i-direita" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></symbol>
+  <symbol id="i-baixo" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-cima" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
+  <symbol id="i-topo" viewBox="0 0 24 24"><path d="M5 4h14"/><path d="M7 14l5-5 5 5"/><path d="M12 9v11"/></symbol>
+  <symbol id="i-aviso" viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/></symbol>
+</svg>
+
+<header class="topo">
+  <h1 class="topo-marca">Escala de Voo <span>ACPM</span></h1>
+  <!-- A data em uso: o contexto de todas as abas -->
+  <div class="topo-data" role="group" aria-label="Data da escala">
+    <button class="topo-ico" type="button" id="dt-ant" aria-label="Dia anterior" title="Dia anterior"><svg class="ico"><use href="#i-esquerda"/></svg></button>
+    <label class="topo-data-campo" title="Escolher a data">
+      <svg class="ico"><use href="#i-calendario"/></svg>
+      <span id="dt-rotulo"></span>
+      <span class="topo-data-rel" id="dt-rel" hidden></span>
+      <input type="date" id="dt" aria-label="Data da escala">
+    </label>
+    <button class="topo-ico" type="button" id="dt-prox" aria-label="Próximo dia" title="Próximo dia"><svg class="ico"><use href="#i-direita"/></svg></button>
+  </div>
   <div class="hd-tools">
     <select class="hd-sel" id="role-sel" aria-label="Perfil de acesso">
       <option value="operador">Operador</option>
       <option value="gestor">Gestor</option>
     </select>
-    <span class="hd-usuario" id="usuario" hidden></span>
-    <button class="hd-btn" id="btn-manual" title="Como usar a escala e as regras que ela segue">Manual</button>
-    <button class="hd-btn" id="btn-conta" hidden title="Trocar a senha ou o e-mail">Minha conta</button>
-    <button class="hd-btn" id="btn-sair" hidden title="Encerrar a sessão">Sair</button>
-    <button class="hd-btn edit-only" id="btn-undo" disabled title="Desfazer última alteração">↶ Desfazer</button>
-    <button class="hd-btn" id="btn-open-log" title="Ver inclusões e histórico do dia">
-      🕒 Histórico <span class="badge-cnt" id="log-cnt">0</span>
-    </button>
-    <button class="hd-btn" id="btn-share-link" title="Copiar link compartilhável da escala (abre bloqueado como Gestor)">🔗 Compartilhar</button>
-    <button class="hd-btn" id="btn-theme" title="Alternar tema claro/escuro">◐ Tema</button>
+    <button class="hd-btn edit-only" id="btn-undo" disabled title="Desfazer a última alteração"><svg class="ico"><use href="#i-desfazer"/></svg><span class="hd-txt">Desfazer</span></button>
+    <button class="hd-btn" id="btn-open-log" title="Alterações desta data"><svg class="ico"><use href="#i-historico"/></svg><span class="hd-txt">Histórico</span><span class="badge-cnt" id="log-cnt">0</span></button>
+    <button class="hd-btn" id="btn-manual" title="Como usar a escala e as regras que ela segue"><svg class="ico"><use href="#i-manual"/></svg><span class="hd-txt">Manual</span></button>
+    <!-- Menu da conta: Minha conta, Usuários (administrador), tema e Sair -->
+    <div class="menu-conta">
+      <button class="hd-conta" type="button" id="btn-menu-conta" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-conta" title="Conta e preferências">
+        <span class="hd-avatar" id="usuario-iniciais" aria-hidden="true"><svg class="ico"><use href="#i-conta"/></svg></span>
+        <span class="hd-usuario" id="usuario" hidden></span>
+        <svg class="ico hd-seta" aria-hidden="true"><use href="#i-baixo"/></svg>
+      </button>
+      <div class="menu-itens" id="menu-conta" role="menu" hidden>
+        <button type="button" role="menuitem" id="btn-conta" hidden>Minha conta</button>
+        <button type="button" role="menuitem" id="btn-usuarios" hidden>Usuários</button>
+        <button type="button" role="menuitem" id="btn-theme">Tema claro ou escuro</button>
+        <button type="button" role="menuitem" id="btn-sair" hidden>Sair</button>
+      </div>
+    </div>
   </div>
-  <nav id="nav">
-    <button data-t="rec" class="on">1 · Recursos</button>
-    <button data-t="ins">2 · Instrutores</button>
-    <button data-t="alu">3 · Alunos</button>
-    <button data-t="age">4 · Agenda</button>
-    <button data-t="dem">5 · Demanda</button>
-    <button data-t="esc">6 · Escala</button>
-    <button data-t="rod">7 · Rodízio</button>
-    <button data-t="bi">8 · BI</button>
+  <!-- Abas na ordem de uso: a escala e o que a alimenta no dia; o cadastro; o BI -->
+  <nav id="nav" aria-label="Abas">
+    <button data-t="esc" class="on"><span class="aba-rotulo">Escala</span><span class="aba-selo" id="selo-esc" hidden></span></button>
+    <button data-t="dem"><span class="aba-rotulo">Demanda</span></button>
+    <button data-t="age"><span class="aba-rotulo">Agenda</span><span class="aba-selo" id="selo-age" hidden></span></button>
+    <span class="aba-sep" aria-hidden="true"></span>
+    <button data-t="rec"><span class="aba-rotulo">Recursos</span><span class="aba-selo" id="selo-rec" hidden></span></button>
+    <button data-t="ins"><span class="aba-rotulo">Instrutores</span></button>
+    <button data-t="alu"><span class="aba-rotulo">Alunos</span></button>
+    <button data-t="rod"><span class="aba-rotulo">Rodízio</span></button>
+    <span class="aba-sep" aria-hidden="true"></span>
+    <button data-t="bi"><span class="aba-rotulo">BI</span></button>
   </nav>
 </header>
 
@@ -78,43 +120,70 @@
     </div>
   </section>
 
-  <!-- ABA 1: RECURSOS -->
-  <section id="s-rec" class="on">
-    <h2>Janelas de operação</h2>
+  <!-- RECURSOS DO DIA: janelas de operação e a frota (aviões e simuladores) -->
+  <section id="s-rec">
+    <h2>Recursos do dia</h2>
     <div class="pn">
-      <div class="chips" id="wins"></div>
+      <h3>Janelas de operação</h3>
+      <div class="janelas" id="wins"></div>
     </div>
-    <div id="eqs"></div>
-    <div id="revisao"></div>
-    <div class="bar"><button class="btn" data-go="ins">Próximo: Instrutores →</button></div>
+    <h3 class="frota-titulo">Aviões e simuladores <small>horas desde a última revisão de 50 horas, no início desta data; a escala não passa das 50 horas</small></h3>
+    <div class="tw" id="eqs">
+      <table class="frota">
+        <thead><tr><th>Disponível</th><th>Avião</th><th>Horas desde a revisão</th><th>Saldo até 50 h</th><th>Na escala do dia</th><th class="edit-only" aria-label="Revisão"></th></tr></thead>
+        <tbody id="revisao"></tbody>
+      </table>
+    </div>
+    <p class="h">A data seguinte começa com estas horas mais os voos do dia que não foram cancelados. Avião sem as horas informadas fica sem o controle da revisão.</p>
   </section>
 
-  <!-- ABA 2: INSTRUTORES -->
-  <section id="s-ins">
+  <!-- INSTRUTORES: disponibilidade do dia e cadastro -->
+  <section id="s-ins" data-vista="dia">
     <h2>Instrutores</h2>
     <div class="bar">
-      <button class="btn edit-only" data-act="addi">+ Novo instrutor</button>
+      <div class="seg" role="group" aria-label="O que ver">
+        <button type="button" data-vista-ins="dia" class="on"><svg class="ico"><use href="#i-calendario"/></svg>Disponibilidade do dia</button>
+        <button type="button" data-vista-ins="cadastro"><svg class="ico"><use href="#i-instrutor"/></svg>Cadastro</button>
+      </div>
+      <span class="cresce"></span>
       <input type="search" class="flt-ctrl" data-flt="inst" placeholder="Buscar instrutor…" aria-label="Buscar instrutor">
       <select id="flt-ins-hab" class="flt-ctrl" aria-label="Filtrar por habilitação">
         <option value="">Todas as habilitações</option>
       </select>
+      <button class="btn edit-only" data-act="addi">+ Novo instrutor</button>
     </div>
-    <div class="grid g2" id="inst"></div>
-    <div class="bar"><button class="btn" data-go="alu">Próximo: Alunos →</button></div>
+    <div class="vista-dia">
+      <p class="legenda-disp">
+        <span><i class="cel on"></i>disponível</span>
+        <span><i class="cel on voo"></i>com voo ou aula na escala</span>
+        <span><i class="cel"></i>não vem</span>
+        <span class="h">Clique numa janela para mudar a disponibilidade de hoje.</span>
+      </p>
+      <div class="tw"><table class="disp"><thead id="inst-dia-cab"></thead><tbody id="inst-dia"></tbody></table></div>
+    </div>
+    <div class="vista-cadastro">
+      <div class="tw"><table class="cadastro">
+        <thead><tr><th>Nome</th><th>Peso (kg)</th><th>Habilitações</th><th></th></tr></thead>
+        <tbody id="inst"></tbody>
+      </table></div>
+    </div>
   </section>
 
-  <!-- ABA 3: ALUNOS -->
+  <!-- ALUNOS -->
   <section id="s-alu">
     <h2>Alunos</h2>
     <div class="bar">
-      <button class="btn edit-only" data-act="adds">+ Novo aluno</button>
       <input type="search" class="flt-ctrl" data-flt="alu" placeholder="Buscar aluno…" aria-label="Buscar aluno">
+      <span class="cresce"></span>
+      <button class="btn edit-only" data-act="adds">+ Novo aluno</button>
     </div>
-    <div class="grid g2" id="alu"></div>
-    <div class="bar"><button class="btn" data-go="dem">Próximo: Demanda →</button></div>
+    <div class="tw"><table class="cadastro alunos">
+      <thead><tr><th>Nome</th><th>Peso (kg)</th><th>Não escalar com</th><th></th></tr></thead>
+      <tbody id="alu"></tbody>
+    </table></div>
   </section>
 
-  <!-- ABA 4: DEMANDA -->
+  <!-- AGENDA DE SOLICITAÇÕES (secretaria) -->
   <section id="s-age">
     <h2>Agenda de Solicitações</h2>
     <p class="h" id="agenda-prazo"></p>
@@ -133,79 +202,77 @@
           <button class="x" type="button" id="ag-excecao" hidden title="Registra fora do prazo das 13:00 (fica marcado para auditoria)">Exceção da Coordenação</button>
           <p id="ag-erro" role="alert"></p>
         </form>
+        <button class="btn edit-only" type="button" id="agenda-importar" hidden></button>
         <div class="tw" id="agenda-lista"></div>
       </div>
     </div>
   </section>
 
+  <!-- DEMANDA -->
   <section id="s-dem">
     <h2>Demanda</h2>
     <div class="bar">
-      <button class="btn sec edit-only" id="importar-agenda" title="Traz os pedidos da agenda da secretaria para esta data (só acrescenta; não repete)">Importar Solicitações da Agenda</button>
-      <button class="btn sec edit-only" id="clr">Limpar demanda</button>
-      <label class="chip"><input type="checkbox" id="onlyfly"> Só quem voa</label>
-      <input type="search" id="flt-dem" class="flt-ctrl" placeholder="Buscar aluno…" aria-label="Filtrar aluno na demanda">
+      <button class="btn sec edit-only" id="importar-agenda" title="Traz os pedidos da agenda da secretaria para esta data (só acrescenta; não repete)">Importar da agenda</button>
+      <input class="edit-only" id="incluir-aluno" list="alunos-fora" placeholder="+ Pôr um aluno na demanda…" aria-label="Pôr um aluno na demanda" autocomplete="off">
+      <datalist id="alunos-fora"></datalist>
+      <span class="cresce"></span>
+      <label class="chk"><input type="checkbox" id="onlyfly" checked> Só quem voa</label>
+      <input type="search" id="flt-dem" class="flt-ctrl" placeholder="Buscar na demanda…" aria-label="Filtrar aluno na demanda">
       <select id="flt-dem-mis" class="flt-ctrl" aria-label="Filtrar por missão">
         <option value="">Todas as missões</option>
       </select>
-      <span id="cnt" class="h"></span>
+      <div class="menu-mais edit-only">
+        <button class="btn quiet" type="button" id="btn-mais-dem" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-mais-dem">Mais<svg class="ico" aria-hidden="true"><use href="#i-baixo"/></svg></button>
+        <div class="menu-itens" id="menu-mais-dem" role="menu" hidden>
+          <button type="button" role="menuitem" id="clr">Limpar demanda</button>
+        </div>
+      </div>
     </div>
+    <p class="h" id="cnt"></p>
     <div class="tw">
       <table>
         <thead>
           <tr>
-            <th>Aluno / Missões no Dia</th>
-            <th>Vai voar?</th>
-            <th>Fase / missão</th>
-            <th>Equipamento</th>
-            <th>Início pref. 1</th>
-            <th>Início pref. 2</th>
+            <th>Aluno</th>
+            <th>Voa</th>
+            <th>Missão</th>
+            <th>Avião / sala</th>
+            <th>1ª preferência</th>
+            <th>2ª preferência</th>
             <th>Disponibilidade</th>
-            <th>Horas</th>
+            <th>Duração</th>
             <th>Sessões</th>
             <th>Prioridade</th>
-            <th>Resumo</th>
           </tr>
         </thead>
-        <tbody id="dem"></tbody>
+        <tbody id="dem" class="only"></tbody>
       </table>
     </div>
   </section>
 
-  <!-- ABA 5: ESCALA -->
-  <section id="s-esc">
-    <h2>Escala do Dia</h2>
+  <!-- ESCALA DO DIA -->
+  <section id="s-esc" class="on">
+    <h2>Escala do dia</h2>
     <div class="bar">
-      <button class="btn sec" id="exp">Exportar CSV</button>
-      <button class="btn sec" id="pdf">Emitir PDF</button>
-      <label class="chip">Data <input type="date" id="dt"></label>
-      <select id="flt-esc-eq" class="flt-ctrl" aria-label="Filtrar por equipamento">
-        <option value="">Todos os equipamentos</option>
+      <div class="seg" role="group" aria-label="Como ver a escala">
+        <button type="button" data-tl="lista" class="on"><svg class="ico"><use href="#i-lista"/></svg>Lista</button>
+        <button type="button" data-tl="eq"><svg class="ico"><use href="#i-aviao"/></svg>Por avião e sala</button>
+        <button type="button" data-tl="ins"><svg class="ico"><use href="#i-instrutor"/></svg>Por instrutor</button>
+      </div>
+      <span class="h" id="escala-atualizada" role="status" hidden></span>
+      <span class="cresce"></span>
+      <select id="flt-esc-eq" class="flt-ctrl" aria-label="Filtrar por avião ou sala">
+        <option value="">Todos os aviões e salas</option>
       </select>
       <input type="search" id="flt-esc-q" class="flt-ctrl" placeholder="Buscar aluno, instrutor ou missão…" aria-label="Filtrar na escala">
+      <button class="btn sec" id="btn-share-link" title="Copiar link compartilhável da escala (abre bloqueado como Gestor)"><svg class="ico"><use href="#i-compartilhar"/></svg>Compartilhar</button>
+      <button class="btn sec" id="exp" title="Exportar o CSV para o lançamento no portal">CSV</button>
+      <button class="btn sec" id="pdf" title="Emitir o PDF da escala para impressão">PDF</button>
       <span id="msg" class="h" role="status"></span>
     </div>
 
-    <!-- PAINEL INTERATIVO DE INCLUSÕES E HISTÓRICO DO DIA -->
-    <details class="pn" id="audit-panel">
-      <summary>Inclusões Ativas (<span id="inc-active-cnt">0</span>) e Histórico do Dia</summary>
-      <div class="audit-grid">
-        <div>
-          <h3>Inclusões na Escala</h3>
-          <div class="audit-list" id="inc-active-list"></div>
-        </div>
-        <div>
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <h3>Alterações nesta data</h3>
-            <button class="x edit-only" id="btn-clear-log" style="font-size:12px">Limpar</button>
-          </div>
-          <div class="audit-list" id="audit-log-list"></div>
-        </div>
-      </div>
-    </details>
-
     <div id="out">
-      <p class="h">Nenhum voo nesta data. Marque quem vai voar na aba “5 · Demanda”: a escala é montada automaticamente.</p>
+      <p class="h">Nenhum voo nesta data. Marque quem vai voar na aba Demanda: a escala é montada automaticamente.</p>
     </div>
     <div id="csvbox" hidden>
       <p class="h">Copie o texto abaixo e salve como .csv:</p>
@@ -213,12 +280,14 @@
     </div>
   </section>
 
+  <!-- RODÍZIO -->
   <section id="s-rod">
     <h2>Rodízio</h2>
-    <p class="h">Filas das escalas que remuneram melhor, entre os instrutores habilitados. Cada voo da categoria vai para o primeiro da fila que estiver livre (no mesmo dia, quem ainda não voou nela vem antes de quem já voou). Quem voar na categoria vai para o fim da fila na data seguinte; voo cancelado não conta. Use os botões para ajustar a ordem, por exemplo quando um voo foi cancelado pela meteorologia.</p>
+    <p class="h">Cada voo destas categorias vai para o primeiro livre da fila; quem voa vai para o fim na data seguinte. <a href="#manual-aba-rodizio" data-manual="manual-aba-rodizio">Como funciona o rodízio</a></p>
     <div id="rodizio" class="rodizio"></div>
   </section>
 
+  <!-- MINHA CONTA E USUÁRIOS -->
   <section id="s-conta">
     <h2>Minha conta</h2>
     <p class="h" id="conta-dados"></p>
@@ -278,68 +347,80 @@
     <div class="pn" id="manual-rotina">
       <h3>Primeiros passos: a rotina do operador</h3>
       <ol>
-        <li><b>Escolha a data.</b> O sistema abre na data de amanhã; para outra data, use o campo <i>Data</i> na aba Escala. Uma data nova começa como cópia da anterior: a demanda, os aviões, as janelas e os horários dos instrutores. As horas dos aviões e as filas do rodízio já chegam atualizadas com os voos da data anterior.</li>
-        <li><b>Recursos:</b> desmarque os aviões e simuladores indisponíveis (em manutenção) e as janelas de horário que não vão operar. Confira as horas de cada avião desde a última revisão.</li>
-        <li><b>Instrutores:</b> desmarque quem não vem no dia e confira os horários de cada um.</li>
-        <li><b>Agenda:</b> veja os pedidos de voo que a secretaria registrou para a data.</li>
-        <li><b>Demanda:</b> clique em <i>Importar Solicitações da Agenda</i> e ajuste o que precisar: missão, equipamento, horários preferidos, disponibilidade, horas, sessões e prioridade.</li>
-        <li><b>Escala:</b> ela já está pronta. Confira os alertas (os pedidos que não couberam e o motivo), ajuste o que for preciso e exporte o CSV (para o lançamento no portal) e o PDF.</li>
+        <li><b>Confira a data no topo.</b> O sistema abre na aba Escala, na data de amanhã. Use as setas ‹ › ao lado da data, ou clique nela para escolher no calendário. Tudo o que você vê e altera, em qualquer aba, vale para essa data. Uma data nova começa como cópia da anterior: a demanda, os aviões, as janelas e os horários dos instrutores. As horas dos aviões e as filas do rodízio já chegam atualizadas com os voos da data anterior.</li>
+        <li><b>Recursos:</b> desligue os aviões e simuladores indisponíveis (em manutenção) e as janelas de horário que não vão operar. Confira as horas de cada avião desde a última revisão de 50 horas.</li>
+        <li><b>Instrutores:</b> em <i>Disponibilidade do dia</i>, desligue quem não vem e confira as janelas de cada um.</li>
+        <li><b>Demanda:</b> clique em <i>Importar pedidos da agenda</i> (o botão diz quantos pedidos da secretaria ainda não estão na demanda) e ajuste o que precisar: missão, avião ou sala, horários preferidos, disponibilidade, duração, sessões e prioridade. Para um aluno que não está na lista, use <i>Pôr um aluno na demanda</i>.</li>
+        <li><b>Escala:</b> ela já está pronta. Confira as missões que não entraram (caixa vermelha, com o motivo) e os avisos (caixa amarela), ajuste o que for preciso e baixe o <i>CSV</i> (para o lançamento no portal) e o <i>PDF</i>.</li>
         <li><b>Durante o dia:</b> atualize o status de cada voo (Confirmado, Em Voo, Pendente ou Cancelado). Voo cancelado não conta nas horas do avião, no rodízio nem no BI.</li>
       </ol>
-      <p class="manual-destaque"><b>Não existe botão de gerar nem de salvar.</b> Toda alteração, em qualquer aba, refaz a escala na hora e fica gravada.</p>
-      <p class="manual-destaque">Uma data que você só abriu para consultar não é gravada. Ela passa a contar (no BI, nas horas dos aviões e no rodízio da data seguinte) quando você altera alguma coisa nela ou exporta o CSV ou o PDF.</p>
+      <p class="manual-destaque"><b>Não existe botão de gerar nem de salvar.</b> Toda alteração, em qualquer aba, refaz a escala na hora e fica gravada. A barra da escala mostra a hora da última atualização (por exemplo, “Atualizada às 10:42”).</p>
+      <p class="manual-destaque">Uma data que você só abriu para consultar não é gravada. Ela passa a contar (no BI, nas horas dos aviões e no rodízio da data seguinte) quando você altera alguma coisa nela ou baixa o CSV ou o PDF.</p>
+      <p>Os números ao lado do nome das abas avisam o que pede atenção: na Escala, as missões que não entraram (em vermelho) ou os avisos (em amarelo); na Agenda, os pedidos que ainda não estão na demanda; em Recursos, os aviões parados ou perto da revisão de 50 horas.</p>
     </div>
 
     <div class="pn" id="manual-perfis">
       <h3>Perfis de acesso</h3>
       <ul>
         <li><b>Operador:</b> altera tudo e opera a escala.</li>
-        <li><b>Administrador:</b> faz tudo o que o Operador faz e também cria e exclui contas (em <i>Minha conta › Usuários</i>).</li>
+        <li><b>Administrador:</b> faz tudo o que o Operador faz e também cria e exclui contas (em <i>Usuários</i>, no menu da conta).</li>
         <li><b>Gestor:</b> consulta tudo (escala, BI, histórico, PDF e CSV), sem alterar nada.</li>
-        <li><b>Secretaria:</b> registra os pedidos de voo na Agenda; o resto ela só consulta.</li>
+        <li><b>Secretaria:</b> registra os pedidos de voo na Agenda (o app abre para ela nessa aba) e consulta a Escala; as outras abas ela não vê.</li>
       </ul>
-      <p>Cada pessoa entra com a própria conta. Em <i>Minha conta</i> dá para trocar a senha (com pelo menos 12 caracteres) e o e-mail: o sistema manda um link para o e-mail atual e outro para o novo, e a troca vale depois que os dois forem abertos.</p>
-      <p><i>Compartilhar</i> copia o link da escala da data; quem abre o link entra com a própria conta. <i>Histórico</i> mostra as alterações da data, com quem fez e a hora; algumas podem ser revertidas por ali. <i>Desfazer</i> volta a última alteração feita neste navegador.</p>
+      <p>Cada pessoa entra com a própria conta. No menu da conta (o seu nome, no canto direito do topo) ficam <i>Minha conta</i>, <i>Usuários</i> (só para o Administrador), o tema claro ou escuro e <i>Sair</i>. Em <i>Minha conta</i> dá para trocar a senha (com pelo menos 12 caracteres) e o e-mail: o sistema manda um link para o e-mail atual e outro para o novo, e a troca vale depois que os dois forem abertos.</p>
+      <p><i>Histórico</i> (no topo) mostra as alterações da data, com quem fez e a hora, numa gaveta ao lado, sem sair da aba; algumas podem ser revertidas por ali. <i>Desfazer</i> (no topo; aparece depois de uma alteração) volta a última alteração feita neste navegador. <i>Compartilhar</i> (na barra da Escala) copia o link da escala da data; quem abre o link entra com a própria conta.</p>
     </div>
 
     <div class="pn" id="manual-abas">
       <h3>As abas</h3>
-      <h4>1 · Recursos</h4>
-      <p><b>Janelas de operação:</b> os horários em que um voo pode começar. Desmarcar uma janela tira esse horário da escala do dia.</p>
-      <ul class="manual-lista-curta" id="manual-janelas"></ul>
-      <p><b>Aviões e simuladores:</b> desmarcado quer dizer indisponível (em manutenção). O PR-JPL só voa Parafuso.</p>
-      <p><b>Revisão de 50 horas:</b> informe as horas de cada avião desde a última revisão. A escala não passa das 50 horas: o avião para quando não tem saldo para mais um voo, e o alerta aparece na escala. Depois da revisão, clique em <i>Revisão feita</i> para zerar. A data seguinte começa com as horas desta data mais os voos dela que não foram cancelados. Avião sem as horas informadas fica sem esse controle.</p>
-
-      <h4>2 · Instrutores</h4>
-      <p>Cada cartão tem a caixa <i>Disponível no dia</i> (ao lado do nome), o peso, os horários em que o instrutor está disponível (o <i>Turno rápido</i> marca vários de uma vez) e as habilitações. O instrutor só recebe uma missão se tiver as habilitações que ela exige (veja a tabela em <a href="#manual-regras">Como a escala é montada</a>) e se estiver disponível durante o voo inteiro.</p>
-
-      <h4>3 · Alunos</h4>
-      <p>Nome e peso de cada aluno; o peso entra no limite de peso de cada avião. Em <i>Bloquear</i>, escolha instrutores que não devem voar com o aluno.</p>
-
-      <h4>4 · Agenda</h4>
-      <p>A agenda de pedidos da secretaria, com um calendário. Cada pedido tem o aluno, a missão, a disponibilidade do aluno e quem anotou. O pedido para o dia seguinte só pode ser registrado até as 13:00 (horário de Brasília); depois disso, só para os próximos dias. Operadores e Administradores podem registrar fora do prazo com a <i>Exceção da Coordenação</i>, que fica marcada no pedido.</p>
-
-      <h4>5 · Demanda</h4>
-      <p>Uma linha por aluno. Marque <i>Vai voar?</i> para quem voa na data e preencha:</p>
+      <p>As abas seguem a ordem de uso: Escala, Demanda e Agenda; Recursos, Instrutores, Alunos e Rodízio; e o BI.</p>
+      <h4>Escala</h4>
+      <p>No alto, o resumo do dia (missões pedidas, escaladas e as horas de voo e aula), as missões que não entraram, cada uma com o motivo (caixa vermelha), e os avisos agrupados (caixa amarela). Depois, a escala em três vistas:</p>
       <ul>
-        <li><b>Fase / missão</b> e <b>Equipamento</b> (só aparecem os equipamentos permitidos para a missão);</li>
-        <li><b>Início pref. 1 e 2:</b> os horários preferidos; sem vaga neles, o sistema usa o próximo horário livre;</li>
+        <li><b>Lista:</b> uma linha por voo, por horário. A turma de Ground ocupa uma linha só, com os alunos logo abaixo. A preferência aparece só quando o voo não ficou na 1ª (“2ª preferência” ou “horário livre”), e o peso fica em destaque quando chega perto do limite do avião.</li>
+        <li><b>Por avião e sala</b> e <b>Por instrutor:</b> o mapa do dia, com a ocupação de cada um.</li>
+      </ul>
+      <p>Filtre por avião ou sala, ou busque um aluno ou instrutor. Na lista, mude o status do voo ou use o ✕ do fim da linha (<i>Tirar da escala</i>, aparece ao passar o mouse) para tirar um voo; o Histórico permite restaurar. <i>CSV</i> gera o arquivo do lançamento no portal, agrupado por avião e com o peso; <i>PDF</i> gera a escala para impressão. No celular, a lista mostra um cartão por voo.</p>
+
+      <h4>Demanda</h4>
+      <p>Uma linha por aluno. Ligue <i>Voa</i> para quem voa na data e preencha:</p>
+      <ul>
+        <li><b>Missão</b> e <b>Avião / sala</b> (só aparecem os permitidos para a missão; deixe o mouse sobre a missão para ver as habilitações que ela exige);</li>
+        <li><b>1ª e 2ª preferência:</b> os horários preferidos; sem vaga neles, o sistema usa o próximo horário livre;</li>
         <li><b>Disponibilidade:</b> quando o aluno pode voar (qualquer horário, manhã, tarde, noite ou um horário só);</li>
-        <li><b>Horas</b> e <b>Sessões:</b> por exemplo, 3 horas em 2 sessões viram uma sessão de 2 h e outra de 1 h;</li>
+        <li><b>Duração</b> e <b>Sessões:</b> por exemplo, 3 horas em 2 sessões viram uma sessão de 2 h e outra de 1 h;</li>
         <li><b>Prioridade:</b> de 1 a 5; quem tem 5 é atendido primeiro.</li>
       </ul>
-      <p><i>+ Missão</i> acrescenta outra missão ao mesmo aluno no dia (por exemplo, Ground de manhã e voo à tarde). <i>Importar Solicitações da Agenda</i> traz os pedidos da data; ele só acrescenta, nunca apaga nem repete.</p>
+      <p><i>Só quem voa</i> (ligado) esconde quem não voa na data. <i>+ missão</i> (aparece ao passar o mouse no nome) acrescenta outra missão ao mesmo aluno no dia, por exemplo Ground de manhã e voo à tarde. <i>Importar pedidos da agenda</i> traz os pedidos da data: só acrescenta, nunca apaga nem repete. <i>Pôr um aluno na demanda</i> inclui um aluno que ainda não voa na data. <i>Limpar demanda</i> fica no menu <i>Mais</i> e pede confirmação.</p>
 
-      <h4>6 · Escala</h4>
-      <p>O resumo do dia (missões pedidas, atendidas, horas e alertas), os alertas, a tabela oficial e o mapa de ocupação por avião ou por instrutor. Cada alerta diz por que um pedido não entrou: avião em manutenção, falta de instrutor habilitado no horário, peso acima do limite e assim por diante. Na tabela, mude o status do voo ou use <i>Excluir</i> para tirar um voo da escala (o Histórico permite restaurar). <i>Exportar CSV</i> gera o arquivo do lançamento no portal, agrupado por avião e com o peso; <i>Emitir PDF</i> gera a escala para impressão.</p>
+      <h4>Agenda</h4>
+      <p>A agenda de pedidos da secretaria, com um calendário. Cada pedido tem o aluno, a missão, a disponibilidade do aluno e quem anotou. O pedido para o dia seguinte só pode ser registrado até as 13:00 (horário de Brasília); depois disso, só para os próximos dias. Operadores e Administradores podem registrar fora do prazo com a <i>Exceção da Coordenação</i>, que fica marcada no pedido.</p>
+      <p>Na data aberta no topo, a coluna <i>Situação</i> diz se o pedido já está na demanda (“Na demanda”) ou não (“Ainda não importado”), e o operador pode importar por ali mesmo. O pedido cancelado continua na lista, esmaecido; deixe o mouse sobre “Cancelado” para ver quem cancelou e quando.</p>
 
-      <h4>7 · Rodízio</h4>
+      <h4>Recursos</h4>
+      <p><b>Janelas de operação:</b> os horários em que um voo pode começar. Desligar uma janela tira esse horário da escala do dia.</p>
+      <ul class="manual-lista-curta" id="manual-janelas"></ul>
+      <p><b>Aviões e simuladores:</b> desligado quer dizer indisponível (em manutenção). O PR-JPL só voa Parafuso. A tabela mostra quanto cada avião voa na escala do dia e o saldo até a revisão de 50 horas.</p>
+      <p><b>Revisão de 50 horas:</b> informe as horas de cada avião desde a última revisão. A escala não passa das 50 horas: o avião para quando não tem saldo para mais um voo, e o aviso aparece na escala. Depois da revisão, clique em <i>Revisão feita</i> (aparece ao passar o mouse na linha) para zerar. A data seguinte começa com as horas desta data mais os voos dela que não foram cancelados. Avião sem as horas informadas fica sem esse controle.</p>
+
+      <h4>Instrutores</h4>
+      <p>Duas vistas, com a busca e o filtro por habilitação valendo nas duas:</p>
+      <ul>
+        <li><b>Disponibilidade do dia:</b> uma linha por instrutor, com o interruptor de quem vem e as janelas do dia: azul-claro quando o instrutor está disponível, azul quando ele já tem voo ou aula na escala e listrado quando não vem. Clique numa janela para mudar; <i>Aplicar turno</i> marca várias de uma vez.</li>
+        <li><b>Cadastro:</b> nome, peso (em destaque quando falta) e as habilitações. <i>Editar habilitações</i> abre um painel ao lado com as 16 habilitações em grupos: Ground e simulador, Voo, Aviões e Checador.</li>
+      </ul>
+      <p>O instrutor só recebe uma missão se tiver as habilitações que ela exige (veja a tabela em <a href="#manual-regras">Como a escala é montada</a>) e se estiver disponível durante o voo inteiro.</p>
+
+      <h4>Alunos</h4>
+      <p>Nome e peso de cada aluno; o peso entra no limite de peso de cada avião (sem o peso, a escala avisa que não conferiu). Em <i>Não escalar com</i>, escolha os instrutores que não devem voar com o aluno.</p>
+
+      <h4 id="manual-aba-rodizio">Rodízio</h4>
       <p>Filas para dividir com justiça, entre os instrutores habilitados, os voos que remuneram melhor:</p>
       <ul class="manual-lista-curta" id="manual-rodizio"></ul>
-      <p>Cada voo da categoria vai para o primeiro da fila que estiver livre (no mesmo dia, quem ainda não voou nela vem antes). Quem voou vai para o fim da fila na data seguinte; voo cancelado não conta. Use os botões para ajustar a ordem, por exemplo quando um voo foi cancelado pela meteorologia.</p>
+      <p>Cada voo da categoria vai para o primeiro da fila que estiver livre (no mesmo dia, quem ainda não voou nela vem antes). Quem voou vai para o fim da fila na data seguinte; voo cancelado não conta. Para ajustar a ordem, por exemplo quando um voo foi cancelado pela meteorologia, use os botões que aparecem ao passar o mouse sobre o nome: subir, descer e pôr no início da fila.</p>
 
-      <h4>8 · BI</h4>
-      <p>Indicadores das escalas gravadas: horas por avião, por instrutor e por missão, no dia, na semana e no mês. Escolha a data base e filtre por frota ou por instrutor.</p>
+      <h4>BI</h4>
+      <p>Indicadores das escalas gravadas: horas por avião, por instrutor e por missão, no dia, na semana e no mês. Escolha a data base e filtre por tipo de avião ou por instrutor. As tabelas de avião e de instrutor mostram os 10 maiores; <i>Ver todos</i> abre a lista inteira.</p>
     </div>
 
     <div class="pn" id="manual-regras">
@@ -348,12 +429,12 @@
       <ol>
         <li>Primeiro os <b>Grounds</b>, que definem a partir de que horário o voo do aluno pode começar.</li>
         <li>Depois os voos e simuladores, por <b>prioridade</b> (5 primeiro) e, empatados, na ordem do cadastro dos alunos.</li>
-        <li>Para cada pedido, tenta o início preferido 1, depois o 2 e depois o próximo horário livre, sempre dentro da disponibilidade do aluno e das janelas abertas.</li>
+        <li>Para cada pedido, tenta a 1ª preferência, depois a 2ª e depois o próximo horário livre, sempre dentro da disponibilidade do aluno e das janelas abertas.</li>
       </ol>
       <p>Um voo só entra na escala quando tudo isto vale ao mesmo tempo:</p>
       <ul>
-        <li><b>Equipamento certo para a missão</b> (tabela abaixo), disponível e livre no horário.</li>
-        <li><b>Instrutor disponível no dia e durante o voo inteiro</b>, livre e com as habilitações da missão; instrutor bloqueado para o aluno não entra.</li>
+        <li><b>Avião ou sala certo para a missão</b> (tabela abaixo), disponível e livre no horário.</li>
+        <li><b>Instrutor disponível no dia e durante o voo inteiro</b>, livre e com as habilitações da missão; o instrutor marcado em <i>Não escalar com</i> para o aluno não entra.</li>
         <li><b>Peso:</b> aluno mais instrutor dentro do limite do avião (<span id="manual-pesos"></span>). Sem o peso informado, a escala avisa que não conferiu.</li>
         <li><b>Revisão de 50 horas:</b> o avião precisa ter saldo de horas para o voo.</li>
         <li><b>Horário:</b> os voos diurnos terminam até as 17:30; o voo noturno começa na janela das 17:30.</li>
@@ -363,21 +444,21 @@
       <p><b>Grounds</b> duram 1h30, numa sala só, e são dados em turma: alunos do mesmo Ground no mesmo horário ficam com o mesmo instrutor (o disponível com menos habilitações), e as horas contam uma vez só para ele.</p>
       <div class="tw">
         <table id="manual-missoes">
-          <thead><tr><th>Missão</th><th>Equipamentos</th><th>Habilitações exigidas</th><th>Observação</th></tr></thead>
+          <thead><tr><th>Missão</th><th>Aviões e salas</th><th>Habilitações exigidas</th><th>Observação</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
-      <p class="h">Os nomes das habilitações são os da grade da aba Instrutores. Quando aparecem várias separadas por “ou”, basta uma delas.</p>
+      <p class="h">Os nomes das habilitações são os mesmos da aba Instrutores. Quando aparecem várias separadas por “ou”, basta uma delas.</p>
     </div>
 
     <div class="pn" id="manual-gestor">
       <h3>Para o gestor</h3>
       <p>Com o perfil Gestor você vê tudo, sem risco de alterar nada: os campos ficam travados.</p>
       <ul>
-        <li><b>Escala do dia:</b> na aba Escala; para outro dia, use o campo Data. Uma data que o operador ainda não preparou mostra a escala calculada com a demanda copiada da data anterior.</li>
-        <li><b>PDF e CSV:</b> os mesmos botões do operador.</li>
+        <li><b>Escala do dia:</b> na aba Escala; para outro dia, use as setas ou o calendário da data no topo. Uma data que o operador ainda não preparou mostra a escala calculada com a demanda copiada da data anterior.</li>
+        <li><b>PDF e CSV:</b> os mesmos botões do operador, na barra da escala.</li>
         <li><b>BI:</b> horas por avião, instrutor e missão, no dia, na semana e no mês.</li>
-        <li><b>Histórico:</b> quem alterou o quê, e quando, em cada data.</li>
+        <li><b>Histórico:</b> no topo, quem alterou o quê, e quando, em cada data.</li>
         <li><b>Rodízio:</b> a ordem das filas de cada categoria.</li>
       </ul>
     </div>
@@ -388,9 +469,11 @@
         <dt>Preciso salvar ou gerar a escala?</dt>
         <dd>Não. Cada alteração refaz a escala e grava tudo na hora.</dd>
         <dt>Por que um aluno ficou fora da escala?</dt>
-        <dd>Veja os alertas da aba Escala: cada pedido que não coube tem o motivo. Os mais comuns são falta de instrutor habilitado no horário, avião em manutenção ou sem horas até a revisão e peso acima do limite.</dd>
+        <dd>Veja a caixa vermelha no alto da Escala: cada missão que não entrou tem o motivo. Os mais comuns são falta de instrutor habilitado no horário, avião em manutenção ou sem horas até a revisão e peso acima do limite.</dd>
         <dt>Mudei uma coisa e outros voos também mudaram. Por quê?</dt>
         <dd>A escala é refeita inteira a cada alteração, seguindo as prioridades, e uma mudança pode abrir ou ocupar vagas de outros voos. Com o dia já em andamento, prefira mudar o status do voo (por exemplo, para Cancelado): o status não muda a distribuição dos outros voos.</dd>
+        <dt>Fiz uma alteração sem querer. Como volto?</dt>
+        <dd>Use <i>Desfazer</i>, no topo (volta a última alteração feita neste navegador), ou reverta pelo <i>Histórico</i>.</dd>
         <dt>Como dar preferência a um aluno?</dt>
         <dd>Na Demanda, aumente a prioridade dele (5 é a mais alta).</dd>
         <dt>O aluno tem Ground e voo no mesmo dia. O que acontece?</dt>
@@ -398,19 +481,22 @@
         <dt>As horas de um Ground em turma contam por aluno?</dt>
         <dd>Não: o instrutor recebe 1h30, mesmo com vários alunos na turma.</dd>
         <dt>Um avião parou de aparecer na escala.</dt>
-        <dd>Veja na aba Recursos se ele está marcado como disponível e se ainda tem horas até a revisão de 50 horas. Depois da revisão, clique em <i>Revisão feita</i>.</dd>
+        <dd>Veja na aba Recursos se ele está ligado (disponível) e se ainda tem saldo até a revisão de 50 horas. Depois da revisão, clique em <i>Revisão feita</i>.</dd>
+        <dt>Onde ficam Minha conta e Sair?</dt>
+        <dd>No menu da conta: clique no seu nome (no celular, nas suas iniciais), no canto direito do topo.</dd>
         <dt>Esqueci a senha.</dt>
         <dd>Peça a um Administrador: ele exclui a conta e cria outra com uma senha inicial, que você troca em Minha conta.</dd>
       </dl>
     </div>
   </section>
 
+  <!-- BI -->
   <section id="s-bi">
-    <h2>Dashboard BI</h2>
+    <h2>BI</h2>
     <div class="bar">
       <label class="chip">Data base <input type="date" id="bi-dt"></label>
-      <select id="bi-flt-eq" class="flt-ctrl" aria-label="Filtrar frota no BI">
-        <option value="">Todas as frotas / recursos</option>
+      <select id="bi-flt-eq" class="flt-ctrl" aria-label="Filtrar por tipo de avião ou sala">
+        <option value="">Todos os aviões e salas</option>
         <option value="C152">C152</option>
         <option value="C172">C172</option>
         <option value="PA-34">PA-34</option>
@@ -425,6 +511,20 @@
     <div id="bi-content"></div>
   </section>
 </main>
+
+<!-- HISTÓRICO DA DATA: gaveta lateral que abre sobre qualquer aba -->
+<aside class="gaveta" id="historico" aria-labelledby="historico-titulo" hidden>
+  <div class="gaveta-cab">
+    <h2 id="historico-titulo">Histórico <small id="historico-data"></small></h2>
+    <button class="x" type="button" id="btn-fechar-historico" aria-label="Fechar o histórico">✕</button>
+  </div>
+  <p class="h">As alterações desta data, com quem fez e a hora. Algumas podem ser revertidas por aqui.</p>
+  <div class="audit-list" id="audit-log-list"></div>
+  <button class="btn quiet edit-only" type="button" id="btn-clear-log">Limpar o histórico desta data</button>
+</aside>
+
+<!-- HABILITAÇÕES DE UM INSTRUTOR: painel lateral aberto pelo cadastro -->
+<aside class="gaveta" id="painel-instrutor" aria-labelledby="painel-instrutor-titulo" hidden></aside>
 
 <div id="toast-box" aria-live="polite"></div>
 

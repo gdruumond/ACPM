@@ -6,7 +6,7 @@ export let S = ApiClient.createFreshState();
 export let RES = null;
 export let AUDIT_LOG = [];
 export let BI_HISTORY = {};
-export let TL_MODE = 'eq'; // 'eq' (Por Aeronave) ou 'ins' (Por Instrutor)
+export let TL_MODE = 'lista'; // visão da escala: 'lista', 'eq' (por avião e sala) ou 'ins' (por instrutor)
 // Data (AAAA-MM-DD) da escala aberta na tela. O campo de data pode já mostrar outra enquanto ela carrega
 // (ou ficar vazio): as alterações vão sempre para esta data
 export let DATA = '';

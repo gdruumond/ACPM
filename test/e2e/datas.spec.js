@@ -48,6 +48,7 @@ test.describe('Escala por data', () => {
 
   test('o histórico é separado por data', async ({ page }) => {
     await abrirSintetico(page);
+    await irPara(page, 'rec');
     await page.locator('#eqs input[data-id="PR-BTB"]').uncheck();
     await expect(page.locator('#log-cnt')).toHaveText('1');
     await mudarData(page, DEPOIS);
@@ -59,6 +60,7 @@ test.describe('Escala por data', () => {
 
   test('reverter pelo histórico vale também depois de recarregar', async ({ page }) => {
     await abrirSintetico(page);
+    await irPara(page, 'rec');
     await page.locator('#eqs input[data-id="PR-BTB"]').uncheck();
     await page.locator('#btn-open-log').click();
     await page.locator('#audit-log-list [data-act="rev-log"]').first().click();

@@ -1,17 +1,17 @@
 {
   "porEquipamento": [
-    "08:20 · 2º tempo · 1 lançamento(s) iniciando",
-    "08:20–10:20 | Aluno 01 | Multimotor | PR-VOM | Instrutor 09 | 2 h | 118 kg | Pref. 1 | [Confirmado] | ✕"
+    "08:20 · 2º tempo 1 decolagem ou aula",
+    "08:20–10:20 2 h | Aluno 01 | Multimotor | PR-VOM PA-34 | Instrutor 09 | 118 / 250 kg | [Confirmado] | ✕"
   ],
   "porTexto": [
-    "06:30 · 1º tempo · 1 lançamento(s) iniciando",
-    "06:30–08:00 | Aluno 01 | Ground PA-34 | SALA-GROUND | Instrutor 01 | 01h30 (1,5 h) | — | Pref. 1 | [Confirmado] | ✕",
-    "08:20 · 2º tempo · 6 lançamento(s) iniciando",
-    "08:20–09:50 | Aluno 02 | Ground C152 | SALA-GROUND | Instrutor 10 | 01h30 (1,5 h) | — | Pref. 2 · Turma (6) | [Confirmado] | ✕",
-    "08:20–09:50 | Aluno 03 | Ground C152 | SALA-GROUND | Instrutor 10 | 01h30 (1,5 h) | — | Pref. 2 · Turma (6) | [Confirmado] | ✕",
-    "08:20–09:50 | Aluno 04 | Ground C152 | SALA-GROUND | Instrutor 10 | 01h30 (1,5 h) | — | Pref. 2 · Turma (6) | [Confirmado] | ✕",
-    "08:20–09:50 | Aluno 05 | Ground C152 | SALA-GROUND | Instrutor 10 | 01h30 (1,5 h) | — | Pref. 2 · Turma (6) | [Confirmado] | ✕",
-    "08:20–09:50 | Aluno 06 | Ground C152 | SALA-GROUND | Instrutor 10 | 01h30 (1,5 h) | — | Pref. 2 · Turma (6) | [Confirmado] | ✕",
-    "08:20–09:50 | Aluno 07 | Ground C152 | SALA-GROUND | Instrutor 10 | 01h30 (1,5 h) | — | Pref. 2 · Turma (6) | [Confirmado] | ✕"
+    "06:30 · 1º tempo 1 decolagem ou aula",
+    "06:30–08:00 1h30 | Aluno 01 | Ground PA-34 | Sala Ground | Instrutor 01 |  | [Confirmado] | ✕",
+    "08:20 · 2º tempo 1 decolagem ou aula",
+    "08:20–09:50 1h30 2ª preferência | Aluno 02 | Ground C152 Turma de 6 alunos | Sala Ground | Instrutor 10 |  | [Confirmado] | ✕",
+    "Aluno 03 | [Confirmado] | ✕",
+    "Aluno 04 | [Confirmado] | ✕",
+    "Aluno 05 | [Confirmado] | ✕",
+    "Aluno 06 | [Confirmado] | ✕",
+    "Aluno 07 | [Confirmado] | ✕"
   ]
 }

@@ -29,15 +29,21 @@ test.describe('Agenda de Solicitações (modo compartilhado)', () => {
     await page.locator('#ag-por').fill('Maria');
     await page.locator('#form-agenda [type="submit"]').click();
     await expect(page.locator('#agenda-lista tbody tr')).toHaveCount(1);
-    await expect(page.locator('#agenda-lista tbody tr').first()).toContainText('conta: Secretaria de Teste');
+    const pedido = page.locator('#agenda-lista tbody tr').first();
+    await expect(pedido.locator('.por')).toHaveText('Maria');
+    await expect(pedido.locator('.por')).toHaveAttribute('title', 'Conta: Secretaria de Teste');
+    await expect(pedido.locator('.situacao')).toHaveText('Ainda não importado');
+    await expect(page.locator('#agenda-importar')).toBeHidden();
     expect(servidor.solicitacoes.map(s => [s.data, s.aluno, s.janela, s.registrado_por, s.usuario])).toEqual([[AMANHA, 1001, 'tarde', 'Maria', CONTAS.secretaria.id]]);
 
     await page.locator('#agenda-cal [data-dia="2026-11-10"]').click();
     await expect(page.locator('#form-agenda [type="submit"]')).toBeDisabled();
     await expect(page.locator('#ag-excecao')).toBeHidden();
 
-    await page.locator('#nav button[data-t="rec"]').click();
-    expect(await page.locator('#eqs input[data-id="PR-BTB"]').evaluate(el => getComputedStyle(el).pointerEvents)).toBe('none');
+    // Ela só vê a Agenda e a Escala, que só consulta
+    await expect(page.locator('#nav button:visible .aba-rotulo')).toHaveText(['Escala', 'Agenda']);
+    await page.locator('#nav button[data-t="esc"]').click();
+    await expect(page.locator('body')).toHaveAttribute('data-role', 'gestor');
     expect(servidor.gravacoes).toEqual([]);
   });
 

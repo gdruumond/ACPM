@@ -1,27 +1,40 @@
-import { test, expect, abrir, irPara } from './fixtures.js';
+import { test, expect, abrir, irPara, abrirMenuDaConta } from './fixtures.js';
 
 test.describe('Aplicação', () => {
-  test('carrega com as seis abas e a aba Recursos ativa', async ({ page }) => {
+  test('abre na Escala, com as abas na ordem de uso e sem números', async ({ page }) => {
     await abrir(page);
     await expect(page).toHaveTitle('Escala de Voo — ACPM');
-    await expect(page.locator('#nav button')).toHaveText([
-      '1 · Recursos', '2 · Instrutores', '3 · Alunos', '4 · Agenda', '5 · Demanda', '6 · Escala', '7 · Rodízio', '8 · BI'
-    ]);
-    await expect(page.locator('#s-rec')).toBeVisible();
-    await expect(page.locator('#s-ins')).toBeHidden();
+    await expect(page.locator('#nav button .aba-rotulo')).toHaveText(['Escala', 'Demanda', 'Agenda', 'Recursos', 'Instrutores', 'Alunos', 'Rodízio', 'BI']);
+    await expect(page.locator('#s-esc')).toBeVisible();
+    await expect(page.locator('#nav button[data-t="esc"]')).toHaveClass(/\bon\b/);
+    await expect(page.locator('#s-rec')).toBeHidden();
   });
 
-  test('navega pelas abas e pelos botões "Próximo"', async ({ page }) => {
+  test('a data em uso fica no topo, em todas as abas; os botões ‹ e › trocam o dia', async ({ page }) => {
+    await abrir(page);
+    await expect(page.locator('#dt-rotulo')).toHaveText('quarta-feira, 11/11');
+    await expect(page.locator('#dt-rel')).toHaveText('amanhã');
+    await irPara(page, 'dem');
+    await expect(page.locator('#dt-rotulo')).toBeVisible();
+    await page.locator('#dt-prox').click();
+    await expect(page.locator('#dt')).toHaveValue('2026-11-12');
+    await expect(page.locator('#dt-rotulo')).toHaveText('quinta-feira, 12/11');
+    await expect(page.locator('#dt-rel')).toBeHidden();
+    await page.locator('#dt-ant').click();
+    await expect(page.locator('#dt')).toHaveValue('2026-11-11');
+    await page.locator('#dt-ant').click();
+    await expect(page.locator('#dt')).toHaveValue('2026-11-10');
+    await expect(page.locator('#dt-rel')).toHaveText('hoje');
+  });
+
+  test('navega pelas abas; sem os botões "Próximo" de um passo a passo', async ({ page }) => {
     await abrir(page);
     for (const aba of ['ins', 'alu', 'dem', 'esc', 'bi', 'rec']) {
       await irPara(page, aba);
       await expect(page.locator(`#nav button[data-t="${aba}"]`)).toHaveClass(/\bon\b/);
       await expect(page.locator('section.on')).toHaveCount(1);
     }
-    await page.locator('#s-rec [data-go="ins"]').click();
-    await expect(page.locator('#s-ins')).toBeVisible();
-    await page.locator('#s-ins [data-go="alu"]').click();
-    await expect(page.locator('#s-alu')).toBeVisible();
+    await expect(page.locator('[data-go]')).toHaveCount(0);
   });
 
   test('aplica a folha de estilos (tokens de cor, layout e fontes)', async ({ page }) => {
@@ -36,21 +49,24 @@ test.describe('Aplicação', () => {
       principalMax: getComputedStyle(document.querySelector('main')).maxWidth
     }));
     expect(await estilos()).toEqual({
-      tinta: '#12263A', fundo: 'rgb(232, 237, 241)', fonte: expect.stringContaining('Barlow'), secaoInativa: 'none', principalMax: '1280px'
+      tinta: '#12263A', fundo: 'rgb(238, 242, 245)', fonte: expect.stringContaining('Barlow'), secaoInativa: 'none', principalMax: '1280px'
     });
     expect(fontes).toHaveLength(1);
 
+    await abrirMenuDaConta(page);
     await page.locator('#btn-theme').click();
-    expect((await estilos()).fundo).not.toBe('rgb(232, 237, 241)');
+    expect((await estilos()).fundo).not.toBe('rgb(238, 242, 245)');
   });
 
   test('alterna o tema e lembra a escolha após recarregar', async ({ page }) => {
     await abrir(page);
     const html = page.locator('html');
+    await abrirMenuDaConta(page);
     await page.locator('#btn-theme').click();
     await expect(html).toHaveAttribute('data-theme', 'dark');
     await page.reload();
     await expect(html).toHaveAttribute('data-theme', 'dark');
+    await abrirMenuDaConta(page);
     await page.locator('#btn-theme').click();
     await expect(html).toHaveAttribute('data-theme', 'light');
   });
@@ -70,11 +86,19 @@ test.describe('Aplicação', () => {
     await expect(page.locator('#manual-pesos')).toContainText('C152: 170 kg');
     await expect(page.locator('#manual-rodizio li')).toHaveText(['Voos de cheque', 'Voo MLTE (PA-34)', 'Voo noturno', 'Voo C172']);
 
-    // Nada das regras antigas
+    // Nada das regras e dos nomes antigos
     const texto = await manual.innerText();
-    for (const antigo of ['A01', 'A09', 'Gerar escala', 'Preencher exemplo', 'Link Blindado']) expect(texto).not.toContain(antigo);
-    for (const secao of ['Primeiros passos', 'Perfis de acesso', 'Como a escala é montada', 'Para o gestor', 'Perguntas frequentes']) {
-      await expect(manual.locator('h3', { hasText: secao })).toHaveCount(1);
+    for (const antigo of ['A01', 'A09', 'Gerar escala', 'Preencher exemplo', 'Link Blindado', 'Importar Solicitações da Agenda',
+      'Vai voar?', 'Início pref', 'Exportar CSV', 'Emitir PDF', 'Turno rápido', 'Cada cartão', 'campo Data', 'Equipamento', 'Bloquear']) {
+      expect(texto, antigo).not.toContain(antigo);
+    }
+    await expect(manual.locator('h3')).toHaveText(['Primeiros passos: a rotina do operador', 'Perfis de acesso', 'As abas',
+      'Como a escala é montada', 'Para o gestor', 'Perguntas frequentes']);
+    // As abas na ordem do app, sem números, com os nomes novos dos botões e das vistas
+    await expect(manual.locator('#manual-abas h4')).toHaveText(['Escala', 'Demanda', 'Agenda', 'Recursos', 'Instrutores', 'Alunos', 'Rodízio', 'BI']);
+    for (const novo of ['menu da conta', 'Pôr um aluno na demanda', 'Disponibilidade do dia', 'Editar habilitações', 'Não escalar com',
+      'Ainda não importado', 'Atualizada às', 'Ver todos', 'Desfazer', 'Compartilhar']) {
+      expect(texto, novo).toContain(novo);
     }
 
     // O índice leva às seções e as abas continuam funcionando

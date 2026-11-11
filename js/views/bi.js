@@ -1,4 +1,4 @@
-// Aba 8 · Dashboard BI: horas por equipamento, instrutor e missão (dia, semana e mês).
+// Aba BI: horas por avião e sala, instrutor e missão (dia, semana e mês).
 import { EQ, GROUND_EQ_TYPE, GROUND_REG, ACROBAT_REG, MIS } from '../config.js';
 import { fmtH, esc } from '../format.js';
 import { isGroundMission, migrateLegacyMissionName } from '../rules.js';
@@ -11,6 +11,18 @@ export function getDaysDiff(d1Str, d2Str) {
   const d2 = new Date(d2Str + 'T12:00:00');
   return Math.round((d1 - d2) / 86400000);
 }
+
+// Horas por avião e por instrutor: os 10 maiores, com "Ver todos" para abrir a lista inteira
+const MAIORES = 10;
+const verTodos = { eq: false, ins: false };
+export function alternarTodosDoBI(tabela) {
+  verTodos[tabela] = !verTodos[tabela];
+  rBI();
+}
+const botaoVerTodos = (tabela, total) => (total > MAIORES
+  ? `<button class="btn quiet" type="button" data-bi-todos="${tabela}">${verTodos[tabela] ? `Ver só os ${MAIORES} maiores` : `Ver todos (${total})`}</button>`
+  : '');
+const visiveis = (tabela, lista) => (verTodos[tabela] ? lista : lista.slice(0, MAIORES));
 
 export function rBI() {
   const container = $('#bi-content');
@@ -97,20 +109,20 @@ export function rBI() {
 
   container.innerHTML = `
     <div class="st">
-      <div><strong>${fmtH(totH_D)}</strong>No Dia (${fmtDateBR})<small>${totF_D} voos/aulas ativas</small></div>
-      <div><strong>${fmtH(totH_W)}</strong>Na Semana (7d)<small>${totF_W} voos/aulas ativas</small></div>
-      <div><strong>${fmtH(totH_M)}</strong>No Mês (${refMonth.split('-').reverse().join('/')})<small>${daysRecordedInMonth} dias registrados</small></div>
-      <div><strong>${Object.values(S.av).filter(Boolean).length}/${Object.keys(S.av).length}</strong>Frota Ativa<small>${S.ins.filter(x => x.on).length}/${S.ins.length} instrutores</small></div>
+      <div><strong>${fmtH(totH_D)}</strong>No dia (${fmtDateBR})<small>${totF_D} voos/aulas ativas</small></div>
+      <div><strong>${fmtH(totH_W)}</strong>Na semana (7 dias)<small>${totF_W} voos/aulas ativas</small></div>
+      <div><strong>${fmtH(totH_M)}</strong>No mês (${refMonth.split('-').reverse().join('/')})<small>${daysRecordedInMonth} dias registrados</small></div>
+      <div><strong>${Object.values(S.av).filter(Boolean).length}/${Object.keys(S.av).length}</strong>Aviões e salas disponíveis<small>${S.ins.filter(x => x.on).length}/${S.ins.length} instrutores</small></div>
     </div>
 
     <div class="bi-grid-2">
       <div class="pn">
-        <h3>Horas por Equipamento / Sala (Dia · Semana · Mês)</h3>
-        <div class="tw" style="max-height:440px;overflow-y:auto">
-          <table style="min-width:100%">
-            <thead><tr><th>Equipamento</th><th>Frota</th><th>Dia</th><th>Semana</th><th>Mês</th><th>Uso</th></tr></thead>
+        <h3>Horas por avião e sala (dia, semana e mês)</h3>
+        <div class="tw">
+          <table style="min-width:100%" data-bi="eq">
+            <thead><tr><th>Avião / sala</th><th>Tipo</th><th>Dia</th><th>Semana</th><th>Mês</th><th>Uso</th></tr></thead>
             <tbody>
-              ${eqList.map(e => {
+              ${visiveis('eq', eqList).map(e => {
                 const pct = Math.round((e.m / maxEqM) * 100);
                 const disp = (e.reg !== GROUND_REG && !S.av[e.reg]) ? ' <span class="tag fb">Manut.</span>' : '';
                 const acro = e.reg === ACROBAT_REG ? ' <span class="tag">Acrobat</span>' : '';
@@ -126,15 +138,16 @@ export function rBI() {
             </tbody>
           </table>
         </div>
+        ${botaoVerTodos('eq', eqList.length)}
       </div>
 
       <div class="pn">
-        <h3>Horas por Instrutor (Dia · Semana · Mês)</h3>
-        <div class="tw" style="max-height:440px;overflow-y:auto">
-          <table style="min-width:100%">
+        <h3>Horas por instrutor (dia, semana e mês)</h3>
+        <div class="tw">
+          <table style="min-width:100%" data-bi="ins">
             <thead><tr><th>Instrutor</th><th>Dia</th><th>Semana</th><th>Mês</th><th>Carga</th></tr></thead>
             <tbody>
-              ${insList.map(x => {
+              ${visiveis('ins', insList).map(x => {
                 const pct = Math.round((x.m / maxInsM) * 100);
                 return `<tr>
                   <td><b>${esc(x.nm)}</b></td>
@@ -147,14 +160,15 @@ export function rBI() {
             </tbody>
           </table>
         </div>
+        ${botaoVerTodos('ins', insList.length)}
       </div>
     </div>
 
     <div class="pn">
-      <h3>Horas por Fase / Missão</h3>
+      <h3>Horas por missão</h3>
       <div class="tw">
         <table style="min-width:100%">
-          <thead><tr><th>Missão</th><th>Equipamento Permitido</th><th>Dia</th><th>Semana</th><th>Mês</th><th>Proporção</th></tr></thead>
+          <thead><tr><th>Missão</th><th>Equipamentos permitidos</th><th>Dia</th><th>Semana</th><th>Mês</th><th>Proporção</th></tr></thead>
           <tbody>
             ${Object.values(misStats).map(ms => {
               const rule = MIS[ms.mis] || MIS['Voo Local'];
