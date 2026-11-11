@@ -47,9 +47,9 @@ test.describe('Login e perfis (modo compartilhado)', () => {
     await expect(page.locator('#inst .cd')).toHaveCount(40);
     await expect(page.locator('#role-sel')).toBeHidden();
 
-    await irPara(page, 'dem');
-    await confirmar(page, '#demo');
-    await expect.poll(() => servidor.banco.get('cadastro').conteudo.stu.length).toBe(20);
+    await irPara(page, 'alu');
+    await page.locator('[data-act="adds"]').click();
+    await expect.poll(() => servidor.banco.get('cadastro').conteudo.stu.length).toBe(1);
     expect(servidor.gravacoes.find(g => g.chave === `dia:${AMANHA}`)).toEqual({ chave: `dia:${AMANHA}`, versaoLida: 1, por: CONTAS.operador.email });
     await expect.poll(() => servidor.historico.map(h => [h.data, h.autor])).toContainEqual([AMANHA, 'Operador de Teste']);
   });
@@ -62,7 +62,7 @@ test.describe('Login e perfis (modo compartilhado)', () => {
     await expect(page.locator('body')).toHaveAttribute('data-role', 'gestor');
     await expect(page.locator('#inst .cd')).toHaveCount(40);
     await irPara(page, 'dem');
-    await expect(page.locator('#demo')).toBeHidden();
+    await expect(page.locator('#clr')).toBeHidden();
     await irPara(page, 'ins');
     await expect(page.locator('[data-act="addi"]')).toBeHidden();
     expect(servidor.gravacoes).toEqual([]);

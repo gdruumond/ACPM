@@ -44,7 +44,8 @@ npm run test:e2e       # aplicação no navegador (Playwright)
 - Os testes E2E comparam a escala gerada com snapshots em `test/e2e/__snapshots__/`. Se uma mudança
   de comportamento for intencional, atualize-os com `npx playwright test --update-snapshots` e revise o diff.
 - `test/fixtures/motor-goldens.json` guarda a escala aprovada do motor para 40 cenários aleatórios e para o
-  "Preencher exemplo". Depois de mudar uma regra do motor de propósito, regrave com
+  dia de exemplo (`test/helpers/exemplo.js`, a demanda do antigo botão "Preencher exemplo"). Depois de mudar uma
+  regra do motor de propósito, regrave com
   `node scripts/capturar-goldens-motor.mjs` e revise a diferença.
 - Os testes usam somente nomes e pesos fictícios.
 - O modo compartilhado é testado com um servidor Supabase falso (`test/e2e/supabase-falso.js`) que segue o mesmo

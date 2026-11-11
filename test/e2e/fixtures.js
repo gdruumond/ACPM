@@ -5,6 +5,7 @@
 import { test as base, expect } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 import { estadoSintetico } from '../helpers/estado.js';
+import { comExemplo } from '../helpers/exemplo.js';
 
 export { expect };
 
@@ -79,11 +80,8 @@ export async function confirmar(page, seletor) {
   await botao.click();
 }
 
-export async function preencherExemplo(page) {
-  await irPara(page, 'dem');
-  await confirmar(page, '#demo');
-  await expect(page.locator('#dem tr[data-k="d"]').first()).toBeAttached();
-}
+// Cadastro sintético com o dia de exemplo (a demanda do antigo botão "Preencher exemplo")
+export const abrirComExemplo = (page, opts = {}) => abrir(page, { estado: comExemplo(estadoSintetico()), ...opts });
 
 export async function gerarEscala(page) {
   await irPara(page, 'dem');

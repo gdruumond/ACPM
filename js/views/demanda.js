@@ -89,7 +89,7 @@ export const cnt = () => {
 
 export const rDem = () => {
   if (!S.stu.length) {
-    $('#dem').innerHTML = `<tr class="empty-dem"><td colspan="11" class="h" style="padding:16px">Nenhum aluno cadastrado. Cadastre alunos em “3 · Alunos” ou clique em “Preencher exemplo” acima para testar a escala.</td></tr>`;
+    $('#dem').innerHTML = `<tr class="empty-dem"><td colspan="11" class="h" style="padding:16px">Nenhum aluno cadastrado. Cadastre os alunos na aba “3 · Alunos”.</td></tr>`;
     cnt();
     renderAuditPanel();
     return;

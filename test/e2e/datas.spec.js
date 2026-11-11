@@ -1,6 +1,6 @@
 // Escala por data no modo local: cada data guarda a sua escala, a nova data copia o dia anterior,
 // histórico e BI por data, e os dados da fase 2 deste navegador são convertidos na primeira abertura.
-import { test, expect, abrir, abrirSintetico, irPara, preencherExemplo, gerarEscala, lerEscala, AMANHA } from './fixtures.js';
+import { test, expect, abrir, abrirSintetico, abrirComExemplo, irPara, gerarEscala, lerEscala, AMANHA } from './fixtures.js';
 import { estadoSintetico } from '../helpers/estado.js';
 import { aluno } from '../helpers/montar.js';
 import { runAllocationEngine } from '../../js/engine.js';
@@ -21,8 +21,7 @@ async function mudarData(page, data) {
 
 test.describe('Escala por data', () => {
   test('cada data tem a sua escala; a nova data copia a demanda do dia anterior', async ({ page }) => {
-    await abrirSintetico(page);
-    await preencherExemplo(page);
+    await abrirComExemplo(page);
     await gerarEscala(page);
     const escalaDia11 = await lerEscala(page);
 
@@ -84,8 +83,7 @@ test.describe('Escala por data', () => {
   });
 
   test('o BI soma as escalas guardadas de cada data', async ({ page }) => {
-    await abrirSintetico(page);
-    await preencherExemplo(page);
+    await abrirComExemplo(page);
     await gerarEscala(page);
     await mudarData(page, DEPOIS);
     await gerarEscala(page);

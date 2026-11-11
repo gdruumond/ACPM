@@ -8,7 +8,7 @@
  *   js/storage.js   Camada de dados (migrações, link compartilhado) sobre js/backends/ (local ou Supabase)
  *   js/sessao.js    Login e perfil de acesso no modo compartilhado (Supabase)
  *   js/state.js     Estado compartilhado entre os módulos
- *   js/actions.js   Perfil de acesso, desfazer, histórico, gerar escala e exemplo
+ *   js/actions.js   Perfil de acesso, desfazer, histórico e escala
  *   js/dom.js       Utilitários de DOM
  *   js/views/       Renderização das abas (recursos, cadastros, demanda, escala, BI e navegação)
  *   js/export.js    Exportação CSV e PDF
@@ -26,7 +26,7 @@ import { renderAuditPanel, rOut } from './views/escala.js';
 import { singleDemandRowHTML, cnt, rDem, applyDemandFilters } from './views/demanda.js';
 import { insHTML, stuHTML, rIns, rAlu, applyInstructorFilters, preencherFiltroDeHabilitacoes } from './views/cadastros.js';
 import { rRec } from './views/recursos.js';
-import { setRole, pushHistory, save, logChange, undoLastAction, syncBIHistoryForCurrentDate, gen, demo, abrirData, historicoParaPainel, carregarData, carregarBI } from './actions.js';
+import { setRole, pushHistory, save, logChange, undoLastAction, syncBIHistoryForCurrentDate, gen, abrirData, historicoParaPainel, carregarData, carregarBI } from './actions.js';
 import { exp, pdf } from './export.js';
 import { projetoSupabase } from './config-supabase.js';
 import { CATEGORIAS_DO_RODIZIO, ajustarFilas } from './rodizio.js';
@@ -169,7 +169,6 @@ $('#btn-theme').onclick = () => {
   try { localStorage.setItem(ApiClient.KEY_THEME, next); } catch (e) {}
 };
 
-armed('#demo', 'Confirmar exemplo', demo);
 armed('#clr', 'Confirmar limpeza', () => {
   if (isGestor()) return;
   pushHistory();

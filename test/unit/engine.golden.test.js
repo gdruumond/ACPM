@@ -9,7 +9,7 @@ import { gerarCenario, hashEstado } from '../helpers/cenarios.js';
 const goldens = JSON.parse(readFileSync(new URL('../fixtures/motor-goldens.json', import.meta.url), 'utf8'));
 const semIndefinidos = valor => JSON.parse(JSON.stringify(valor));
 
-test('cenário "Preencher exemplo" mantém a escala aprovada', () => {
+test('cenário de exemplo (o do antigo botão "Preencher exemplo") mantém a escala aprovada', () => {
   assert.deepEqual(semIndefinidos(runAllocationEngine(goldens.exemplo.estado)), goldens.exemplo.saida);
 });
 

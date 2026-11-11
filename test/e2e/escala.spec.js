@@ -1,10 +1,9 @@
 import { readFile } from 'node:fs/promises';
-import { test, expect, abrirSintetico, irPara, preencherExemplo, gerarEscala, lerEscala, json, AMANHA } from './fixtures.js';
+import { test, expect, abrirComExemplo, irPara, gerarEscala, lerEscala, json, AMANHA } from './fixtures.js';
 
 test.describe('Escala', () => {
   test.beforeEach(async ({ page }) => {
-    await abrirSintetico(page);
-    await preencherExemplo(page);
+    await abrirComExemplo(page);
     await gerarEscala(page);
   });
 

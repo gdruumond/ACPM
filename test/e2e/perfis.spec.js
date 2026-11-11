@@ -1,11 +1,10 @@
 import {
-  test, expect, abrirSintetico, irPara, preencherExemplo, gerarEscala, lerEscala, prepararContexto, vigiarErros
+  test, expect, abrirSintetico, abrirComExemplo, irPara, gerarEscala, lerEscala, prepararContexto, vigiarErros
 } from './fixtures.js';
 
 test.describe('Perfis de acesso', () => {
   test('perfil Gestor oculta a edição e o Operador a restaura', async ({ page }) => {
-    await abrirSintetico(page);
-    await preencherExemplo(page);
+    await abrirComExemplo(page);
     await gerarEscala(page);
 
     await page.locator('#role-sel').selectOption('gestor');
@@ -31,8 +30,7 @@ test.describe('Perfis de acesso', () => {
   });
 
   test('link compartilhado abre travado no Gestor com a mesma escala', async ({ page, browser }) => {
-    await abrirSintetico(page);
-    await preencherExemplo(page);
+    await abrirComExemplo(page);
     await gerarEscala(page);
     const escalaOperador = await lerEscala(page);
 
