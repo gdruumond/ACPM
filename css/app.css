@@ -190,7 +190,7 @@ h3 { font: 600 15px 'Barlow Semi Condensed', sans-serif; margin: 10px 0 6px; col
 
 /* Regras de Somente Visualização Estrita para o Perfil Gestor e Links Compartilhados */
 body[data-role="gestor"] .edit-only { display: none !important; }
-body[data-role="gestor"] #s-rec .chip,
+body[data-role="gestor"] #s-rec .janela,
 body[data-role="gestor"] #s-ins .w,
 body[data-role="gestor"]:not([data-backend="supabase"]) #dt,
 body[data-role="gestor"] .st-sel,
@@ -435,7 +435,43 @@ tr.st-Cancelado td { opacity: 0.45; text-decoration: line-through; }
 .tag.fb { background: var(--wa-bg); color: var(--wa); }
 .tag.grp { background: var(--ok-bg); color: var(--ok); }
 .tag.er { background: var(--er-bg); color: var(--er); }
-.revisao input { width: 6em; }
+/* Interruptor (é uma caixa de seleção com outra aparência) */
+input.sw {
+  -webkit-appearance: none; appearance: none; width: 32px; height: 18px; border-radius: 9px; margin: 0; flex: none;
+  background: var(--ln2); position: relative; cursor: pointer; transition: background .15s; vertical-align: middle;
+}
+input.sw::after {
+  content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: left .15s;
+}
+input.sw:checked { background: var(--ok); }
+input.sw:checked::after { left: 16px; }
+
+/* Recursos: as janelas como interruptores e a frota numa tabela só */
+.janelas { display: flex; flex-wrap: wrap; gap: 6px; }
+.janela {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px 4px 6px; cursor: pointer; user-select: none;
+  border: 1px solid var(--ln2); border-radius: 18px; background: var(--pn); font: 600 14.5px 'Barlow Semi Condensed', sans-serif;
+}
+.janela small { color: var(--mu); font-weight: 500; }
+.janela.off { color: var(--mu); }
+.frota-titulo { margin-top: 16px; }
+.frota-titulo small { font: 400 13px 'Barlow', sans-serif; color: var(--mu); margin-left: 6px; }
+table.frota { min-width: 640px; font-size: 14.5px; }
+table.frota td { padding: 6px 10px; }
+table.frota tr.grupo td { background: var(--pn2); font: 600 14px 'Barlow Semi Condensed', sans-serif; }
+table.frota tr.grupo small { color: var(--mu); font-weight: 500; margin-left: 6px; }
+table.frota tr.manutencao td:not(:first-child) { color: var(--mu); }
+table.frota input.horas { width: 72px; text-align: right; border-color: transparent; background: transparent; }
+table.frota tr:hover input.horas, table.frota input.horas:focus { border-color: var(--ln2); background: var(--pn); }
+.saldo { display: inline-block; min-width: 48px; text-align: right; }
+.barra { display: inline-block; width: 90px; height: 6px; border-radius: 3px; background: var(--neutro-bg); vertical-align: middle; margin-left: 8px; overflow: hidden; }
+.barra i { display: block; height: 100%; background: var(--ok); }
+.barra.wa i { background: #D9A400; }
+.barra.er i { background: var(--er); }
+table.frota .rev { opacity: 0; transition: opacity .1s; }
+table.frota tr:hover .rev, table.frota .rev:focus-visible { opacity: 1; }
+@media (hover: none) { table.frota .rev { opacity: 1; } }
 .rodizio { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
 .fila { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
 .fila li { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 4px 0; border-bottom: 1px solid var(--ln); }

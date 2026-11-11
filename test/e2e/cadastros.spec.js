@@ -1,14 +1,14 @@
 import { test, expect, abrir, abrirSintetico, irPara, abrirEscala, lerEscala } from './fixtures.js';
-import { aluno, cenario, instrutor } from '../helpers/montar.js';
+import { aluno, apenas, cenario, instrutor } from '../helpers/montar.js';
 
 test.describe('Recursos', () => {
   test('estado inicial: 9 janelas, 26 recursos, nenhum instrutor e nenhum aluno', async ({ page }) => {
     await abrir(page);
     await expect(page.locator('#wins input[data-a="win"]')).toHaveCount(9);
-    await expect(page.locator('#wins label').last()).toHaveText('9º · 17:30 (noturno)');
+    await expect(page.locator('#wins label').last()).toHaveText('17:30 noturno');
     await expect(page.locator('#eqs input[data-a="av"]')).toHaveCount(26);
-    await expect(page.locator('#eqs h2')).toHaveText(['Sim. Mono', 'Sim. Multi', 'C152', 'C172', 'PA-34']);
-    await expect(page.locator('#eqs label:has(input[data-id="PR-JPL"])')).toContainText('Acrobat · Parafuso');
+    await expect(page.locator('#eqs tr.grupo')).toHaveText([/^C152/, /^C172/, /^PA-34/, /^Simuladores/]);
+    await expect(page.locator('#eqs tr[data-r="PR-JPL"]')).toContainText('Só Parafuso');
     await expect(page.locator('#inst .cd')).toHaveCount(0);
     await expect(page.locator('#inst')).toContainText('Nenhum instrutor cadastrado');
     await irPara(page, 'alu');
@@ -18,14 +18,26 @@ test.describe('Recursos', () => {
   test('aeronave em manutenção fica registrada no histórico e persiste', async ({ page }) => {
     await abrirSintetico(page);
     await irPara(page, 'rec');
-    const chip = page.locator('#eqs label:has(input[data-id="PR-BTB"])');
-    await chip.locator('input').uncheck();
-    await expect(chip).toHaveClass(/\boff\b/);
+    const linha = page.locator('#eqs tr[data-r="PR-BTB"]');
+    await linha.locator('input[data-a="av"]').uncheck();
+    await expect(linha).toHaveClass(/\bmanutencao\b/);
+    await expect(linha).toContainText('Em manutenção');
     await expect(page.locator('#log-cnt')).toHaveText('1');
     await expect(page.locator('#audit-log-list')).toContainText('PR-BTB: Manutenção');
     await page.reload();
     await expect(page.locator('#eqs input[data-id="PR-BTB"]')).not.toBeChecked();
     await expect(page.locator('#log-cnt')).toHaveText('1');
+  });
+
+  test('uma tabela da frota: saldo até a revisão de 50 horas e o que o avião voa no dia', async ({ page }) => {
+    await abrir(page, { estado: cenario({ stu: [aluno(1000, { p1: 1, p2: 1 })], semAeronaves: apenas('C152', 'PP-LJV'), horas: { 'PP-LJV': 42 } }) });
+    await irPara(page, 'rec');
+    const linha = page.locator('#eqs tr[data-r="PP-LJV"]');
+    await expect(linha.locator('.saldo')).toHaveText('8 h');
+    await expect(linha.locator('.barra')).toHaveClass(/\bwa\b/);
+    await expect(linha).toContainText('1 h na escala · termina com 43 h');
+    await expect(page.locator('#eqs tr.grupo').first()).toContainText('1 de 13 disponíveis');
+    await expect(page.locator('#eqs tr[data-r="SIM-MONO-A"] input[data-a="horas"]')).toHaveCount(0);
   });
 
   test('desativa uma janela de operação', async ({ page }) => {

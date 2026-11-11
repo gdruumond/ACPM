@@ -1,49 +1,58 @@
-// Aba 1 · Recursos: janelas de operação, frota (manutenção) e revisão de 50 horas dos aviões.
-import { WIN, NI, EQ, ACROBAT_REG, EQT, AIRCRAFT_EQ_TYPES, REVISAO_H } from '../config.js';
+// Aba Recursos: janelas de operação e a frota numa tabela só: disponível ou em manutenção, horas desde a última
+// revisão de 50 horas, saldo até a revisão e o que o avião voa na escala do dia.
+import { WIN, NI, EQ, ACROBAT_REG, AIRCRAFT_EQ_TYPES, SIM_EQ_TYPES, REVISAO_H } from '../config.js';
 import { S, RES } from '../state.js';
 import { $ } from '../dom.js';
 import { hm, fmtH } from '../format.js';
 
-// Horas de cada avião desde a última revisão (no início da data aberta), o saldo e onde ele para na escala do dia
+const GRUPOS = [...AIRCRAFT_EQ_TYPES.map(tipo => [tipo, [tipo]]), ['Simuladores', SIM_EQ_TYPES]];
+
+function situacao(r, voadas, revisao) {
+  if (!S.av[r]) return '<span class="tag">Em manutenção</span>';
+  if (revisao && revisao.paraAs !== null) {
+    return `<span class="tag er">Parou para revisão de 50 horas ${revisao.voadas ? 'às ' + hm(revisao.paraAs) : '(sem saldo hoje)'}</span>`;
+  }
+  if (!voadas) return '<span class="sm">—</span>';
+  return `${fmtH(voadas)} na escala${revisao ? ` · termina com ${fmtH(revisao.fim)}` : ''}`;
+}
+
+// Saldo até a revisão, com uma barra: âmbar abaixo de 10 h e vermelha abaixo de 5 h
+function saldo(horas) {
+  const resta = Math.max(0, REVISAO_H - horas);
+  const cor = resta < 5 ? 'er' : resta < 10 ? 'wa' : '';
+  const largura = Math.max(2, Math.min(100, (resta / REVISAO_H) * 100)).toFixed(0);
+  return `<span class="saldo">${fmtH(resta)}</span><span class="barra ${cor}"><i style="width:${largura}%"></i></span>`;
+}
+
+function linha(r, tipo, voadas, revisao) {
+  const aviao = AIRCRAFT_EQ_TYPES.includes(tipo);
+  const horas = S.horas[r];
+  const temHoras = typeof horas === 'number';
+  const parafuso = r === ACROBAT_REG ? ' <span class="tag fb" title="Exclusivo para a missão de Parafuso">Só Parafuso</span>' : '';
+  return `<tr data-r="${r}"${S.av[r] ? '' : ' class="manutencao"'}>
+    <td><input type="checkbox" class="sw" data-a="av" data-id="${r}"${S.av[r] ? ' checked' : ''} aria-label="${r} disponível"></td>
+    <td><b>${r}</b>${aviao ? '' : ` <small class="sm">${tipo}</small>`}${parafuso}</td>
+    <td>${aviao ? `<input type="number" class="horas" min="0" max="60" step="0.1" inputmode="decimal" data-a="horas" data-horas="${r}" value="${temHoras ? horas : ''}" placeholder="—" aria-label="Horas do ${r} desde a última revisão"> h` : ''}</td>
+    <td>${aviao && temHoras ? saldo(horas) : ''}</td>
+    <td>${situacao(r, voadas, revisao)}</td>
+    <td class="edit-only">${aviao ? `<button class="btn quiet rev" data-act="revisao" data-id="${r}">Revisão feita</button>` : ''}</td>
+  </tr>`;
+}
+
+// A frota, por tipo: refeita junto com a escala (as horas voadas no dia e onde cada avião para)
 export function rRevisao() {
   const resumo = (RES && RES.revisao) || {};
-  const linhas = AIRCRAFT_EQ_TYPES.flatMap(tipo => EQ[tipo].map(r => {
-    const horas = S.horas[r];
-    const temHoras = typeof horas === 'number';
-    const naEscala = resumo[r];
-    const situacao = !temHoras ? '<span class="h">—</span>'
-      : naEscala && naEscala.paraAs !== null
-        ? `<span class="tag er">Parou para revisão de 50 horas ${naEscala.voadas ? 'às ' + hm(naEscala.paraAs) : '(sem saldo hoje)'}</span>`
-        : naEscala ? `${fmtH(naEscala.voadas)} na escala · termina o dia com ${fmtH(naEscala.fim)}` : '—';
-    return `<tr data-r="${r}">
-      <td><b>${r}</b> <span class="sm">${tipo}</span></td>
-      <td><input type="number" min="0" max="60" step="0.1" inputmode="decimal" data-a="horas" data-id="${r}" value="${temHoras ? horas : ''}" placeholder="—" aria-label="Horas do ${r} desde a última revisão"></td>
-      <td>${temHoras ? fmtH(Math.max(0, REVISAO_H - horas)) : '—'}</td>
-      <td>${situacao}</td>
-      <td><button class="x edit-only" data-act="revisao" data-id="${r}">Revisão feita</button></td>
-    </tr>`;
-  }));
-  $('#revisao').innerHTML = `<h2>Revisão de 50 horas</h2><div class="pn">
-    <p class="h">Horas de voo de cada avião desde a última revisão, no início desta data. A escala não passa das 50 horas: o avião para quando não tem saldo para mais um voo. A data seguinte começa com estas horas mais os voos do dia que não foram cancelados. Avião sem as horas informadas fica sem esse controle.</p>
-    <div class="tw"><table class="revisao">
-      <thead><tr><th>Avião</th><th>Horas desde a revisão</th><th>Saldo até 50 h</th><th>Escala do dia</th><th></th></tr></thead>
-      <tbody>${linhas.join('')}</tbody>
-    </table></div>
-  </div>`;
+  const voadas = {};
+  ((RES && RES.out) || []).forEach(o => { voadas[o.r] = (voadas[o.r] || 0) + o.h; });
+  $('#revisao').innerHTML = GRUPOS.map(([rotulo, tipos]) => {
+    const regs = tipos.flatMap(tipo => EQ[tipo].map(r => [r, tipo]));
+    const disponiveis = regs.filter(([r]) => S.av[r]).length;
+    return `<tr class="grupo"><td colspan="6">${rotulo} <small>${disponiveis} de ${regs.length} disponíveis</small></td></tr>` +
+      regs.map(([r, tipo]) => linha(r, tipo, voadas[r] || 0, resumo[r])).join('');
+  }).join('');
 }
 
 export function rRec() {
-  $('#wins').innerHTML = WIN.map((w, i) =>
-    `<label class="chip${S.win[i] ? '' : ' off'}"><input type="checkbox" data-a="win" data-i="${i}"${S.win[i] ? ' checked' : ''}>${i + 1}º · ${w}${i == NI ? ' (noturno)' : ''}</label>`
-  ).join('');
-
-  $('#eqs').innerHTML = Object.keys(EQ).map(k =>
-    `<h2>${EQT[k]}</h2><div class="pn"><div class="chips">${
-      EQ[k].map(r => {
-        const badge = r === ACROBAT_REG ? ' <span class="chip-sub" title="Exclusivo para a missão de Parafuso">Acrobat · Parafuso</span>' : '';
-        return `<label class="chip${S.av[r] ? '' : ' off'}"><input type="checkbox" data-a="av" data-id="${r}"${S.av[r] ? ' checked' : ''}>${r}${badge}</label>`;
-      }).join('')
-    }</div></div>`
-  ).join('');
+  $('#wins').innerHTML = WIN.map((w, i) => `<label class="janela${S.win[i] ? '' : ' off'}"><input type="checkbox" class="sw" data-a="win" data-i="${i}"${S.win[i] ? ' checked' : ''}><b>${w}</b> <small>${i == NI ? 'noturno' : (i + 1) + 'º'}</small></label>`).join('');
   rRevisao();
 }

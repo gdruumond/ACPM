@@ -676,7 +676,7 @@ document.addEventListener('change', e => {
       });
     } else if (a === 'horas') {
       // Horas desde a última revisão de 50 horas; vazio: sem controle para o avião
-      const reg = t.dataset.id;
+      const reg = t.dataset.horas;
       const horas = t.value === '' ? null : Math.round(Math.max(0, +t.value) * 10) / 10;
       if (horas === null || Number.isNaN(horas)) delete S.horas[reg];
       else S.horas[reg] = horas;

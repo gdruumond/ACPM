@@ -120,12 +120,19 @@
 
   <!-- ABA 1: RECURSOS -->
   <section id="s-rec">
-    <h2>Janelas de operação</h2>
+    <h2>Recursos do dia</h2>
     <div class="pn">
-      <div class="chips" id="wins"></div>
+      <h3>Janelas de operação</h3>
+      <div class="janelas" id="wins"></div>
     </div>
-    <div id="eqs"></div>
-    <div id="revisao"></div>
+    <h3 class="frota-titulo">Frota <small>horas desde a última revisão de 50 horas, no início desta data; a escala não passa das 50 horas</small></h3>
+    <div class="tw" id="eqs">
+      <table class="frota">
+        <thead><tr><th>Disponível</th><th>Avião</th><th>Horas desde a revisão</th><th>Saldo até 50 h</th><th>Na escala do dia</th><th class="edit-only" aria-label="Revisão"></th></tr></thead>
+        <tbody id="revisao"></tbody>
+      </table>
+    </div>
+    <p class="h">A data seguinte começa com estas horas mais os voos do dia que não foram cancelados. Avião sem as horas informadas fica sem o controle da revisão.</p>
   </section>
 
   <!-- ABA 2: INSTRUTORES -->
