@@ -1,11 +1,10 @@
 import { readFile } from 'node:fs/promises';
-import { test, expect, abrirSintetico, irPara, preencherExemplo, gerarEscala, lerEscala, json, AMANHA } from './fixtures.js';
+import { test, expect, abrirComExemplo, irPara, abrirEscala, lerEscala, json, AMANHA } from './fixtures.js';
 
 test.describe('Escala', () => {
   test.beforeEach(async ({ page }) => {
-    await abrirSintetico(page);
-    await preencherExemplo(page);
-    await gerarEscala(page);
+    await abrirComExemplo(page);
+    await abrirEscala(page);
   });
 
   test('gera a escala do exemplo: resumo, alertas, tabela e mapa por aeronave', async ({ page }) => {

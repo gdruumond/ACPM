@@ -1,9 +1,7 @@
 // Ações que alteram o estado: perfil de acesso, data da escala, desfazer, histórico de alterações, geração da
-// escala, BI e "Preencher exemplo".
-import { WIN, NI, GROUND_EQ_TYPE, GROUND_DURATION_H, SIM_EQ_TYPES, MIS, DEFAULT_LIM } from './config.js';
-import { pad, isoMenosDias, fimDoMes } from './format.js';
-import { blank } from './rules.js';
-import { habilitacoesDoNivel } from './habilitacoes.js';
+// escala e BI.
+import { DEFAULT_LIM } from './config.js';
+import { isoMenosDias, fimDoMes } from './format.js';
 import { runAllocationEngine } from './engine.js';
 import { ApiClient } from './storage.js';
 import { S, RES, AUDIT_LOG, BI_HISTORY, DATA, setS, setRES, setAuditLog, setBIHistory, setData, isGestor } from './state.js';
@@ -63,9 +61,21 @@ export function pushHistory() {
   if (btnUndo) btnUndo.disabled = false;
 }
 
+// A escala acompanha os dados: cada alteração do operador refaz a escala da data (o motor leva milissegundos) e
+// grava os dados e a escala juntos. Ao abrir a aba Escala, ela já está pronta
 export function save() {
   if (isGestor()) return;
+  refazerEscala();
   ApiClient.salvarDia(DATA, S, RES);
+  escalaSoCalculada = false;
+}
+
+// Escala só calculada (data aberta ainda sem escala gravada): é gravada na primeira alteração ou quando é exportada
+// (CSV ou PDF), para entrar no BI e nas horas e no rodízio da data seguinte. Abrir uma data não grava nada
+let escalaSoCalculada = false;
+export const marcarEscalaSoCalculada = valor => { escalaSoCalculada = valor; };
+export function gravarEscalaCalculada() {
+  if (escalaSoCalculada) save();
 }
 
 // A entrada aparece na hora; o id (que permite reverter) chega quando o registro é gravado.
@@ -120,10 +130,13 @@ export async function carregarData(data) {
   if (pedido !== pedidoDeData) return;
   abrirData(data);
   setS(estado);
-  setRES(escala);
+  // Data sem escala gravada (por exemplo, uma data nova, copiada da anterior): a escala calculada aparece na hora
+  // e é gravada junto com a primeira alteração
+  setRES(escala || escalaCalculada());
+  escalaSoCalculada = !escala;
   setAuditLog(historico);
   limparDesfazer();
-  rRec(); rIns(); rAlu(); rDem(); renderAuditPanel(); rOut(false);
+  rRec(); rIns(); rAlu(); rDem(); renderAuditPanel(); rOut();
   await carregarBI();
 }
 
@@ -155,7 +168,6 @@ export function undoLastAction() {
   $('#btn-undo').disabled = historyStack.length === 0;
   logChange('mod', 'Ação desfeita pelo botão Desfazer');
   rRec(); rIns(); rAlu(); rDem();
-  if (RES) gen(false);
   showToast('Última alteração desfeita.');
 }
 
@@ -174,99 +186,16 @@ export function syncBIHistoryForCurrentDate() {
   }
 }
 
-export function gen(switchTab = true) {
-  // A escala guarda a data para a qual foi gerada (no modo compartilhado, todos veem essa data)
-  setRES({ ...runAllocationEngine(S), data: DATA });
-  ApiClient.salvarDia(DATA, S, RES);
+// Escala da data calculada a partir dos dados da tela. Ela guarda a data para a qual foi feita (no modo
+// compartilhado, todos veem essa data)
+export const escalaCalculada = () => ({ ...runAllocationEngine(S), data: DATA });
+
+// Refaz a escala e o que depende dela (revisão de 50 horas, painel do dia e BI), sem gravar: quem grava é save
+export function refazerEscala() {
+  setRES(escalaCalculada());
   syncBIHistoryForCurrentDate();
   rRevisao();
-  rOut(switchTab);
+  rOut();
   renderAuditPanel();
   rBI();
 }
-
-export const demo = () => {
-  if (isGestor()) return;
-  pushHistory();
-  let s = 7;
-  const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
-  const pick = a => a[Math.floor(r() * a.length)];
-  const wt = [0,0,1,1,1,2,2,3,4,4,5,6,6,7];
-  const poolMis = ['Simulador','Voo Local','Voo Local','Navegação','Navegação','Voo Solo','IFR','Multimotor','Noturno'];
-
-  // Se não houver nenhum instrutor cadastrado, cria 40 instrutores fictícios (habilitações dos níveis A01–A09 em ciclo)
-  if (!S.ins.length) {
-    S.ins = Array.from({ length: 40 }, (_, i) => ({
-      id: i + 1,
-      nm: `Instrutor ${String(i + 1).padStart(2, '0')}`,
-      on: true,
-      hab: habilitacoesDoNivel((i % 9) + 1),
-      kg: 55 + ((i * 17) % 45),
-      aw: WIN.map(() => true)
-    }));
-  }
-
-  // Se não houver nenhum aluno cadastrado, cria 20 alunos de exemplo com pesos realistas
-  if (!S.stu.length) {
-    S.stu = Array.from({ length: 20 }, (_, i) => ({
-      id: S.nid++,
-      nm: pad(i),
-      kg: 62 + Math.floor(r() * 28),
-      bl: [],
-      extra: [],
-      ...blank()
-    }));
-  }
-
-  S.stu.forEach((d, idx) => {
-    d.extra = [];
-    // Aluno 01 exemplifica Ground PA-34 (com instrutor A01+) às 06:30 + Multimotor PA-34 (instrutor A09) às 08:20
-    if (idx === 0) {
-      Object.assign(d, {
-        fly: true, mis: 'Ground PA-34', eq: GROUND_EQ_TYPE, p1: 0, p2: 1, nb: GROUND_DURATION_H, ss: 1, pr: 5,
-        extra: [
-          { mid: S.nid++, fly: true, mis: 'Multimotor', eq: 'PA-34', p1: 1, p2: 2, nb: 2, ss: 1, pr: 5 },
-          { mid: S.nid++, fly: true, mis: 'Noturno', eq: 'C172', p1: NI, p2: NI, nb: 1, ss: 1, pr: 5 }
-        ]
-      });
-      return;
-    }
-    // Alunos 02 a 07 (6 alunos) exemplificam uma turma coletiva de Ground C152 no mesmo horário com o mesmo instrutor A01
-    if (idx >= 1 && idx <= 6) {
-      Object.assign(d, {
-        fly: true, mis: 'Ground C152', eq: GROUND_EQ_TYPE, p1: 0, p2: 1, nb: GROUND_DURATION_H, ss: 1, pr: 4,
-        extra: idx <= 3 ? [
-          { mid: S.nid++, fly: true, mis: 'Voo Local', eq: 'C152', p1: 1, p2: 2, nb: 1, ss: 1, pr: 4 }
-        ] : []
-      });
-      return;
-    }
-    // Aluno 08 exemplifica missão de Parafuso no PR-JPL (C152 Acrobat)
-    if (idx === 7) {
-      Object.assign(d, {
-        fly: true, mis: 'Parafuso', eq: 'C152', p1: 2, p2: 5, nb: 1, ss: 1, pr: 4, extra: []
-      });
-      return;
-    }
-    if (r() > .82) { Object.assign(d, blank()); return; }
-    const mis = pick(poolMis);
-    const nt = mis === 'Noturno';
-    const nb = nt ? 1 + Math.floor(r() * 2) : 1 + Math.floor(r() * r() * 4);
-    let eq = MIS[mis].defEq;
-    if (mis === 'Simulador') eq = pick(SIM_EQ_TYPES);
-    else if (mis === 'IFR') eq = r() > 0.78 ? 'PA-34' : 'C172';
-    else if (mis === 'Navegação' || mis === 'Voo Local') eq = r() > 0.72 ? 'C172' : 'C152';
-
-    Object.assign(d, {
-      fly: true, mis, eq,
-      p1: nt ? NI : pick(wt),
-      p2: nt ? NI : pick(wt),
-      nb,
-      ss: nb >= 3 && r() > .5 ? 2 : 1,
-      pr: 1 + Math.floor(r() * 5)
-    });
-  });
-  save(); rIns(); rAlu(); rDem();
-  logChange('inc', 'Demanda preenchida com exemplo (Ground A01+ e turmas coletivas)');
-  showToast('Exemplo operacional carregado.');
-};

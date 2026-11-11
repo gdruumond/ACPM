@@ -1,4 +1,4 @@
-import { test, expect, abrir, abrirSintetico, irPara, preencherExemplo, gerarEscala, lerEscala, json } from './fixtures.js';
+import { test, expect, abrir, abrirSintetico, abrirComExemplo, irPara, abrirEscala, lerEscala, json } from './fixtures.js';
 import { aluno, cenario, instrutor } from '../helpers/montar.js';
 
 const lerDemanda = page => page.locator('#dem tr[data-k="d"]').evaluateAll(linhas => linhas.map(tr => {
@@ -14,26 +14,18 @@ const lerDemanda = page => page.locator('#dem tr[data-k="d"]').evaluateAll(linha
 const linhaDoAluno = (page, nome) => page.locator(`#dem tr[data-k="d"][data-mid="0"][data-nm="${nome.toLowerCase()}"]`);
 
 test.describe('Demanda', () => {
-  test('"Preencher exemplo" cria 20 alunos com as missões de exemplo', async ({ page }) => {
-    await abrirSintetico(page);
-    await preencherExemplo(page);
-    await expect(page.locator('#dem tr[data-k="d"][data-mid="0"]')).toHaveCount(20);
-    expect(json({ contagem: await page.locator('#cnt').innerText(), linhas: await lerDemanda(page) }))
-      .toMatchSnapshot('demanda-exemplo.json');
-  });
-
-  test('"Preencher exemplo" num navegador sem cadastro cria 40 instrutores e 20 alunos de exemplo', async ({ page }) => {
+  test('sem "Preencher exemplo": o app opera só com a demanda real', async ({ page }) => {
     await abrir(page);
-    await preencherExemplo(page);
-    await expect(page.locator('#dem tr[data-k="d"][data-mid="0"]')).toHaveCount(20);
-    await irPara(page, 'ins');
-    await expect(page.locator('#inst .cd')).toHaveCount(40);
-    await expect(page.locator('#inst .cd .nm').first()).toHaveValue('Instrutor 01');
+    for (const aba of ['ins', 'alu', 'dem']) {
+      await irPara(page, aba);
+      await expect(page.locator(`#s-${aba}`)).not.toContainText('Preencher exemplo');
+    }
+    await expect(page.locator('#demo')).toHaveCount(0);
   });
 
   test('"+ Missão" adiciona e remove uma missão extra do aluno', async ({ page }) => {
-    await abrirSintetico(page);
-    await preencherExemplo(page);
+    await abrirComExemplo(page);
+    await irPara(page, 'dem');
     await linhaDoAluno(page, 'Aluno 09').locator('[data-act="add-mis"]').click();
     const extra = page.locator('#dem tr.extra-row[data-nm="aluno 09"]');
     await expect(extra).toHaveCount(1);
@@ -84,7 +76,7 @@ test.describe('Demanda', () => {
     await linha.locator('[data-f="mis"]').selectOption('Cheque PC MNTE IFR');
     expect(await linha.locator('[data-f="eq"] option').allTextContents()).toEqual(['C172']);
     await expect(linha.locator('td').last()).toContainText('Exige Checador PP, PC, MNTE, INVA, IFR ou Checador PP, PC, MLTE, MNTE, INVA, IFR');
-    await gerarEscala(page);
+    await abrirEscala(page);
     const voos = (await lerEscala(page)).linhas.filter(l => l.includes('Aluno 1000'));
     expect(voos).toHaveLength(1);
     expect(voos[0]).toContain('| Cheque PC MNTE IFR |');
@@ -98,14 +90,14 @@ test.describe('Demanda', () => {
     await linha.locator('[data-f="jan"]').selectOption('tarde');
     await expect(linha.locator('td').last()).toContainText('Disponibilidade: Tarde');
     await expect(page.locator('#audit-log-list')).toContainText('Pedido Aluno 1000: disponibilidade Tarde (Voo Local)');
-    await gerarEscala(page);
+    await abrirEscala(page);
     const voos = (await lerEscala(page)).linhas.filter(l => l.includes('Aluno 1000'));
     expect(voos[0]).toMatch(/^12:40–13:40 \| Aluno 1000/);
   });
 
   test('filtros "Só quem voa", nome e missão', async ({ page }) => {
-    await abrirSintetico(page);
-    await preencherExemplo(page);
+    await abrirComExemplo(page);
+    await irPara(page, 'dem');
     const visiveis = page.locator('#dem tr[data-k="d"]:visible');
 
     await page.locator('#onlyfly').check();
@@ -121,11 +113,15 @@ test.describe('Demanda', () => {
   });
 
   test('"Desfazer" restaura a demanda anterior', async ({ page }) => {
-    await abrirSintetico(page);
-    await preencherExemplo(page);
+    await abrirComExemplo(page);
+    await irPara(page, 'dem');
+    const voa = linhaDoAluno(page, 'Aluno 01').locator('[data-f="fly"]');
+    await expect(voa).toBeChecked();
+    await expect(page.locator('#btn-undo')).toBeDisabled();
+    await voa.uncheck();
     await expect(page.locator('#btn-undo')).toBeEnabled();
     await page.locator('#btn-undo').click();
-    await expect(page.locator('#dem')).toContainText('Nenhum aluno cadastrado');
+    await expect(linhaDoAluno(page, 'Aluno 01').locator('[data-f="fly"]')).toBeChecked();
     await expect(page.locator('#btn-undo')).toBeDisabled();
     await expect(page.locator('#audit-log-list')).toContainText('Ação desfeita pelo botão Desfazer');
   });

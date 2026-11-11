@@ -1,14 +1,14 @@
 /**
  * Escala de Voo — ACPM: ponto de entrada (eventos da interface e inicialização).
  *
- *   js/config.js    Configurações operacionais (janelas, frota, missões, níveis A01–A09, limites)
+ *   js/config.js    Configurações operacionais (janelas, frota, missões, limites de peso)
  *   js/rules.js     Regras das missões (Ground School, nível mínimo, precedência, normalização)
  *   js/format.js    Formatação de horários, durações e opções de seleção
  *   js/engine.js    Motor de alocação determinístico (função pura)
  *   js/storage.js   Camada de dados (migrações, link compartilhado) sobre js/backends/ (local ou Supabase)
  *   js/sessao.js    Login e perfil de acesso no modo compartilhado (Supabase)
  *   js/state.js     Estado compartilhado entre os módulos
- *   js/actions.js   Perfil de acesso, desfazer, histórico, gerar escala e exemplo
+ *   js/actions.js   Perfil de acesso, desfazer, histórico e escala
  *   js/dom.js       Utilitários de DOM
  *   js/views/       Renderização das abas (recursos, cadastros, demanda, escala, BI e navegação)
  *   js/export.js    Exportação CSV e PDF
@@ -26,12 +26,13 @@ import { renderAuditPanel, rOut } from './views/escala.js';
 import { singleDemandRowHTML, cnt, rDem, applyDemandFilters } from './views/demanda.js';
 import { insHTML, stuHTML, rIns, rAlu, applyInstructorFilters, preencherFiltroDeHabilitacoes } from './views/cadastros.js';
 import { rRec } from './views/recursos.js';
-import { setRole, pushHistory, save, logChange, undoLastAction, syncBIHistoryForCurrentDate, gen, demo, abrirData, historicoParaPainel, carregarData, carregarBI } from './actions.js';
+import { setRole, pushHistory, save, logChange, undoLastAction, refazerEscala, escalaCalculada, marcarEscalaSoCalculada, gravarEscalaCalculada, abrirData, historicoParaPainel, carregarData, carregarBI } from './actions.js';
 import { exp, pdf } from './export.js';
 import { projetoSupabase } from './config-supabase.js';
 import { CATEGORIAS_DO_RODIZIO, ajustarFilas } from './rodizio.js';
 import { rRodizio } from './views/rodizio.js';
 import { abrirConta, carregarContas, gerarSenha, mensagem } from './views/conta.js';
+import { rManual } from './views/manual.js';
 import { importarSolicitacoes, disponibilidadeDaSolicitacao } from './agenda.js';
 import { abrirAgenda, carregarMes, mudarMes, escolherDia, diaDaAgenda, lembrarRegistradoPor, podeEditarAgenda } from './views/agenda.js';
 import { ESQUEMA } from './migracoes.js';
@@ -52,13 +53,13 @@ document.addEventListener('click', e => {
   const tlBtn = e.target.closest('[data-tl]');
   if (tlBtn) {
     setTLMode(tlBtn.dataset.tl);
-    rOut(false);
+    rOut();
   }
 });
 
 document.addEventListener('input', e => {
   if (e.target.id === 'flt-dem') { applyDemandFilters(); return; }
-  if (e.target.id === 'flt-esc-q') { rOut(false); return; }
+  if (e.target.id === 'flt-esc-q') { rOut(); return; }
   if (e.target.id === 'bi-flt-ins') { rBI(); return; }
   if (e.target.dataset.flt === 'inst') { applyInstructorFilters(); return; }
   const f = e.target.dataset.flt;
@@ -88,9 +89,9 @@ const armed = (id, txt, fn) => {
   };
 };
 
-$('#gen').onclick = $('#gen2').onclick = () => { if (!isGestor()) gen(true); };
-$('#exp').onclick = exp;
-$('#pdf').onclick = pdf;
+// Exportar é usar a escala: a escala só calculada fica gravada (quem só consulta não grava)
+$('#exp').onclick = () => { gravarEscalaCalculada(); return exp(); };
+$('#pdf').onclick = () => { gravarEscalaCalculada(); return pdf(); };
 $('#btn-undo').onclick = undoLastAction;
 
 $('#role-sel').onchange = e => {
@@ -99,7 +100,7 @@ $('#role-sel').onchange = e => {
     return;
   }
   setRole(e.target.value);
-  if (RES) rOut(false);
+  if (RES) rOut();
 };
 
 const modoCompartilhado = () => document.body.dataset.backend === 'supabase';
@@ -159,7 +160,7 @@ $('#flt-dem-mis').onchange = applyDemandFilters;
 preencherFiltroDeHabilitacoes();
 $('#flt-dem-mis').insertAdjacentHTML('beforeend', Object.keys(MIS).map(m => `<option value="${m}">${m}</option>`).join(''));
 $('#flt-ins-hab').onchange = applyInstructorFilters;
-$('#flt-esc-eq').onchange = () => rOut(false);
+$('#flt-esc-eq').onchange = () => rOut();
 
 $('#btn-theme').onclick = () => {
   const root = document.documentElement;
@@ -169,14 +170,12 @@ $('#btn-theme').onclick = () => {
   try { localStorage.setItem(ApiClient.KEY_THEME, next); } catch (e) {}
 };
 
-armed('#demo', 'Confirmar exemplo', demo);
 armed('#clr', 'Confirmar limpeza', () => {
   if (isGestor()) return;
   pushHistory();
   S.stu.forEach(d => { Object.assign(d, blank()); d.extra = []; });
   save(); rDem();
   logChange('exc', 'Demanda limpa');
-  if (RES) gen(false);
 });
 
 // Só no modo local: grava 30 dias simulados (marcados como simulados) nas datas que ainda não têm escala
@@ -240,6 +239,13 @@ armed('#btn-bi-clr', 'Confirmar limpeza', async () => {
 });
 
 // Minha conta: trocar a senha e o e-mail (modo compartilhado; vale para todos os perfis)
+// Manual: abre de qualquer aba (as tabelas de regras são montadas uma vez, a partir do código)
+rManual();
+$('#btn-manual').onclick = () => {
+  show('manual');
+  try { window.scrollTo(0, 0); } catch (x) {}
+};
+
 $('#btn-conta').onclick = () => { show('conta'); abrirConta(); };
 
 $('#form-senha').onsubmit = async e => {
@@ -334,7 +340,6 @@ $('#importar-agenda').onclick = async () => {
     logChange('inc', `Agenda: ${s.aluno_nome} incluído (${s.missao} · ${rotuloDaDisponibilidade(disponibilidadeDaSolicitacao(s))})`);
   });
   save(); rDem();
-  if (RES) gen(false);
   showToast(`${resumo.novos + resumo.atualizados} pedido(s) da agenda na demanda` +
     (resumo.semAluno ? ` · ${resumo.semAluno} de aluno que não está mais no cadastro` : '') + '.');
 };
@@ -418,7 +423,6 @@ document.addEventListener('click', e => {
     save();
     rDem();
     logChange('inc', `Missão extra adicionada para ${s.nm}`);
-    if (RES) gen(false);
     showToast(`Nova missão adicionada para ${s.nm}.`);
     return;
   }
@@ -431,7 +435,6 @@ document.addEventListener('click', e => {
     save();
     rDem();
     logChange('exc', `Missão extra removida de ${s.nm}`);
-    if (RES) gen(false);
     return;
   }
 
@@ -446,7 +449,6 @@ document.addEventListener('click', e => {
       kind: 'setFly', stuId: s.id, mid, val: true, label: '↶ Restaurar'
     });
     rDem();
-    gen(false);
     msg(`Inclusão de ${s.nm} (${target.mis}) removida.`);
     return;
   }
@@ -465,18 +467,18 @@ document.addEventListener('click', e => {
       if (st && target) {
         target.fly = rev.val;
         logChange(rev.val ? 'inc' : 'exc', `Revertido: ${st.nm} (${target.mis})`, null, entry.id);
-        save(); rDem(); gen(false);
+        save(); rDem();
       }
     } else if (rev.kind === 'setAv') {
       S.av[rev.reg] = rev.val;
       logChange(rev.val ? 'inc' : 'exc', `Revertido: ${rev.reg} ${rev.val ? 'disponível' : 'em manutenção'}`, null, entry.id);
-      save(); rRec(); if (RES) gen(false);
+      save(); rRec();
     } else if (rev.kind === 'setInsOn') {
       const ins = insBy(rev.insId);
       if (ins) {
         ins.on = rev.val;
         logChange(rev.val ? 'inc' : 'exc', `Revertido: ${ins.nm} ${rev.val ? 'disponível' : 'indisponível'}`, null, entry.id);
-        save(); rIns(); if (RES) gen(false);
+        save(); rIns();
       }
     }
     return;
@@ -495,7 +497,6 @@ document.addEventListener('click', e => {
     const categoria = CATEGORIAS_DO_RODIZIO.find(c => c.id === cat);
     logChange('mod', `Rodízio · ${categoria.nome}: ${insBy(insId).nm} passou para ${depois + 1}º`);
     save();
-    if (RES) gen(false);
     rRodizio();
     return;
   }
@@ -507,7 +508,6 @@ document.addEventListener('click', e => {
     S.horas[b.dataset.id] = 0;
     logChange('mod', `${b.dataset.id}: revisão de 50 horas feita (horas zeradas)`);
     save(); rRec();
-    if (RES) gen(false);
     return;
   }
 
@@ -551,7 +551,6 @@ document.addEventListener('click', e => {
       logChange('exc', `Aluno excluído: ${target ? target.nm : id}`);
     }
     save(); rIns(); rAlu(); rDem();
-    if (RES) gen(false);
   }
 });
 
@@ -564,7 +563,7 @@ document.addEventListener('change', e => {
   if ((a || f) && isGestor()) {
     e.preventDefault();
     rRec(); rIns(); rAlu(); rDem();
-    if (RES) rOut(false);
+    if (RES) rOut();
     return;
   }
 
@@ -581,10 +580,7 @@ document.addEventListener('change', e => {
       }
     }
     save();
-    syncBIHistoryForCurrentDate();
     logChange('mod', `Status de ${flightDesc}: ${t.value}`);
-    rOut(false);
-    rBI();
     return;
   }
 
@@ -609,7 +605,6 @@ document.addEventListener('change', e => {
       logChange('mod', `${reg}: ${horas === null || Number.isNaN(horas) ? 'horas desde a revisão não informadas' : fmtH(horas) + ' desde a última revisão de 50 horas'}`);
     }
     save(); rRec();
-    if (RES) gen(false);
     return;
   }
 
@@ -645,7 +640,6 @@ document.addEventListener('change', e => {
     }
     save(); c.outerHTML = insHTML(x);
     if (f === 'nm') rAlu();
-    if (RES) gen(false);
   } else {
     const s = stuBy(id);
     if (k === 's') {
@@ -663,7 +657,6 @@ document.addEventListener('change', e => {
       }
       save(); c.outerHTML = stuHTML(s);
       if (f === 'nm') rDem();
-      if (RES) gen(false);
     } else {
       const target = getMissionTarget(id, mid);
       if (!target) return;
@@ -711,7 +704,6 @@ document.addEventListener('change', e => {
       c.outerHTML = singleDemandRowHTML(s, target, mid);
       cnt();
       renderAuditPanel();
-      if (RES) gen(false);
     }
   }
 });
@@ -745,7 +737,9 @@ document.addEventListener('change', e => {
     abrirData(data);
     const { estado, escala } = await ApiClient.carregarDia(data);
     setS(estado);
-    setRES(escala);
+    // Data sem escala gravada: a escala calculada aparece na hora (é gravada junto com a primeira alteração)
+    setRES(escala || escalaCalculada());
+    marcarEscalaSoCalculada(!escala);
     setAuditLog(await historicoParaPainel(data));
   } catch (e) {
     console.warn(e);
@@ -776,10 +770,11 @@ document.addEventListener('change', e => {
 
   if (sharedDate) {
     abrirData(sharedDate);
-    gen(true);
+    refazerEscala();
+    show('esc');
     showToast('Escala compartilhada carregada (Modo Gestor Somente Leitura).');
   } else {
-    rOut(false);
+    rOut();
   }
   carregarBI();
 })();

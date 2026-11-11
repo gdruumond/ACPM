@@ -12,7 +12,7 @@ const SEEDS = Array.from({ length: 40 }, (_, i) => i + 1);
 const DESTINO = new URL('../test/fixtures/motor-goldens.json', import.meta.url);
 const semIndefinidos = valor => JSON.parse(JSON.stringify(valor));
 
-// O estado do cenário "Preencher exemplo" (roster sintético + demanda do botão) foi gravado da aplicação original
+// O estado do cenário de exemplo (roster sintético + demanda do antigo botão "Preencher exemplo") foi gravado da aplicação original
 const { exemplo: { estado: estadoExemplo } } = JSON.parse(await readFile(DESTINO, 'utf8'));
 
 const exemplo = { estado: estadoExemplo, saida: semIndefinidos(runAllocationEngine(estadoExemplo)) };

@@ -40,7 +40,7 @@ export function rRec() {
   $('#eqs').innerHTML = Object.keys(EQ).map(k =>
     `<h2>${EQT[k]}</h2><div class="pn"><div class="chips">${
       EQ[k].map(r => {
-        const badge = r === ACROBAT_REG ? ' <span class="chip-sub" title="Exclusivo para missão de Parafuso (A06+)">Acrobat · Parafuso</span>' : '';
+        const badge = r === ACROBAT_REG ? ' <span class="chip-sub" title="Exclusivo para a missão de Parafuso">Acrobat · Parafuso</span>' : '';
         return `<label class="chip${S.av[r] ? '' : ' off'}"><input type="checkbox" data-a="av" data-id="${r}"${S.av[r] ? ' checked' : ''}>${r}${badge}</label>`;
       }).join('')
     }</div></div>`

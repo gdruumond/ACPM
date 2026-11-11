@@ -1,6 +1,6 @@
 // Escala por data no modo local: cada data guarda a sua escala, a nova data copia o dia anterior,
 // histórico e BI por data, e os dados da fase 2 deste navegador são convertidos na primeira abertura.
-import { test, expect, abrir, abrirSintetico, irPara, preencherExemplo, gerarEscala, lerEscala, AMANHA } from './fixtures.js';
+import { test, expect, abrir, abrirSintetico, abrirComExemplo, irPara, abrirEscala, lerEscala, AMANHA } from './fixtures.js';
 import { estadoSintetico } from '../helpers/estado.js';
 import { aluno } from '../helpers/montar.js';
 import { runAllocationEngine } from '../../js/engine.js';
@@ -21,19 +21,20 @@ async function mudarData(page, data) {
 
 test.describe('Escala por data', () => {
   test('cada data tem a sua escala; a nova data copia a demanda do dia anterior', async ({ page }) => {
-    await abrirSintetico(page);
-    await preencherExemplo(page);
-    await gerarEscala(page);
+    await abrirComExemplo(page);
+    await abrirEscala(page);
     const escalaDia11 = await lerEscala(page);
 
+    // A nova data já mostra a escala calculada com a demanda copiada
     await mudarData(page, DEPOIS);
-    await expect(page.locator('#out')).toContainText('Ainda não há escala');
+    await expect(page.locator('#out .st')).toBeVisible();
+    expect((await lerEscala(page)).linhas.length).toBeGreaterThan(20);
     await irPara(page, 'dem');
     await expect(page.locator('#dem tr[data-k="d"][data-mid="0"]')).toHaveCount(20);
     await expect(page.locator('#cnt')).toContainText('20 aluno(s)');
 
     await page.locator('#dem tr[data-k="d"][data-mid="0"]').first().locator('[data-f="fly"]').uncheck();
-    await gerarEscala(page);
+    await abrirEscala(page);
     const escalaDia12 = await lerEscala(page);
     expect(escalaDia12.linhas).not.toEqual(escalaDia11.linhas);
 
@@ -84,11 +85,14 @@ test.describe('Escala por data', () => {
   });
 
   test('o BI soma as escalas guardadas de cada data', async ({ page }) => {
-    await abrirSintetico(page);
-    await preencherExemplo(page);
-    await gerarEscala(page);
+    // Exportar grava a escala calculada de cada data
+    const exportar = () => Promise.all([page.waitForEvent('download'), page.locator('#exp').click()]);
+    await abrirComExemplo(page);
+    await abrirEscala(page);
+    await exportar();
     await mudarData(page, DEPOIS);
-    await gerarEscala(page);
+    await abrirEscala(page);
+    await exportar();
     await irPara(page, 'bi');
     await expect(page.locator('#bi-content .st > div').nth(1)).toContainText('44 h');
     await expect(page.locator('#bi-content .st > div').nth(2)).toContainText('2 dias registrados');

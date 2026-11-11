@@ -1,4 +1,4 @@
-import { test, expect, abrirSintetico, irPara, preencherExemplo, gerarEscala, confirmar, json, AMANHA } from './fixtures.js';
+import { test, expect, abrirComExemplo, irPara, abrirEscala, confirmar, json, AMANHA } from './fixtures.js';
 
 const lerBI = page => page.locator('#bi-content').evaluate(el => {
   const txt = n => n.innerText.replace(/\s+/g, ' ').trim();
@@ -10,9 +10,8 @@ const lerBI = page => page.locator('#bi-content').evaluate(el => {
 
 test.describe('Dashboard BI', () => {
   test('registra o dia gerado, simula 30 dias, filtra e limpa', async ({ page }) => {
-    await abrirSintetico(page);
-    await preencherExemplo(page);
-    await gerarEscala(page);
+    await abrirComExemplo(page);
+    await abrirEscala(page);
     await irPara(page, 'bi');
     await expect(page.locator('#bi-dt')).toHaveValue(AMANHA);
     const antes = json(await lerBI(page));

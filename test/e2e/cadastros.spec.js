@@ -1,4 +1,4 @@
-import { test, expect, abrir, abrirSintetico, irPara, gerarEscala, lerEscala } from './fixtures.js';
+import { test, expect, abrir, abrirSintetico, irPara, abrirEscala, lerEscala } from './fixtures.js';
 import { aluno, cenario, instrutor } from '../helpers/montar.js';
 
 test.describe('Recursos', () => {
@@ -80,7 +80,7 @@ test.describe('Instrutores', () => {
       stu: [aluno(1000, { mis: 'Simulador', eq: 'Sim. Mono' })]
     });
     await abrir(page, { estado });
-    await gerarEscala(page);
+    await abrirEscala(page);
     const voos = (await lerEscala(page)).linhas.filter(l => l.includes('Aluno 1000'));
     expect(voos).toHaveLength(1);
     expect(voos[0]).toContain('| Instrutor 02 |');

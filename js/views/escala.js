@@ -5,7 +5,6 @@ import { isGroundMission } from '../rules.js';
 import { sumUniqueOperationalHours, consolidateTimelineSlots } from '../engine.js';
 import { S, RES, AUDIT_LOG, TL_MODE, isGestor } from '../state.js';
 import { $ } from '../dom.js';
-import { show } from './tabs.js';
 
 export const HT = o => (o.isGround || isGroundMission(o.mis) ? '01h30 (1,5 h)' : o.h + ' h' + (o.ss !== '1/1' ? ` (sessão ${o.ss})` : ''));
 
@@ -206,9 +205,10 @@ export function renderAuditPanel() {
   }
 }
 
-export function rOut(switchTab = true) {
-  if (!RES) {
-    $('#out').innerHTML = `<p class="h">Ainda não há escala para esta data. Marque quem vai voar em “5 · Demanda” e clique em “Gerar escala”.</p>`;
+// A escala é refeita a cada alteração (save em actions.js): aqui ela só é desenhada
+export function rOut() {
+  if (!RES || (!RES.out.length && !RES.al.length)) {
+    $('#out').innerHTML = `<p class="h">Nenhum voo nesta data. Marque quem vai voar na aba “5 · Demanda”: a escala é montada automaticamente.</p>`;
     return;
   }
   const { out, al, tot } = RES;
@@ -283,5 +283,4 @@ export function rOut(switchTab = true) {
   }
 
   $('#out').innerHTML = h;
-  if (switchTab) show('esc');
 }

@@ -619,52 +619,26 @@ p.h { color: var(--mu); margin: 4px 0 8px; }
 .bi-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 14px; }
 
 /* Manual do Usuário Recolhível (Final da Aba 6) */
-.manual-panel {
-  margin-top: 22px;
-  border-left: 5px solid var(--ac);
+/* Manual (botão no topo): leitura confortável, índice de seções e tabelas geradas das regras */
+.manual { max-width: 980px; }
+.manual-intro { font-size: 15px; max-width: 80ch; margin: 0 0 12px; }
+.manual-indice { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+.manual-indice a {
+  border: 1px solid var(--ln); border-radius: 999px; padding: 4px 12px; color: var(--ac);
+  text-decoration: none; font-weight: 600; background: var(--pn);
 }
-.manual-panel > summary {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font: 600 17px 'Barlow Semi Condensed', sans-serif;
-  color: var(--ink);
-  padding: 4px 0;
-}
-.manual-panel > summary::after {
-  content: "Clique para expandir / recolher ▾";
-  font: 500 13px 'Barlow', sans-serif;
-  color: var(--mu);
-}
-.manual-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-  gap: 12px;
-  margin-top: 12px;
-}
-.manual-card {
-  background: var(--bg);
-  border: 1px solid var(--ln);
-  border-radius: 6px;
-  padding: 12px 14px;
-  font-size: 14px;
-}
-.manual-card h4 {
-  margin: 0 0 8px;
-  font: 600 16px 'Barlow Semi Condensed', sans-serif;
-  color: var(--ac);
-  border-bottom: 1px solid var(--ln);
-  padding-bottom: 4px;
-}
-.manual-card ul { margin: 6px 0 0; padding-left: 18px; }
-.manual-card li { margin: 4px 0; }
-.faq-item {
-  border-top: 1px solid var(--ln);
-  padding: 8px 0;
-  font-size: 14px;
-}
-.faq-item:first-child { border-top: 0; }
-.faq-item b { display: block; color: var(--ink); margin-bottom: 2px; }
+.manual-indice a:hover { border-color: var(--ac); }
+.manual .pn { margin-bottom: 16px; scroll-margin-top: 120px; }
+.manual h3 { margin: 0 0 8px; }
+.manual h4 { margin: 18px 0 4px; }
+.manual p, .manual li, .manual dd { line-height: 1.55; max-width: 80ch; }
+.manual-destaque { border-left: 4px solid var(--ac); padding: 4px 10px; margin: 10px 0; }
+.manual-lista-curta { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 6px 0 10px; }
+.manual-lista-curta li { border: 1px solid var(--ln); border-radius: 4px; padding: 2px 8px; }
+.manual dt { font-weight: 700; margin-top: 12px; }
+.manual dd { margin: 2px 0 0; }
+#manual-missoes td { vertical-align: top; }
+#manual-missoes td:nth-child(2) { white-space: nowrap; }
 
 #toast-box {
   position: fixed;
