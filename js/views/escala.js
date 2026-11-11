@@ -1,6 +1,6 @@
 // Aba 6 · Escala: tabela oficial, mapa de ocupação e painel de inclusões e histórico do dia.
 import { FLIGHT_STATUSES } from '../config.js';
-import { hm, WLB, fmtH, fmtDurLabel, esc } from '../format.js';
+import { hm, WLB, fmtH, esc } from '../format.js';
 import { isGroundMission } from '../rules.js';
 import { sumUniqueOperationalHours, consolidateTimelineSlots } from '../engine.js';
 import { S, RES, AUDIT_LOG, TL_MODE, isGestor } from '../state.js';
@@ -135,45 +135,13 @@ export function renderVisualTimeline(out) {
   </div>`;
 }
 
+// Histórico da data (na gaveta lateral) e o número de alterações no botão do topo
 export function renderAuditPanel() {
-  const activeItems = [];
-  S.stu.forEach(s => {
-    if (s.fly) activeItems.push({ stuId: s.id, mid: 0, nm: s.nm, mis: s.mis, eq: s.eq, nb: s.nb });
-    if (Array.isArray(s.extra)) {
-      s.extra.forEach(ex => {
-        if (ex.fly) activeItems.push({ stuId: s.id, mid: ex.mid, nm: s.nm, mis: ex.mis, eq: ex.eq, nb: ex.nb });
-      });
-    }
-  });
-
-  const cntEl = $('#inc-active-cnt');
-  if (cntEl) cntEl.textContent = activeItems.length;
-
   // Entradas revertidas (apontadas por uma reversão) não aparecem no painel
   const revertidas = new Set(AUDIT_LOG.map(e => e.reverte).filter(id => id !== null && id !== undefined));
   const historico = AUDIT_LOG.filter(e => !revertidas.has(e.id));
   const badgeCnt = $('#log-cnt');
   if (badgeCnt) badgeCnt.textContent = historico.length;
-
-  const allocatedKeySet = new Set(RES ? RES.out.map(o => `${o.stuId}_${o.mid || 0}`) : []);
-
-  const activeListEl = $('#inc-active-list');
-  if (activeListEl) {
-    if (!activeItems.length) {
-      activeListEl.innerHTML = `<div class="audit-item"><span class="h">Nenhuma missão marcada.</span></div>`;
-    } else {
-      activeListEl.innerHTML = activeItems.map(d => {
-        const isAlloc = allocatedKeySet.has(`${d.stuId}_${d.mid}`);
-        const statusBadge = RES
-          ? (isAlloc ? `<span class="audit-badge inc">Alocado</span>` : `<span class="audit-badge exc">Rejeitado</span>`)
-          : `<span class="audit-badge mod">Pendente</span>`;
-        return `<div class="audit-item">
-          <div>${statusBadge} <b>${esc(d.nm)}</b> · ${esc(d.mis)} (${esc(d.eq)}) · ${fmtDurLabel(d.nb)}</div>
-          <button class="x edit-only" data-act="rm-fly" data-id="${d.stuId}" data-mid="${d.mid}">✕ Excluir</button>
-        </div>`;
-      }).join('');
-    }
-  }
 
   const logListEl = $('#audit-log-list');
   if (logListEl) {

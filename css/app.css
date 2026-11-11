@@ -671,13 +671,23 @@ p.h { color: var(--mu); margin: 4px 0 8px; }
 /* ==========================================================================
    5. PAINEL DO DIA, BI, MANUAL DO USUÁRIO & TOASTS
    ========================================================================== */
-.audit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; margin-top: 8px; }
+/* Histórico da data: gaveta lateral sobre a aba aberta */
+.gaveta {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(440px, 100vw); z-index: 200;
+  display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; overflow: hidden;
+  background: var(--pn); color: var(--ink); border-left: 1px solid var(--ln); box-shadow: -8px 0 24px rgba(0,0,0,.18);
+}
+.gaveta-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.gaveta-cab h2 { margin: 0; }
+.gaveta-cab small { font: 500 14px 'Barlow', sans-serif; color: var(--mu); margin-left: 6px; }
+.gaveta .h { margin: 0; }
+.gaveta #btn-clear-log { align-self: flex-start; }
 .audit-list {
-  max-height: 240px;
+  flex: 1;
   overflow-y: auto;
   border: 1px solid var(--ln);
-  border-radius: 6px;
-  background: var(--bg);
+  border-radius: 8px;
+  background: var(--pn2);
 }
 .audit-item {
   display: flex;

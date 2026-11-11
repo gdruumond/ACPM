@@ -127,11 +127,20 @@ $('#btn-share-link').onclick = async () => {
   }
 };
 
-$('#btn-open-log').onclick = () => {
-  show('esc');
-  const p = $('#audit-panel');
-  if (p) { p.open = true; p.scrollIntoView({ behavior: 'smooth' }); }
-};
+// Histórico: gaveta lateral sobre a aba aberta; o botão abre e fecha, ✕ e Esc fecham
+const gavetaDoHistorico = $('#historico');
+function mostrarHistorico(abrir) {
+  gavetaDoHistorico.hidden = !abrir;
+  $('#btn-open-log').setAttribute('aria-expanded', String(abrir));
+  if (!abrir) return;
+  $('#historico-data').textContent = $('#dt-rotulo').textContent;
+  $('#btn-fechar-historico').focus();
+}
+$('#btn-open-log').onclick = () => mostrarHistorico(gavetaDoHistorico.hidden);
+$('#btn-fechar-historico').onclick = () => mostrarHistorico(false);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !gavetaDoHistorico.hidden) mostrarHistorico(false);
+});
 
 // Só no modo local: no modo compartilhado o histórico é permanente (o botão fica oculto)
 $('#btn-clear-log').onclick = async () => {

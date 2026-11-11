@@ -223,24 +223,6 @@
       <span id="msg" class="h" role="status"></span>
     </div>
 
-    <!-- PAINEL INTERATIVO DE INCLUSÕES E HISTÓRICO DO DIA -->
-    <details class="pn" id="audit-panel">
-      <summary>Inclusões Ativas (<span id="inc-active-cnt">0</span>) e Histórico do Dia</summary>
-      <div class="audit-grid">
-        <div>
-          <h3>Inclusões na Escala</h3>
-          <div class="audit-list" id="inc-active-list"></div>
-        </div>
-        <div>
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <h3>Alterações nesta data</h3>
-            <button class="x edit-only" id="btn-clear-log" style="font-size:12px">Limpar</button>
-          </div>
-          <div class="audit-list" id="audit-log-list"></div>
-        </div>
-      </div>
-    </details>
-
     <div id="out">
       <p class="h">Nenhum voo nesta data. Marque quem vai voar na aba “5 · Demanda”: a escala é montada automaticamente.</p>
     </div>
@@ -462,6 +444,17 @@
     <div id="bi-content"></div>
   </section>
 </main>
+
+<!-- HISTÓRICO DA DATA: gaveta lateral que abre sobre qualquer aba -->
+<aside class="gaveta" id="historico" aria-labelledby="historico-titulo" hidden>
+  <div class="gaveta-cab">
+    <h2 id="historico-titulo">Histórico <small id="historico-data"></small></h2>
+    <button class="x" type="button" id="btn-fechar-historico" aria-label="Fechar o histórico">✕</button>
+  </div>
+  <p class="h">As alterações desta data, com quem fez e a hora. Algumas podem ser revertidas por aqui.</p>
+  <div class="audit-list" id="audit-log-list"></div>
+  <button class="btn quiet edit-only" type="button" id="btn-clear-log">Limpar o histórico desta data</button>
+</aside>
 
 <div id="toast-box" aria-live="polite"></div>
 
