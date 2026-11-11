@@ -36,12 +36,12 @@ test.describe('Aplicação', () => {
       principalMax: getComputedStyle(document.querySelector('main')).maxWidth
     }));
     expect(await estilos()).toEqual({
-      tinta: '#12263A', fundo: 'rgb(232, 237, 241)', fonte: expect.stringContaining('Barlow'), secaoInativa: 'none', principalMax: '1280px'
+      tinta: '#12263A', fundo: 'rgb(238, 242, 245)', fonte: expect.stringContaining('Barlow'), secaoInativa: 'none', principalMax: '1280px'
     });
     expect(fontes).toHaveLength(1);
 
     await page.locator('#btn-theme').click();
-    expect((await estilos()).fundo).not.toBe('rgb(232, 237, 241)');
+    expect((await estilos()).fundo).not.toBe('rgb(238, 242, 245)');
   });
 
   test('alterna o tema e lembra a escolha após recarregar', async ({ page }) => {

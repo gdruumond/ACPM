@@ -19,7 +19,7 @@ function resumoDoHorario(d) {
     const lvTag = ` · 01h30 · Turma coletiva · Exige ${descreverExigencias(d.mis, GROUND_EQ_TYPE)}`;
     if (d.p1 < 0) return `Livre${lvTag}`;
     const s = T[d.p1], e = s + GROUND_DURATION_MIN;
-    return `${hm(s)}–${hm(e)}${lvTag}` + ((d.p1 == NI || e > T[NI]) ? ' ⚠ horário' : '');
+    return `${hm(s)}–${hm(e)}${lvTag}` + ((d.p1 == NI || e > T[NI]) ? ' · fora do horário' : '');
   }
   const H = d.nb, K = Math.min(d.ss || 1, H);
   const L = Array.from({ length: K }, (_, j) => Math.floor(H / K) + (j < H % K ? 1 : 0));
@@ -28,7 +28,7 @@ function resumoDoHorario(d) {
   if (K > 1) return `${H} h em ${K} sessões (${L.join('h+') + 'h'})${lvTag}`;
   if (d.p1 < 0) return `${H} h, livre${lvTag}`;
   const s = T[d.p1], e = s + H * 60;
-  return `${hm(s)}–${hm(e)}${lvTag}` + ((nt !== (d.p1 == NI) || e > (nt ? 1440 : T[NI])) ? ' ⚠ horário' : '');
+  return `${hm(s)}–${hm(e)}${lvTag}` + ((nt !== (d.p1 == NI) || e > (nt ? 1440 : T[NI])) ? ' · fora do horário' : '');
 }
 
 export function allowedEqOptionsForMission(mis, currentEq) {

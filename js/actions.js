@@ -32,7 +32,7 @@ export function setRole(role, lockShared = false) {
   const sel = $('#role-sel');
   if (sel) {
     if (ApiClient.readOnly) {
-      sel.innerHTML = '<option value="gestor" selected>🔒 Gestor (Somente Leitura)</option>';
+      sel.innerHTML = '<option value="gestor" selected>Gestor (somente leitura)</option>';
       sel.value = 'gestor';
       sel.disabled = true;
       sel.title = 'Link compartilhado: visualização exclusiva no perfil Gestor';

@@ -47,7 +47,7 @@ test.describe('Perfis de acesso', () => {
     await expect(gestor.locator('#s-esc')).toBeVisible();
     await expect(gestor.locator('body')).toHaveAttribute('data-shared', 'true');
     await expect(gestor.locator('#role-sel')).toBeDisabled();
-    await expect(gestor.locator('#role-sel option')).toHaveText(['🔒 Gestor (Somente Leitura)']);
+    await expect(gestor.locator('#role-sel option')).toHaveText(['Gestor (somente leitura)']);
     expect(await lerEscala(gestor)).toEqual(escalaOperador);
     expect(erros).toEqual([]);
     await contexto.close();

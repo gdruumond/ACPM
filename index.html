@@ -13,6 +13,24 @@
 </head>
 <body data-role="operador">
 
+<!-- Ícones de traço (no lugar de emojis): <svg class="ico"><use href="#i-nome"/></svg> -->
+<svg xmlns="http://www.w3.org/2000/svg" hidden>
+  <symbol id="i-historico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-manual" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/></symbol>
+  <symbol id="i-compartilhar" viewBox="0 0 24 24"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></symbol>
+  <symbol id="i-tema" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></symbol>
+  <symbol id="i-desfazer" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></symbol>
+  <symbol id="i-calendario" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-aviao" viewBox="0 0 24 24"><path d="M12 2.5c.8 0 1.5.7 1.5 1.5v5.5l7 4v2l-7-2v4.2l2 1.6V21L12 20l-3.5 1v-1.7l2-1.6v-4.2l-7 2v-2l7-4V4c0-.8.7-1.5 1.5-1.5z"/></symbol>
+  <symbol id="i-instrutor" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="i-lista" viewBox="0 0 24 24"><path d="M9 6h12M9 12h12M9 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+  <symbol id="i-sair" viewBox="0 0 24 24"><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></symbol>
+  <symbol id="i-conta" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3"/><path d="M6.5 18.5a6.5 6.5 0 0 1 11 0"/></symbol>
+  <symbol id="i-esquerda" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
+  <symbol id="i-direita" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></symbol>
+  <symbol id="i-aviso" viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/></symbol>
+</svg>
+
 <header>
   <h1>Escala de Voo — ACPM</h1>
   <div class="hd-tools">
@@ -21,15 +39,15 @@
       <option value="gestor">Gestor</option>
     </select>
     <span class="hd-usuario" id="usuario" hidden></span>
-    <button class="hd-btn" id="btn-manual" title="Como usar a escala e as regras que ela segue">Manual</button>
+    <button class="hd-btn" id="btn-manual" title="Como usar a escala e as regras que ela segue"><svg class="ico"><use href="#i-manual"/></svg>Manual</button>
     <button class="hd-btn" id="btn-conta" hidden title="Trocar a senha ou o e-mail">Minha conta</button>
     <button class="hd-btn" id="btn-sair" hidden title="Encerrar a sessão">Sair</button>
-    <button class="hd-btn edit-only" id="btn-undo" disabled title="Desfazer última alteração">↶ Desfazer</button>
+    <button class="hd-btn edit-only" id="btn-undo" disabled title="Desfazer última alteração"><svg class="ico"><use href="#i-desfazer"/></svg>Desfazer</button>
     <button class="hd-btn" id="btn-open-log" title="Ver inclusões e histórico do dia">
-      🕒 Histórico <span class="badge-cnt" id="log-cnt">0</span>
+      <svg class="ico"><use href="#i-historico"/></svg>Histórico <span class="badge-cnt" id="log-cnt">0</span>
     </button>
-    <button class="hd-btn" id="btn-share-link" title="Copiar link compartilhável da escala (abre bloqueado como Gestor)">🔗 Compartilhar</button>
-    <button class="hd-btn" id="btn-theme" title="Alternar tema claro/escuro">◐ Tema</button>
+    <button class="hd-btn" id="btn-share-link" title="Copiar link compartilhável da escala (abre bloqueado como Gestor)"><svg class="ico"><use href="#i-compartilhar"/></svg>Compartilhar</button>
+    <button class="hd-btn" id="btn-theme" title="Alternar tema claro/escuro"><svg class="ico"><use href="#i-tema"/></svg>Tema</button>
   </div>
   <nav id="nav">
     <button data-t="rec" class="on">1 · Recursos</button>
@@ -174,7 +192,7 @@
 
   <!-- ABA 5: ESCALA -->
   <section id="s-esc">
-    <h2>Escala do Dia</h2>
+    <h2>Escala do dia</h2>
     <div class="bar">
       <button class="btn sec" id="exp">Exportar CSV</button>
       <button class="btn sec" id="pdf">Emitir PDF</button>
@@ -406,7 +424,7 @@
   </section>
 
   <section id="s-bi">
-    <h2>Dashboard BI</h2>
+    <h2>BI</h2>
     <div class="bar">
       <label class="chip">Data base <input type="date" id="bi-dt"></label>
       <select id="bi-flt-eq" class="flt-ctrl" aria-label="Filtrar frota no BI">

@@ -17,13 +17,6 @@ export function missionColorClass(mis) {
   return 'm-mu';
 }
 
-export function statusPrefixIcon(st) {
-  if (st === 'Em Voo') return '🛫 ';
-  if (st === 'Pendente') return '⏳ ';
-  if (st === 'Cancelado') return '✕ ';
-  return '';
-}
-
 export function buildTimelineGroup(out, groupKey, subLabelFn, barLine1Fn, barLine2Fn, minStart, maxEnd) {
   const span = maxEnd - minStart;
   const groups = {};
@@ -50,13 +43,12 @@ export function buildTimelineGroup(out, groupKey, subLabelFn, barLine1Fn, barLin
         ? 'Cancelado'
         : ((S.fStatus && S.fStatus[primaryItem.fKey]) || primaryItem.status || 'Confirmado');
       const stKey = stVal.replace(/\s+/g, '');
-      const icon = statusPrefixIcon(stVal);
       const pesoTxt = o.kg ? `${o.kg} kg` : '—';
       const isCollective = o.students.length > 1;
       const stuListTxt = isCollective ? `${o.students.length} alunos: ${o.students.join(', ')}` : o.s;
 
       return `<div class="tl-bar ${cls} tl-st-${stKey}" tabindex="0" style="left:${left.toFixed(2)}%;width:${width.toFixed(2)}%">
-        <div class="tl-bar-t1">${icon}${barLine1Fn(o)}</div>
+        <div class="tl-bar-t1">${barLine1Fn(o)}</div>
         <div class="tl-bar-t2">${barLine2Fn(o)}</div>
         <div class="tl-pop">
           <div class="tl-pop-hd"><span>${hm(o.a)} – ${hm(o.b)}</span><span>${HT(o)}</span></div>
@@ -122,10 +114,10 @@ export function renderVisualTimeline(out) {
 
   return `<div class="pn" style="margin-top:14px">
     <div class="tl-header">
-      <h3 style="margin:0">Mapa de Ocupação</h3>
+      <h3 style="margin:0">Mapa de ocupação</h3>
       <div class="tl-switch">
-        <button data-tl="eq" class="${TL_MODE === 'eq' ? 'on' : ''}">✈ Por Aeronave / Sala</button>
-        <button data-tl="ins" class="${TL_MODE === 'ins' ? 'on' : ''}">👨‍✈️ Por Instrutor</button>
+        <button data-tl="eq" class="${TL_MODE === 'eq' ? 'on' : ''}"><svg class="ico"><use href="#i-aviao"/></svg> Por avião e sala</button>
+        <button data-tl="ins" class="${TL_MODE === 'ins' ? 'on' : ''}"><svg class="ico"><use href="#i-instrutor"/></svg> Por instrutor</button>
       </div>
     </div>
     <div class="tl-legend">
@@ -135,9 +127,9 @@ export function renderVisualTimeline(out) {
       <span><i class="tl-dot m-pc"></i>Navegação / Parafuso / IFR</span>
       <span><i class="tl-dot m-nt"></i>Noturno</span>
       <span><i class="tl-dot m-mu"></i>Multimotor</span>
-      <span>🛫 Em Voo</span>
-      <span>⏳ Pendente</span>
-      <span>✕ Cancelado</span>
+      <span><i class="tl-dot tl-dot-emvoo"></i>Em voo</span>
+      <span><i class="tl-dot tl-dot-pendente"></i>Pendente</span>
+      <span><i class="tl-dot tl-dot-cancelado"></i>Cancelado</span>
     </div>
     ${chartHTML}
   </div>`;
