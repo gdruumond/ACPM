@@ -5,6 +5,7 @@ import { S, isGestor } from '../state.js';
 import { ApiClient } from '../storage.js';
 import { $ } from '../dom.js';
 import { esc, opts } from '../format.js';
+import { registraNaAgenda, operaEscala } from '../perfis.js';
 import { JANELAS_DA_AGENDA, FUSO_DO_AEROCLUBE, prazoDaAgendaPermite, primeiraDataAberta, hojeEmSaoPaulo, horaEmSaoPaulo, somarDias } from '../agenda.js';
 
 const SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
@@ -14,10 +15,10 @@ let diaEscolhido = null;
 let mesVisivel = null;
 let pedidos = [];
 
-// Quem pode registrar e cancelar: no modo local, quem não está no perfil Gestor; no compartilhado, operadores e a
-// secretaria. A exceção da coordenação é só para operadores (o servidor confere de novo)
-export const podeEditarAgenda = () => (ApiClient.perfil ? ['operador', 'secretaria'].includes(ApiClient.perfil) : !isGestor());
-export const podeUsarExcecao = () => (ApiClient.perfil ? ApiClient.perfil === 'operador' : !isGestor());
+// Quem pode registrar e cancelar: no modo local, quem não está no perfil Gestor; no compartilhado, operadores,
+// administradores e a secretaria. A exceção da coordenação é de quem opera a escala (o servidor confere de novo)
+export const podeEditarAgenda = () => (ApiClient.perfil ? registraNaAgenda(ApiClient.perfil) : !isGestor());
+export const podeUsarExcecao = () => (ApiClient.perfil ? operaEscala(ApiClient.perfil) : !isGestor());
 export const diaDaAgenda = () => diaEscolhido;
 
 const ddmm = iso => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;

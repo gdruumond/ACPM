@@ -12,6 +12,9 @@ function clienteFalso(documentos = {}, { atraso = 0, dias = {} } = {}) {
   const tabelaDias = new Map(Object.entries(dias));
   const historico = [];
   const solicitacoes = [];
+  // Contas do servidor falso: a do usuário logado e as que o administrador gerencia
+  const contas = [{ usuario: 'u-eu', email: 'eu@teste.acpm', senha: 'senha atual bem longa', nome: 'Eu', perfil: 'administrador' }];
+  const atualizacoes = [];
   const rpcs = [];
   const chamadas = [];
   let falhasDeRede = 0;
@@ -42,6 +45,22 @@ function clienteFalso(documentos = {}, { atraso = 0, dias = {} } = {}) {
     rpcs,
     chamadas,
     falharProximas(n) { falhasDeRede = n; },
+    contas,
+    atualizacoes,
+    auth: {
+      async signInWithPassword({ email, password }) {
+        const conta = contas.find(c => c.email === email && c.senha === password);
+        return conta ? { data: { session: { user: { email } } }, error: null } : { data: {}, error: { status: 400, code: 'invalid_credentials', message: 'Invalid login credentials' } };
+      },
+      async updateUser(atributos, opcoes = {}) {
+        atualizacoes.push({ atributos: structuredClone(atributos), opcoes: structuredClone(opcoes) });
+        if (atributos.password !== undefined) {
+          if (atributos.password.length < 12) return { data: {}, error: { status: 422, code: 'weak_password', message: 'Password should be at least 12 characters.' } };
+          contas[0].senha = atributos.password;
+        }
+        return { data: { user: { email: contas[0].email, new_email: atributos.email || undefined } }, error: null };
+      }
+    },
     from(tabela) {
       const filtros = [];
       let colunas = null, limite = null;
@@ -89,6 +108,18 @@ function clienteFalso(documentos = {}, { atraso = 0, dias = {} } = {}) {
           historico.push({ id: historico.length + 1, data: args.p_data, registrado_em: e.registrado_em, autor: null, tipo: e.tipo, descricao: e.descricao, reverter: null, reverte: null, importado: true });
         }
         return { data: args.p_entradas.length, error: null };
+      }
+      if (nome === 'listar_contas') return { data: contas.map(({ senha, ...c }) => c), error: null };
+      if (nome === 'criar_conta') {
+        if (contas.some(c => c.email === args.p_email)) return { data: null, error: { code: '23505', message: 'já existe' } };
+        contas.push({ usuario: `u-${contas.length}`, email: args.p_email, senha: args.p_senha, nome: args.p_nome, perfil: args.p_perfil });
+        return { data: contas.at(-1).usuario, error: null };
+      }
+      if (nome === 'excluir_conta') {
+        const i = contas.findIndex(c => c.usuario === args.p_usuario);
+        if (i < 0) return { data: null, error: { code: 'P0002', message: 'não encontrada' } };
+        contas.splice(i, 1);
+        return { data: null, error: null };
       }
       if (nome === 'registrar_solicitacao') {
         if (args.p_data < '2026-11-11') return { data: null, error: { code: 'PT403', message: 'prazo encerrado' } };
@@ -183,6 +214,39 @@ describe('Backend Supabase', () => {
     cliente.from = () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: { message: 'sem conexão' } }) }) }) });
     const backend = criarBackendSupabase(cliente);
     await assert.rejects(backend.ler('estado'), /sem conexão/);
+  });
+});
+
+describe('Backend Supabase: contas', () => {
+  it('administrador: lista, cria e exclui contas pelas funções do banco (o código do erro é repassado)', async () => {
+    const cliente = clienteFalso();
+    const backend = criarBackendSupabase(cliente);
+    const id = await backend.criarConta({ email: 'nova@teste.acpm', senha: 'senha inicial longa', perfil: 'secretaria', nome: 'Nova' });
+    assert.deepEqual(cliente.chamadas.at(-1), ['criar_conta', { p_email: 'nova@teste.acpm', p_senha: 'senha inicial longa', p_perfil: 'secretaria', p_nome: 'Nova' }]);
+    assert.deepEqual((await backend.listarContas()).map(c => [c.email, c.perfil]), [['eu@teste.acpm', 'administrador'], ['nova@teste.acpm', 'secretaria']]);
+    await assert.rejects(backend.criarConta({ email: 'nova@teste.acpm', senha: 'senha inicial longa', perfil: 'gestor', nome: 'De novo' }), e => e.code === '23505');
+    await backend.excluirConta(id);
+    assert.deepEqual(cliente.chamadas.at(-1), ['excluir_conta', { p_usuario: id }]);
+    await assert.rejects(backend.excluirConta(id), e => e.code === 'P0002');
+  });
+
+  it('minha conta: troca a senha só depois de conferir a senha atual', async () => {
+    const cliente = clienteFalso();
+    const backend = criarBackendSupabase(cliente);
+    await assert.rejects(backend.alterarSenha('eu@teste.acpm', 'errada', 'nova senha bem longa'), e => e.code === 'senha_atual');
+    assert.deepEqual(cliente.atualizacoes, [], 'com a senha atual errada, nada é alterado');
+    await assert.rejects(backend.alterarSenha('eu@teste.acpm', 'senha atual bem longa', 'curta'), e => e.code === 'weak_password');
+    await backend.alterarSenha('eu@teste.acpm', 'senha atual bem longa', 'nova senha bem longa');
+    assert.equal(cliente.contas[0].senha, 'nova senha bem longa');
+  });
+
+  it('minha conta: o e-mail novo fica pendente até a confirmação pelos links enviados', async () => {
+    const cliente = clienteFalso();
+    const backend = criarBackendSupabase(cliente);
+    await assert.rejects(backend.alterarEmail('eu@teste.acpm', 'errada', 'novo@teste.acpm', 'https://exemplo/ACPM/'), e => e.code === 'senha_atual');
+    const usuario = await backend.alterarEmail('eu@teste.acpm', 'senha atual bem longa', 'novo@teste.acpm', 'https://exemplo/ACPM/');
+    assert.deepEqual([usuario.email, usuario.new_email], ['eu@teste.acpm', 'novo@teste.acpm']);
+    assert.deepEqual(cliente.atualizacoes.at(-1), { atributos: { email: 'novo@teste.acpm' }, opcoes: { emailRedirectTo: 'https://exemplo/ACPM/' } });
   });
 });
 

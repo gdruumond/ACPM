@@ -21,6 +21,7 @@
       <option value="gestor">Gestor</option>
     </select>
     <span class="hd-usuario" id="usuario" hidden></span>
+    <button class="hd-btn" id="btn-conta" hidden title="Trocar a senha ou o e-mail">Minha conta</button>
     <button class="hd-btn" id="btn-sair" hidden title="Encerrar a sessão">Sair</button>
     <button class="hd-btn edit-only" id="btn-undo" disabled title="Desfazer última alteração">↶ Desfazer</button>
     <button class="hd-btn" id="btn-open-log" title="Ver inclusões e histórico do dia">
@@ -46,6 +47,12 @@
   <div class="aviso-sync" id="aviso-sync" role="alert" hidden>
     <span id="aviso-sync-texto"></span>
     <button class="btn" type="button" id="btn-recarregar">Recarregar</button>
+  </div>
+
+  <!-- VOLTA DOS LINKS DE CONFIRMAÇÃO DA TROCA DE E-MAIL (aparece no login e no app) -->
+  <div class="aviso-link" id="aviso-link" role="status" hidden>
+    <span id="aviso-link-texto"></span>
+    <button class="btn" type="button" id="btn-fechar-aviso-link">OK</button>
   </div>
 
   <!-- LOGIN (modo compartilhado: dados no Supabase) -->
@@ -213,6 +220,49 @@
     <h2>Rodízio</h2>
     <p class="h">Filas das escalas que remuneram melhor, entre os instrutores habilitados. Cada voo da categoria vai para o primeiro da fila que estiver livre (no mesmo dia, quem ainda não voou nela vem antes de quem já voou). Quem voar na categoria vai para o fim da fila na data seguinte; voo cancelado não conta. Use os botões para ajustar a ordem, por exemplo quando um voo foi cancelado pela meteorologia.</p>
     <div id="rodizio" class="rodizio"></div>
+  </section>
+
+  <section id="s-conta">
+    <h2>Minha conta</h2>
+    <p class="h" id="conta-dados"></p>
+    <div class="conta">
+      <div class="pn">
+        <h3>Trocar a senha</h3>
+        <form id="form-senha" autocomplete="off">
+          <label>Senha atual<input type="password" id="senha-atual" class="conta-campo" required autocomplete="current-password"></label>
+          <label>Nova senha (pelo menos 12 caracteres)<input type="password" id="senha-nova" class="conta-campo" minlength="12" required autocomplete="new-password"></label>
+          <label>Repita a nova senha<input type="password" id="senha-repetida" class="conta-campo" minlength="12" required autocomplete="new-password"></label>
+          <button class="btn" type="submit">Trocar a senha</button>
+          <p class="conta-msg" id="senha-msg" role="status"></p>
+        </form>
+      </div>
+      <div class="pn">
+        <h3>Trocar o e-mail</h3>
+        <p class="h">O Supabase manda um link de confirmação para o e-mail atual e para o novo; a troca vale depois que os dois forem abertos.</p>
+        <form id="form-email" autocomplete="off">
+          <label>Novo e-mail<input type="email" id="email-novo" class="conta-campo" required autocomplete="email"></label>
+          <label>Senha atual<input type="password" id="email-senha" class="conta-campo" required autocomplete="current-password"></label>
+          <button class="btn" type="submit">Trocar o e-mail</button>
+          <p class="conta-msg" id="email-msg" role="status"></p>
+        </form>
+      </div>
+    </div>
+    <div id="usuarios" hidden>
+      <h2>Usuários</h2>
+      <div class="pn">
+        <h3>Nova conta</h3>
+        <form id="form-nova-conta" autocomplete="off">
+          <label>Nome<input id="nc-nome" class="conta-campo" maxlength="80" required></label>
+          <label>E-mail<input type="email" id="nc-email" class="conta-campo" required></label>
+          <label>Perfil<select id="nc-perfil" class="conta-campo"></select></label>
+          <label>Senha inicial (copie antes de criar)<input id="nc-senha" class="conta-campo" minlength="12" required autocomplete="off"></label>
+          <button class="x" type="button" id="nc-gerar">Gerar senha</button>
+          <button class="btn" type="submit">Criar conta</button>
+          <p class="conta-msg" id="nc-msg" role="status"></p>
+        </form>
+      </div>
+      <div class="pn"><div class="tw" id="lista-contas"></div></div>
+    </div>
   </section>
 
   <section id="s-bi">

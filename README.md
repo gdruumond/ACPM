@@ -7,9 +7,11 @@ Publicada pelo GitHub Pages em https://gdruumond.github.io/ACPM/ (branch `main`,
 
 - **Compartilhado (site publicado):** login com e-mail e senha; os dados ficam no Supabase e todos veem as mesmas escalas
   (uma por data).
-  O perfil da conta define o acesso: **Operador** edita, **Gestor** só consulta e **Secretaria** registra pedidos na
-  agenda de solicitações (a escala ela só consulta). O cadastro aberto é desligado: as contas são criadas pelo
-  administrador (`scripts/criar-conta.mjs`).
+  O perfil da conta define o acesso: **Operador** edita, **Gestor** só consulta, **Secretaria** registra pedidos na
+  agenda de solicitações (a escala ela só consulta) e **Administrador** faz tudo o que o Operador faz e, além disso,
+  cria e exclui contas (em "Minha conta" › Usuários). O cadastro aberto é desligado. Em "Minha conta", cada pessoa
+  troca a própria senha e o e-mail (o e-mail novo vale depois dos links de confirmação, que dependem do SMTP do
+  Supabase). A primeira conta de administrador sai de `scripts/criar-conta.mjs`.
 - **Local (`localhost`):** sem login, dados só no `localStorage` do navegador. Em localhost, `?supabase=previa` usa o
   projeto de prévia (com login).
 
@@ -55,7 +57,11 @@ npm run test:e2e       # aplicação no navegador (Playwright)
 - Rode os testes do banco **somente no projeto de prévia** (o `supabase/` local fica vinculado a ele):
   `SUPABASE_DB_PASSWORD=... npm run test:db` (cada teste roda numa transação desfeita no final).
 - Aplicar migrações: `supabase db push --remote` (prévia) ou `--remote=<ref de produção>`.
-- Contas: `SUPABASE_DB_PASSWORD=... SENHA_NOVA=... node scripts/criar-conta.mjs <email> <operador|gestor> "<nome>"`.
+- Contas: `SUPABASE_DB_PASSWORD=... SENHA_NOVA=... node scripts/criar-conta.mjs <email> <operador|gestor|secretaria|administrador> "<nome>"`
+  (depois da primeira conta de administrador, as outras saem de "Minha conta" › Usuários).
+- Configuração do Auth (SMTP, senha mínima de 12 caracteres e o e-mail da troca de endereço, em
+  `supabase/templates/`): `SUPABASE_AUTH_SMTP_USER=<gmail> SUPABASE_AUTH_SMTP_PASS=<senha de app> supabase config push`
+  (prévia) ou com `--remote=<ref de produção>`. Confira antes com `supabase config diff`.
 - Dados fictícios na prévia (só num banco sem dados): `node scripts/semear-previa.mjs`.
 
 ## Formato dos dados
@@ -76,6 +82,7 @@ mais antigo do que o guardado. Nunca apague campos num passo: mantenha o que o p
 | `js/rodizio.js` | Filas do rodízio (cheque, MLTE, noturno e C172) e a rotação de uma data para a seguinte |
 | `js/agenda.js` | Prazo da agenda de solicitações (13:00 do dia anterior) e a importação para a demanda |
 | `js/csv.js` | CSV da escala agrupado por avião, para o lançamento no portal do aeroclube |
+| `js/perfis.js` | Perfis de acesso e o que cada um pode fazer na tela |
 | `js/rules.js` | Regras das missões (Ground School, nível mínimo, precedência) |
 | `js/engine.js` | Motor de alocação (função pura) |
 | `js/storage.js` | Escala por data, migrações de dados e link compartilhado, sobre um backend (`js/backends/`: local ou Supabase) |

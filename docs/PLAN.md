@@ -159,7 +159,17 @@ Each step is test-first and updates the preview. Delivery in about three PRs (st
 4. [ ] Merge Phase 4. The first Operador login updates the saved data to format version 10: simulators renamed, qualifications from the levels (checker boxes unmarked), and the new per-day fields. Anyone with the site open since before the merge gets the "reload" warning on their next save.
 5. [ ] The operator marks the checkers (and reviews the qualifications) in Instrutores, types each aircraft's hours since the last 50-hour inspection in Recursos, and reviews the Rodízio queues (they start in roster order).
 
-### Phase 5: Later (nice to have)
+### Phase 5: Accounts and administration (branch `fase-5`)
+Request (2026-11-11): an account page where each person changes their own email and password, and an Administrador profile that creates and deletes accounts.
+Decisions: the Administrador does everything an Operador does, plus account management; email changes are confirmed by links to the old and new address, sent through custom SMTP (a Gmail account with an App Password); Pedro, Rayane and Gabriel become Administradores in production.
+- [x] **Administrador profile.** In the rules for writing schedules, the agenda and the history, it counts as an Operador; only it can list, create and delete accounts (`listar_contas`, `criar_conta`, `excluir_conta`). Nobody can delete their own account, so at least one administrator always remains. Deleted accounts keep their history and agenda records, which store the author's name. 28 pgTAP checks, plus a real-login check on the preview: an account created by the function logs in, and after deletion it can't.
+- [x] **Minha conta:** change the password (the current password is checked first; at least 12 characters) and request an email change (confirmed by links sent to both addresses). Coming back from a confirmation link, the app says what happened: the other link is still missing, the change is complete (already signed in with the new email), or the link expired or was already used (the session in that browser is kept).
+- [x] **Usuários** (in Minha conta, Administradores only): the list of accounts with their last access, a form for a new account with a password generator, and deletion with confirmation.
+- [x] **Auth config on the preview:** custom SMTP (a Gmail account with an App Password, read from the Keychain at `supabase config push` so neither is in the repo), the email-change message in Portuguese (`supabase/templates/troca-de-email.html`) and `minimum_password_length = 12`. Checked live: a real email-change request was accepted and the emails were sent.
+- [x] **Production, before the merge (2026-11-11):** the same Auth config and the two migrations (`perfil_administrador`, `contas_e_administracao`). Both keep the current app working; checked with an Operador login on the live site (no writes, no errors).
+- [ ] **Production, after the merge:** make Pedro, Rayane and Gabriel Administradores. Not before: the current app shows an Administrador as read-only.
+
+### Phase 6: Later (nice to have)
 - [ ] Track instructor and student qualifications and currency: last flight, medical/CMA expiry, student course phase. The engine then checks these instead of relying on manual levels.
 - [ ] Integrate with the Google Calendar that students already use, publishing each student's missions.
 - [ ] Make the app installable (PWA) for use on the apron with poor connectivity.

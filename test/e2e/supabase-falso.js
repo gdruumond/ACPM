@@ -12,7 +12,8 @@ export const CONTAS = {
   operador: { email: 'operador@teste.acpm', senha: 'senha-do-operador', id: '00000000-0000-4000-a000-000000000001', perfil: 'operador', nome: 'Operador de Teste' },
   gestor: { email: 'gestor@teste.acpm', senha: 'senha-do-gestor', id: '00000000-0000-4000-a000-000000000002', perfil: 'gestor', nome: 'Gestor de Teste' },
   semPerfil: { email: 'sem-perfil@teste.acpm', senha: 'senha-sem-perfil', id: '00000000-0000-4000-a000-000000000003', perfil: null, nome: '' },
-  secretaria: { email: 'secretaria@teste.acpm', senha: 'senha-da-secretaria', id: '00000000-0000-4000-a000-000000000004', perfil: 'secretaria', nome: 'Secretaria de Teste' }
+  secretaria: { email: 'secretaria@teste.acpm', senha: 'senha-da-secretaria', id: '00000000-0000-4000-a000-000000000004', perfil: 'secretaria', nome: 'Secretaria de Teste' },
+  administrador: { email: 'admin@teste.acpm', senha: 'senha-do-administrador', id: '00000000-0000-4000-a000-000000000005', perfil: 'administrador', nome: 'Admin de Teste' }
 };
 
 // Documentos no formato por data da fase 3 (sem a versão do formato) a partir de um estado da aplicação
@@ -28,8 +29,8 @@ export function documentosAtuais(estado, data) {
 }
 
 const base64url = obj => Buffer.from(JSON.stringify(obj)).toString('base64url');
-const usuario = conta => ({
-  id: conta.id, aud: 'authenticated', role: 'authenticated', email: conta.email,
+const usuario = (conta, email = conta.email) => ({
+  id: conta.id, aud: 'authenticated', role: 'authenticated', email,
   app_metadata: { provider: 'email', providers: ['email'] }, user_metadata: {},
   created_at: '2026-11-10T12:00:00Z', updated_at: '2026-11-10T12:00:00Z'
 });
@@ -62,6 +63,20 @@ export function criarSupabaseFalso({ documentos = {}, dias = {}, agora = new Dat
   const historico = [];
   const solicitacoes = [];
   const sessoes = new Map();
+  // Contas criadas pelo administrador, senhas e e-mails trocados e pedidos de troca de e-mail (só neste servidor)
+  const contasCriadas = [];
+  const senhas = new Map();
+  const emails = new Map();
+  const trocasDeEmail = [];
+  const todasAsContas = () => [...Object.values(CONTAS), ...contasCriadas];
+  const senhaDe = c => (senhas.has(c.id) ? senhas.get(c.id) : c.senha);
+  const emailDe = c => (emails.has(c.id) ? emails.get(c.id) : c.email);
+  const exp = () => Math.floor(Date.now() / 1000) + 10 * 365 * 24 * 3600;  // longe no futuro: o relógio da página é fixo
+  const emitirToken = conta => {
+    const token = `${base64url({ alg: 'HS256', typ: 'JWT' })}.${base64url({ sub: conta.id, email: emailDe(conta), role: 'authenticated', aud: 'authenticated', exp: exp() })}.assinatura`;
+    sessoes.set(token, conta);
+    return token;
+  };
   const gravacoes = [];
   const saidas = [];
   const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': '*' };
@@ -88,18 +103,27 @@ export function criarSupabaseFalso({ documentos = {}, dias = {}, agora = new Dat
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
     const conta = sessoes.get((req.headers().authorization || '').replace(/^Bearer /, ''));
     const comPerfil = conta && conta.perfil;
-    const operador = conta && conta.perfil === 'operador';
+    const operador = conta && ['operador', 'administrador'].includes(conta.perfil);
 
     if (url.pathname === '/auth/v1/token' && url.searchParams.get('grant_type') === 'password') {
       const { email, password } = req.postDataJSON();
-      const alvo = Object.values(CONTAS).find(c => c.email === email && c.senha === password);
+      const alvo = todasAsContas().find(c => emailDe(c) === email && senhaDe(c) === password);
       if (!alvo) return responder(400, { code: 400, error_code: 'invalid_credentials', msg: 'Invalid login credentials' });
-      const exp = Math.floor(Date.now() / 1000) + 10 * 365 * 24 * 3600;  // longe no futuro: o relógio da página é fixo
-      const token = `${base64url({ alg: 'HS256', typ: 'JWT' })}.${base64url({ sub: alvo.id, email: alvo.email, role: 'authenticated', aud: 'authenticated', exp })}.assinatura`;
-      sessoes.set(token, alvo);
-      return responder(200, { access_token: token, token_type: 'bearer', expires_in: 3600, expires_at: exp, refresh_token: `renovar-${alvo.id}`, user: usuario(alvo) });
+      const token = emitirToken(alvo);
+      return responder(200, { access_token: token, token_type: 'bearer', expires_in: 3600, expires_at: exp(), refresh_token: `renovar-${alvo.id}`, user: usuario(alvo, emailDe(alvo)) });
     }
-    if (url.pathname === '/auth/v1/user') return conta ? responder(200, usuario(conta)) : responder(401, { code: 401, msg: 'invalid JWT' });
+    if (url.pathname === '/auth/v1/user') {
+      if (!conta) return responder(401, { code: 401, msg: 'invalid JWT' });
+      if (req.method() !== 'PUT') return responder(200, usuario(conta, emailDe(conta)));
+      // Minha conta: senha nova vale na hora; e-mail novo fica pendente até a confirmação pelos links
+      const { password, email } = req.postDataJSON();
+      if (password !== undefined) {
+        if (password.length < 12) return responder(422, { code: 422, error_code: 'weak_password', msg: 'Password should be at least 12 characters.' });
+        senhas.set(conta.id, password);
+      }
+      if (email !== undefined) trocasDeEmail.push({ de: emailDe(conta), para: email, redirecionar: url.searchParams.get('redirect_to') });
+      return responder(200, { ...usuario(conta, emailDe(conta)), ...(email !== undefined ? { new_email: email } : {}) });
+    }
     if (url.pathname === '/auth/v1/logout') {
       saidas.push(url.searchParams.get('scope'));
       sessoes.delete((req.headers().authorization || '').replace(/^Bearer /, ''));
@@ -131,9 +155,29 @@ export function criarSupabaseFalso({ documentos = {}, dias = {}, agora = new Dat
           return responder(503, { message: 'Service Unavailable' });
         }
       }
+      // Contas: só o administrador lista, cria e exclui (ninguém exclui a própria conta)
+      if (['listar_contas', 'criar_conta', 'excluir_conta'].includes(funcao)) {
+        if (!conta || conta.perfil !== 'administrador') return responder(403, { code: '42501', message: 'somente administradores gerenciam contas' });
+        if (funcao === 'listar_contas') {
+          return responder(200, todasAsContas().map(c => ({ usuario: c.id, email: emailDe(c), nome: c.nome, perfil: c.perfil || null, criado_em: '2026-11-01T12:00:00Z', ultimo_acesso: null })));
+        }
+        if (funcao === 'criar_conta') {
+          if ((args.p_senha || '').length < 12 || !(args.p_nome || '').trim()) return responder(400, { code: '22023', message: 'dados inválidos' });
+          if (todasAsContas().some(c => emailDe(c) === args.p_email.trim().toLowerCase())) return responder(409, { code: '23505', message: 'já existe' });
+          const nova = { email: args.p_email.trim().toLowerCase(), senha: args.p_senha, id: `00000000-0000-4000-b000-${String(contasCriadas.length + 1).padStart(12, '0')}`, perfil: args.p_perfil, nome: args.p_nome.trim() };
+          contasCriadas.push(nova);
+          return responder(200, nova.id);
+        }
+        if (args.p_usuario === conta.id) return responder(400, { code: '22023', message: 'não é possível excluir a própria conta' });
+        const i = contasCriadas.findIndex(c => c.id === args.p_usuario);
+        if (i < 0) return responder(404, { code: 'P0002', message: 'conta não encontrada' });
+        contasCriadas.splice(i, 1);
+        return responder(204);
+      }
+
       // Agenda: secretaria e operadores registram; fora do prazo, só operadores pela exceção da coordenação
       if (funcao === 'registrar_solicitacao' || funcao === 'cancelar_solicitacao') {
-        if (!conta || !['secretaria', 'operador'].includes(conta.perfil)) return responder(403, { code: '42501', message: 'sem permissão na agenda' });
+        if (!conta || !['secretaria', 'operador', 'administrador'].includes(conta.perfil)) return responder(403, { code: '42501', message: 'sem permissão na agenda' });
         if (funcao === 'cancelar_solicitacao') {
           const s = solicitacoes.find(x => x.id === args.p_id && !x.cancelada_em);
           if (!s) return responder(404, { code: 'P0002', message: 'pedido não encontrado' });
@@ -142,7 +186,7 @@ export function criarSupabaseFalso({ documentos = {}, dias = {}, agora = new Dat
         }
         const noPrazo = prazoDaAgendaPermite(args.p_data, agora);
         if (!noPrazo && !args.p_excecao) return responder(403, { code: 'PT403', message: 'prazo encerrado' });
-        if (!noPrazo && conta.perfil !== 'operador') return responder(403, { code: '42501', message: 'exceção só para operadores' });
+        if (!noPrazo && !['operador', 'administrador'].includes(conta.perfil)) return responder(403, { code: '42501', message: 'exceção só para operadores' });
         const id = solicitacoes.length + 1;
         solicitacoes.push({
           id, data: args.p_data, aluno: args.p_aluno, aluno_nome: args.p_aluno_nome.trim(), missao: args.p_missao, janela: args.p_janela,
@@ -181,9 +225,21 @@ export function criarSupabaseFalso({ documentos = {}, dias = {}, agora = new Dat
     dias: tabelaDias,
     historico,
     solicitacoes,
+    contasCriadas,
+    trocasDeEmail,
+    senhaDe,
     gravacoes,
     saidas,
     instalar: context => context.route(`${URL_TESTE}/**`, atender),
+    // Os dois links da última troca de e-mail abertos: o e-mail novo passa a valer e o Auth devolve o fragmento
+    // com a sessão que acompanha a volta ao site (fluxo implícito do supabase-js)
+    confirmarTrocaDeEmail() {
+      const { de, para } = trocasDeEmail.at(-1);
+      const conta = todasAsContas().find(c => emailDe(c) === de);
+      emails.set(conta.id, para);
+      const expira = Math.floor(agora.getTime() / 1000) + 3600;
+      return `#access_token=${emitirToken(conta)}&expires_at=${expira}&expires_in=3600&refresh_token=renovar-${conta.id}&token_type=bearer&type=email_change`;
+    },
     // Simula indisponibilidade do servidor nas próximas gravações
     falharGravacoes(n) { falhasDeGravacao = n; },
     // Segura as leituras da tabela dias até chamar a função devolvida (uma data que demora a carregar)
