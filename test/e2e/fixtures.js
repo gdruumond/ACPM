@@ -83,10 +83,9 @@ export async function confirmar(page, seletor) {
 // Cadastro sintético com o dia de exemplo (a demanda do antigo botão "Preencher exemplo")
 export const abrirComExemplo = (page, opts = {}) => abrir(page, { estado: comExemplo(estadoSintetico()), ...opts });
 
-export async function gerarEscala(page) {
-  await irPara(page, 'dem');
-  await page.locator('#gen').click();
-  await expect(page.locator('#s-esc')).toBeVisible();
+// A escala é refeita a cada alteração: basta abrir a aba
+export async function abrirEscala(page) {
+  await irPara(page, 'esc');
   await expect(page.locator('#out .st')).toBeVisible();
 }
 

@@ -1,6 +1,6 @@
 // Aba Agenda de Solicitações (modo local): calendário, prazo das 13:00, registro com "Registrado por", exceção da
 // coordenação e cancelamento. O relógio dos testes está em 10/11/2026, 12:00 em São Paulo.
-import { test, expect, abrir, irPara, gerarEscala, lerEscala } from './fixtures.js';
+import { test, expect, abrir, irPara, abrirEscala, lerEscala } from './fixtures.js';
 import { aluno, cenario } from '../helpers/montar.js';
 
 const comAlunos = () => cenario({ stu: [aluno(1000), aluno(1001)] });
@@ -90,7 +90,7 @@ test.describe('Agenda de Solicitações', () => {
     await page.locator('#importar-agenda').click();
     await expect(page.locator('#toast-box')).toContainText('Nenhum pedido novo na agenda para 11/11.');
 
-    await gerarEscala(page);
+    await abrirEscala(page);
     const voos = (await lerEscala(page)).linhas.filter(l => /Aluno 100[01]/.test(l));
     expect(voos.find(l => l.includes('Aluno 1000'))).toMatch(/^(12:40|13:40|14:30|16:20)/);
     expect(voos.find(l => l.includes('Aluno 1001'))).toMatch(/^14:30/);

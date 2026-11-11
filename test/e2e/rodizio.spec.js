@@ -1,5 +1,5 @@
 // Aba Rodízio: as filas de cada categoria, os botões para ajustar a ordem e o efeito na escala.
-import { test, expect, abrir, irPara, gerarEscala, lerEscala } from './fixtures.js';
+import { test, expect, abrir, irPara, abrirEscala, lerEscala } from './fixtures.js';
 import { aluno, cenario, instrutor } from '../helpers/montar.js';
 
 const doC172 = id => instrutor(id, 1, { hab: ['local', 'noturno', 'c172'] });
@@ -15,7 +15,7 @@ test.describe('Rodízio', () => {
     await expect(page.locator('#rodizio [data-cat="noturno"] li')).toHaveCount(2);
     await expect(page.locator('#rodizio [data-cat="cheque"]')).toContainText('Nenhum instrutor habilitado');
 
-    await gerarEscala(page);
+    await abrirEscala(page);
     expect(await instrutorDoVoo(page)).toContain('| Instrutor 01 |');
     await irPara(page, 'rod');
     await expect(filaC172.nth(0)).toContainText('1 voo nesta data');

@@ -1,5 +1,5 @@
 // Revisão de 50 horas na aba Recursos: horas desde a última revisão, o avião que para na escala e a nova data.
-import { test, expect, abrir, irPara, gerarEscala, lerEscala } from './fixtures.js';
+import { test, expect, abrir, irPara, abrirEscala, lerEscala } from './fixtures.js';
 import { aluno, apenas, cenario, instrutor } from '../helpers/montar.js';
 
 // Três voos de 1 h (08:20, 10:10 e 12:40) e só o PP-LJV disponível no C152
@@ -20,7 +20,7 @@ test.describe('Revisão de 50 horas', () => {
     await abrir(page, { estado: tresVoosNoPPLJV() });
     await informarHoras(page, 'PP-LJV', '48');
     await expect(page.locator('#revisao tr[data-r="PP-LJV"]')).toContainText('2 h');
-    await gerarEscala(page);
+    await abrirEscala(page);
     expect((await lerEscala(page)).linhas.filter(l => l.includes('PP-LJV'))).toHaveLength(2);
     await expect(page.locator('#out .al.warn')).toContainText('Aeronave parou para revisão de 50 horas às 11:10 (50 h desde a última revisão).');
 
@@ -39,7 +39,7 @@ test.describe('Revisão de 50 horas', () => {
   test('a nova data começa com as horas do dia anterior mais os voos dele', async ({ page }) => {
     await abrir(page, { estado: tresVoosNoPPLJV() });
     await informarHoras(page, 'PP-LJV', '10');
-    await gerarEscala(page);
+    await abrirEscala(page);
     await page.locator('#dt').fill('2026-11-12');
     await page.locator('#dt').dispatchEvent('change');
     await expect(page.locator('#bi-dt')).toHaveValue('2026-11-12');

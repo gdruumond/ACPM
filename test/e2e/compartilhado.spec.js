@@ -1,4 +1,4 @@
-import { test, expect, prepararContexto, vigiarErros, irPara, gerarEscala, lerEscala, AMANHA } from './fixtures.js';
+import { test, expect, prepararContexto, vigiarErros, irPara, abrirEscala, lerEscala, AMANHA } from './fixtures.js';
 import { criarSupabaseFalso, instalarSupabaseFalso, documentosAtuais, CONTAS } from './supabase-falso.js';
 import { estadoSintetico } from '../helpers/estado.js';
 import { comExemplo } from '../helpers/exemplo.js';
@@ -79,7 +79,9 @@ test.describe('Modo compartilhado: gravação, conflitos e link da escala', () =
     await servidor.instalar(operador);
     const pgOperador = await operador.newPage();
     await entrar(pgOperador, CONTAS.operador);
-    await gerarEscala(pgOperador);
+    await abrirEscala(pgOperador);
+    // A escala calculada fica gravada (com a data) ao ser exportada
+    await Promise.all([pgOperador.waitForEvent('download'), pgOperador.locator('#exp').click()]);
     await expect.poll(() => servidor.dias.get(AMANHA).conteudo.resultado && servidor.dias.get(AMANHA).conteudo.resultado.data).toBe(AMANHA);
     const escalaOperador = await lerEscala(pgOperador);
     await pgOperador.locator('#btn-share-link').click();

@@ -1,4 +1,4 @@
-import { test, expect, abrir, abrirSintetico, abrirComExemplo, irPara, gerarEscala, lerEscala, json } from './fixtures.js';
+import { test, expect, abrir, abrirSintetico, abrirComExemplo, irPara, abrirEscala, lerEscala, json } from './fixtures.js';
 import { aluno, cenario, instrutor } from '../helpers/montar.js';
 
 const lerDemanda = page => page.locator('#dem tr[data-k="d"]').evaluateAll(linhas => linhas.map(tr => {
@@ -76,7 +76,7 @@ test.describe('Demanda', () => {
     await linha.locator('[data-f="mis"]').selectOption('Cheque PC MNTE IFR');
     expect(await linha.locator('[data-f="eq"] option').allTextContents()).toEqual(['C172']);
     await expect(linha.locator('td').last()).toContainText('Exige Checador PP, PC, MNTE, INVA, IFR ou Checador PP, PC, MLTE, MNTE, INVA, IFR');
-    await gerarEscala(page);
+    await abrirEscala(page);
     const voos = (await lerEscala(page)).linhas.filter(l => l.includes('Aluno 1000'));
     expect(voos).toHaveLength(1);
     expect(voos[0]).toContain('| Cheque PC MNTE IFR |');
@@ -90,7 +90,7 @@ test.describe('Demanda', () => {
     await linha.locator('[data-f="jan"]').selectOption('tarde');
     await expect(linha.locator('td').last()).toContainText('Disponibilidade: Tarde');
     await expect(page.locator('#audit-log-list')).toContainText('Pedido Aluno 1000: disponibilidade Tarde (Voo Local)');
-    await gerarEscala(page);
+    await abrirEscala(page);
     const voos = (await lerEscala(page)).linhas.filter(l => l.includes('Aluno 1000'));
     expect(voos[0]).toMatch(/^12:40–13:40 \| Aluno 1000/);
   });

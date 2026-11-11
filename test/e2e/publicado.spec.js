@@ -23,7 +23,8 @@ test.describe('Site publicado (login real)', () => {
       await expect(page.locator('body')).toHaveAttribute('data-role', perfil);
       await expect(page.locator('#inst .cd').first()).toBeAttached();
       await page.locator('#btn-sair').click();
-      await expect(page.locator('#form-login')).toBeVisible();
+      // Sair recarrega a página: na rede real, os módulos podem levar mais que o tempo padrão para carregar
+      await expect(page.locator('#form-login')).toBeVisible({ timeout: 20000 });
     });
   }
 
@@ -68,7 +69,8 @@ test.describe('Site publicado (login real)', () => {
     await page.locator('#dt').dispatchEvent('change');
     // A data base do BI só muda quando a nova data termina de carregar
     await expect(page.locator('#bi-dt')).toHaveValue('2099-01-01');
-    await expect(page.locator('#out')).toContainText('Ainda não há escala para esta data');
+    // A prévia não tem alunos: a escala calculada da data nova fica vazia
+    await expect(page.locator('#out')).toContainText('Nenhum voo nesta data');
     await expect(page.locator('#inst .cd')).toHaveCount(instrutores);
     await page.locator('#btn-sair').click();
   });

@@ -61,9 +61,21 @@ export function pushHistory() {
   if (btnUndo) btnUndo.disabled = false;
 }
 
+// A escala acompanha os dados: cada alteração do operador refaz a escala da data (o motor leva milissegundos) e
+// grava os dados e a escala juntos. Ao abrir a aba Escala, ela já está pronta
 export function save() {
   if (isGestor()) return;
+  refazerEscala();
   ApiClient.salvarDia(DATA, S, RES);
+  escalaSoCalculada = false;
+}
+
+// Escala só calculada (data aberta ainda sem escala gravada): é gravada na primeira alteração ou quando é exportada
+// (CSV ou PDF), para entrar no BI e nas horas e no rodízio da data seguinte. Abrir uma data não grava nada
+let escalaSoCalculada = false;
+export const marcarEscalaSoCalculada = valor => { escalaSoCalculada = valor; };
+export function gravarEscalaCalculada() {
+  if (escalaSoCalculada) save();
 }
 
 // A entrada aparece na hora; o id (que permite reverter) chega quando o registro é gravado.
@@ -118,10 +130,13 @@ export async function carregarData(data) {
   if (pedido !== pedidoDeData) return;
   abrirData(data);
   setS(estado);
-  setRES(escala);
+  // Data sem escala gravada (por exemplo, uma data nova, copiada da anterior): a escala calculada aparece na hora
+  // e é gravada junto com a primeira alteração
+  setRES(escala || escalaCalculada());
+  escalaSoCalculada = !escala;
   setAuditLog(historico);
   limparDesfazer();
-  rRec(); rIns(); rAlu(); rDem(); renderAuditPanel(); rOut(false);
+  rRec(); rIns(); rAlu(); rDem(); renderAuditPanel(); rOut();
   await carregarBI();
 }
 
@@ -153,7 +168,6 @@ export function undoLastAction() {
   $('#btn-undo').disabled = historyStack.length === 0;
   logChange('mod', 'Ação desfeita pelo botão Desfazer');
   rRec(); rIns(); rAlu(); rDem();
-  if (RES) gen(false);
   showToast('Última alteração desfeita.');
 }
 
@@ -172,13 +186,16 @@ export function syncBIHistoryForCurrentDate() {
   }
 }
 
-export function gen(switchTab = true) {
-  // A escala guarda a data para a qual foi gerada (no modo compartilhado, todos veem essa data)
-  setRES({ ...runAllocationEngine(S), data: DATA });
-  ApiClient.salvarDia(DATA, S, RES);
+// Escala da data calculada a partir dos dados da tela. Ela guarda a data para a qual foi feita (no modo
+// compartilhado, todos veem essa data)
+export const escalaCalculada = () => ({ ...runAllocationEngine(S), data: DATA });
+
+// Refaz a escala e o que depende dela (revisão de 50 horas, painel do dia e BI), sem gravar: quem grava é save
+export function refazerEscala() {
+  setRES(escalaCalculada());
   syncBIHistoryForCurrentDate();
   rRevisao();
-  rOut(switchTab);
+  rOut();
   renderAuditPanel();
   rBI();
 }

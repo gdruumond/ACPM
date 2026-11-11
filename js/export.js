@@ -25,7 +25,7 @@ export async function sv(fn, data) {
 
 // CSV para o portal de agendamento: agrupado por avião, em ordem de horário (js/csv.js)
 export async function exp() {
-  if (!RES) { msg('Gere a escala antes de exportar.'); return; }
+  if (!RES) { msg('Não há escala para exportar nesta data.'); return; }
   const c = montarCsv(RES, S.fStatus || {});
   if (await sv(nomeDoCsv(DATA), c)) { msg('CSV exportado.'); return; }
   $('#csv').value = c;
@@ -33,7 +33,7 @@ export async function exp() {
 }
 
 export async function pdf() {
-  if (!RES) { msg('Gere a escala antes de emitir o PDF.'); return; }
+  if (!RES) { msg('Não há escala para o PDF nesta data.'); return; }
   if (!window.jspdf) { msg('A biblioteca de PDF não carregou. Verifique a conexão e recarregue a página.'); return; }
 
   const doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });

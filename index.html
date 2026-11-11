@@ -140,7 +140,6 @@
   <section id="s-dem">
     <h2>Demanda</h2>
     <div class="bar">
-      <button class="btn edit-only" id="gen">Gerar escala</button>
       <button class="btn sec edit-only" id="importar-agenda" title="Traz os pedidos da agenda da secretaria para esta data (só acrescenta; não repete)">Importar Solicitações da Agenda</button>
       <button class="btn sec edit-only" id="clr">Limpar demanda</button>
       <label class="chip"><input type="checkbox" id="onlyfly"> Só quem voa</label>
@@ -176,7 +175,6 @@
   <section id="s-esc">
     <h2>Escala do Dia</h2>
     <div class="bar">
-      <button class="btn edit-only" id="gen2">Gerar escala</button>
       <button class="btn sec" id="exp">Exportar CSV</button>
       <button class="btn sec" id="pdf">Emitir PDF</button>
       <label class="chip">Data <input type="date" id="dt"></label>
@@ -206,7 +204,7 @@
     </details>
 
     <div id="out">
-      <p class="h">Ainda não há escala. Marque quem vai voar em “5 · Demanda” e clique em “Gerar escala”.</p>
+      <p class="h">Nenhum voo nesta data. Marque quem vai voar na aba “5 · Demanda”: a escala é montada automaticamente.</p>
     </div>
     <div id="csvbox" hidden>
       <p class="h">Copie o texto abaixo e salve como .csv:</p>
