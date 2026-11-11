@@ -15,7 +15,17 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      # Chromium com as bibliotecas do sistema, que vêm dos espelhos do Ubuntu (uns 20 s). Se o runner não alcança os
+      # espelhos (aconteceu em 11/11/2026: a instalação travou até o fim do tempo do job), instala só o navegador; a
+      # imagem do GitHub já tem as bibliotecas de que ele precisa
+      - name: Chromium com as bibliotecas do sistema
+        id: chromium
+        run: npx playwright install --with-deps chromium
+        timeout-minutes: 4
+        continue-on-error: true
+      - name: Só o Chromium (espelhos do Ubuntu fora do alcance)
+        if: steps.chromium.outcome != 'success'
+        run: npx playwright install chromium
       - name: Testes unitários (motor, regras, dados)
         run: npm run test:unit
       - name: Testes E2E (Playwright)
