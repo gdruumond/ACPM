@@ -78,6 +78,10 @@ export function save() {
   refazerEscala();
   ApiClient.salvarDia(DATA, S, RES);
   escalaSoCalculada = false;
+  // A barra da escala mostra quando ela foi refeita
+  const agora = new Date();
+  $('#escala-atualizada').textContent = `Atualizada às ${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
+  $('#escala-atualizada').hidden = false;
 }
 
 // Escala só calculada (data aberta ainda sem escala gravada): é gravada na primeira alteração ou quando é exportada
@@ -146,6 +150,7 @@ export async function carregarData(data) {
   escalaSoCalculada = !escala;
   setAuditLog(historico);
   limparDesfazer();
+  $('#escala-atualizada').hidden = true;
   rRec(); rIns(); rAlu(); rDem(); renderAuditPanel(); rOut();
   atualizarSelosDaEscala();
   lerPedidosDaData();

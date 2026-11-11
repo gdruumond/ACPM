@@ -213,18 +213,25 @@
   <section id="s-esc" class="on">
     <h2>Escala do dia</h2>
     <div class="bar">
-      <button class="btn sec" id="btn-share-link" title="Copiar link compartilhável da escala (abre bloqueado como Gestor)"><svg class="ico"><use href="#i-compartilhar"/></svg>Compartilhar</button>
-      <button class="btn sec" id="exp">Exportar CSV</button>
-      <button class="btn sec" id="pdf">Emitir PDF</button>
-      <select id="flt-esc-eq" class="flt-ctrl" aria-label="Filtrar por equipamento">
-        <option value="">Todos os equipamentos</option>
+      <div class="seg" role="group" aria-label="Como ver a escala">
+        <button type="button" data-tl="lista" class="on"><svg class="ico"><use href="#i-lista"/></svg>Lista</button>
+        <button type="button" data-tl="eq"><svg class="ico"><use href="#i-aviao"/></svg>Por avião e sala</button>
+        <button type="button" data-tl="ins"><svg class="ico"><use href="#i-instrutor"/></svg>Por instrutor</button>
+      </div>
+      <span class="h" id="escala-atualizada" role="status" hidden></span>
+      <span class="cresce"></span>
+      <select id="flt-esc-eq" class="flt-ctrl" aria-label="Filtrar por avião ou sala">
+        <option value="">Todos os aviões e salas</option>
       </select>
       <input type="search" id="flt-esc-q" class="flt-ctrl" placeholder="Buscar aluno, instrutor ou missão…" aria-label="Filtrar na escala">
+      <button class="btn sec" id="btn-share-link" title="Copiar link compartilhável da escala (abre bloqueado como Gestor)"><svg class="ico"><use href="#i-compartilhar"/></svg>Compartilhar</button>
+      <button class="btn sec" id="exp" title="Exportar o CSV para o lançamento no portal">CSV</button>
+      <button class="btn sec" id="pdf" title="Emitir o PDF da escala para impressão">PDF</button>
       <span id="msg" class="h" role="status"></span>
     </div>
 
     <div id="out">
-      <p class="h">Nenhum voo nesta data. Marque quem vai voar na aba “5 · Demanda”: a escala é montada automaticamente.</p>
+      <p class="h">Nenhum voo nesta data. Marque quem vai voar na aba Demanda: a escala é montada automaticamente.</p>
     </div>
     <div id="csvbox" hidden>
       <p class="h">Copie o texto abaixo e salve como .csv:</p>

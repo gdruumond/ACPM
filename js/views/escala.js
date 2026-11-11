@@ -1,5 +1,5 @@
-// Aba 6 · Escala: tabela oficial, mapa de ocupação e painel de inclusões e histórico do dia.
-import { FLIGHT_STATUSES } from '../config.js';
+// Aba Escala: resumo do dia, a lista dos voos (ou o mapa por avião e sala ou por instrutor) e o histórico da data.
+import { FLIGHT_STATUSES, GROUND_REG } from '../config.js';
 import { hm, WLB, fmtH, esc } from '../format.js';
 import { isGroundMission } from '../rules.js';
 import { sumUniqueOperationalHours, consolidateTimelineSlots } from '../engine.js';
@@ -71,7 +71,7 @@ export function buildTimelineGroup(out, groupKey, subLabelFn, barLine1Fn, barLin
     }).join('');
 
     return `<div class="tl-row">
-      <div class="tl-lbl"><span>${esc(key)}</span><small>${sub}</small></div>
+      <div class="tl-lbl"><span>${esc(nomeDoRecurso(key))}</span> <small>${sub}</small></div>
       <div class="tl-track">${bars}</div>
     </div>`;
   }).join('');
@@ -101,7 +101,7 @@ export function renderVisualTimeline(out) {
     : buildTimelineGroup(
         out,
         'r',
-        (first, totalH) => `${first.eqType || ''} · ${fmtH(totalH)}`,
+        (first, totalH) => [first.r === GROUND_REG ? '' : first.eqType, fmtH(totalH)].filter(Boolean).join(' · '),
         o => o.students.length > 1
           ? `${hm(o.a)}–${hm(o.b)} · ${esc(o.mis)} (${o.students.length} alunos)`
           : `${hm(o.a)}–${hm(o.b)} · ${esc(o.s)}`,
@@ -112,14 +112,7 @@ export function renderVisualTimeline(out) {
         maxEnd
       );
 
-  return `<div class="pn" style="margin-top:14px">
-    <div class="tl-header">
-      <h3 style="margin:0">Mapa de ocupação</h3>
-      <div class="tl-switch">
-        <button data-tl="eq" class="${TL_MODE === 'eq' ? 'on' : ''}"><svg class="ico"><use href="#i-aviao"/></svg> Por avião e sala</button>
-        <button data-tl="ins" class="${TL_MODE === 'ins' ? 'on' : ''}"><svg class="ico"><use href="#i-instrutor"/></svg> Por instrutor</button>
-      </div>
-    </div>
+  return `<div class="pn mapa">
     <div class="tl-legend">
       <span><i class="tl-dot m-gnd"></i>Ground School (01h30)</span>
       <span><i class="tl-dot m-sim"></i>Simulador</span>
@@ -165,82 +158,141 @@ export function renderAuditPanel() {
   }
 }
 
-// A escala é refeita a cada alteração (save em actions.js): aqui ela só é desenhada
+const PERTO_DO_LIMITE_KG = 10;
+export const nomeDoRecurso = r => (r === GROUND_REG ? 'Sala Ground' : r);
+const ehGround = o => o.isGround || isGroundMission(o.mis);
+const duracao = o => (ehGround(o) ? '1h30' : fmtH(o.h)) + (o.ss && o.ss !== '1/1' ? ` · sessão ${o.ss}` : '');
+const statusDe = o => (S.fStatus && S.fStatus[o.fKey]) || o.status || 'Confirmado';
+
+// A preferência só aparece quando o voo não ficou na 1ª
+function preferencia(o) {
+  if (o.baseTag === 'Pref. 2') return ' <span class="tag">2ª preferência</span>';
+  if (o.baseTag === 'Próximo livre') return ' <span class="tag fb">horário livre</span>';
+  return '';
+}
+
+// Peso da tripulação só nos aviões, contra o limite (em destaque a menos de 10 kg dele)
+function peso(o) {
+  if (!o.limKg) return '';
+  if (!o.kg) return '<span class="tag fb">sem peso</span>';
+  return `<span class="${o.kg > o.limKg - PERTO_DO_LIMITE_KG ? 'perto' : ''}">${o.kg}</span> <span class="sm">/ ${o.limKg} kg</span>`;
+}
+
+function seletorDeStatus(o) {
+  const st = statusDe(o);
+  return `<select class="st-sel st-${st.replace(/\s+/g, '')}" data-f="fstatus" data-fkey="${o.fKey}" aria-label="Status de ${esc(o.s)}"${isGestor() ? ' disabled' : ''}>
+    ${FLIGHT_STATUSES.map(v => `<option value="${v}"${v === st ? ' selected' : ''}>${v}</option>`).join('')}
+  </select>`;
+}
+
+const acao = o => (o.stuId
+  ? `<button class="x" data-act="rm-fly" data-id="${o.stuId}" data-mid="${o.mid || 0}" aria-label="Tirar ${esc(o.s)} da escala" title="Tirar da escala">✕</button>`
+  : '');
+
+// Avisos agrupados por tipo: alunos sem peso, aviões que param para a revisão e outros
+function resumoDosAvisos(avisos) {
+  const ehPeso = a => a.m.startsWith('Peso do aluno não informado');
+  const ehRevisao = a => a.m.startsWith('Aeronave parou');
+  const semPeso = new Set(avisos.filter(ehPeso).map(a => a.s.replace(/ \(.*\)$/, ''))).size;
+  const revisao = avisos.filter(ehRevisao).length;
+  const outros = avisos.filter(a => !ehPeso(a) && !ehRevisao(a)).length;
+  const partes = [
+    semPeso && `${semPeso} ${semPeso === 1 ? 'aluno sem peso' : 'alunos sem peso'}`,
+    revisao && `${revisao} ${revisao === 1 ? 'avião para' : 'aviões param'} para a revisão de 50 horas`,
+    outros && `${outros} ${outros === 1 ? 'outro' : 'outros'}`
+  ].filter(Boolean);
+  return `${avisos.length} ${avisos.length === 1 ? 'aviso' : 'avisos'}: ${partes.join(' · ')}`;
+}
+
+function resumo(out, al, tot) {
+  const erros = al.filter(a => a.t === 'err');
+  const avisos = al.filter(a => a.t !== 'err');
+  const horas = sumUniqueOperationalHours(out, statusDe);
+  const item = a => `<li class="al ${a.t}"><b>${esc(a.s)}</b> ${esc(a.m)}</li>`;
+  const nomes = [...new Set(erros.map(a => a.s))].join(', ');
+  let h = `<div class="resumo">
+    <div class="st">
+      <div><strong>${tot}</strong> missões pedidas</div>
+      <div><strong>${tot - erros.length}</strong> escaladas</div>
+      <div><strong>${fmtH(horas)}</strong> de voo e aula</div>
+    </div>`;
+  if (erros.length) {
+    h += `<details class="caixa erros" open><summary>${erros.length === 1 ? '1 missão não entrou' : `${erros.length} missões não entraram`} na escala: ${esc(nomes)}</summary>
+      <ul>${erros.map(item).join('')}</ul></details>`;
+  }
+  if (avisos.length) h += `<details class="caixa avisos"><summary>${resumoDosAvisos(avisos)}</summary><ul>${avisos.map(item).join('')}</ul></details>`;
+  return h + '</div>';
+}
+
+// Uma linha por voo. Na turma de Ground, horário, missão, sala e instrutor aparecem uma vez; cada aluno tem a
+// sua linha, com o seu status e a sua ação
+function tabela(voos) {
+  const grupos = [];
+  const turmas = new Map();
+  for (const o of voos) {
+    const chave = ehGround(o) && o.classKey ? o.classKey : null;
+    if (chave && turmas.has(chave)) { turmas.get(chave).push(o); continue; }
+    const grupo = [o];
+    if (chave) turmas.set(chave, grupo);
+    grupos.push(grupo);
+  }
+  const porTempo = {};
+  grupos.forEach(g => { porTempo[g[0].w] = (porTempo[g[0].w] || 0) + 1; });
+
+  let h = `<div class="tw tabela-escala"><table><thead><tr><th>Horário</th><th>Aluno</th><th>Missão</th><th>Avião / sala</th><th>Instrutor</th><th>Peso</th><th>Status</th><th class="edit-only" aria-label="Ação"></th></tr></thead><tbody>`;
+  let tempo = -1;
+  for (const grupo of grupos) {
+    const o = grupo[0];
+    if (o.w !== tempo) {
+      tempo = o.w;
+      const n = porTempo[o.w];
+      h += `<tr class="win"><td colspan="8">${WLB(o.w)} <small>${n} ${n === 1 ? 'decolagem ou aula' : 'decolagens e aulas'}</small></td></tr>`;
+    }
+    const rs = grupo.length > 1 ? ` rowspan="${grupo.length}"` : '';
+    const cancelado = voo => (statusDe(voo) === 'Cancelado' ? ' class="st-Cancelado"' : '');
+    h += `<tr${cancelado(o)}>
+      <td class="hr"${rs}>${hm(o.a)}–${hm(o.b)} <small>${duracao(o)}</small>${preferencia(o)}</td>
+      <td><b>${esc(o.s)}</b></td>
+      <td${rs}>${esc(o.mis)}${grupo.length > 1 ? ` <small>Turma de ${grupo.length} alunos</small>` : ''}</td>
+      <td class="nw"${rs}>${esc(nomeDoRecurso(o.r))}${ehGround(o) ? '' : ` <small>${esc(o.eqType || '')}</small>`}</td>
+      <td class="nw"${rs}>${esc(o.ins)}</td>
+      <td class="nw"${rs}>${peso(o)}</td>
+      <td>${seletorDeStatus(o)}</td>
+      <td class="edit-only acao">${acao(o)}</td>
+    </tr>`;
+    for (const aluno of grupo.slice(1)) {
+      h += `<tr${cancelado(aluno)}><td><b>${esc(aluno.s)}</b></td><td>${seletorDeStatus(aluno)}</td><td class="edit-only acao">${acao(aluno)}</td></tr>`;
+    }
+  }
+  return h + '</tbody></table></div>';
+}
+
+// A escala é refeita a cada alteração (save em actions.js): aqui ela só é desenhada, na visão escolhida na barra
 export function rOut() {
+  document.querySelectorAll('#s-esc [data-tl]').forEach(b => b.classList.toggle('on', b.dataset.tl === TL_MODE));
+  $('#out').dataset.vista = TL_MODE === 'lista' ? 'lista' : 'mapa';
   if (!RES || (!RES.out.length && !RES.al.length)) {
-    $('#out').innerHTML = `<p class="h">Nenhum voo nesta data. Marque quem vai voar na aba “5 · Demanda”: a escala é montada automaticamente.</p>`;
+    $('#out').innerHTML = `<p class="h">Nenhum voo nesta data. Marque quem vai voar na aba Demanda: a escala é montada automaticamente.</p>`;
     return;
   }
   const { out, al, tot } = RES;
-  const rej = al.filter(a => a.t === 'err').length;
 
   const eqFilterEl = $('#flt-esc-eq');
   const curEqFilter = eqFilterEl ? eqFilterEl.value : '';
   if (eqFilterEl) {
-    const usedRegs = [...new Set(out.map(o => o.r))].sort();
-    eqFilterEl.innerHTML = `<option value="">Todos os equipamentos (${usedRegs.length})</option>` +
-      usedRegs.map(r => `<option value="${r}"${r === curEqFilter ? ' selected' : ''}>${r}</option>`).join('');
+    const usados = [...new Set(out.map(o => o.r))].sort();
+    eqFilterEl.innerHTML = `<option value="">Todos os aviões e salas (${usados.length})</option>` +
+      usados.map(r => `<option value="${r}"${r === curEqFilter ? ' selected' : ''}>${esc(nomeDoRecurso(r))}</option>`).join('');
   }
   const qFilter = ($('#flt-esc-q') && $('#flt-esc-q').value || '').toLowerCase();
-
-  const filteredOut = out.filter(o => {
+  const voos = out.filter(o => {
     if (curEqFilter && o.r !== curEqFilter) return false;
     if (qFilter && !o.s.toLowerCase().includes(qFilter) && !o.ins.toLowerCase().includes(qFilter) && !o.mis.toLowerCase().includes(qFilter)) return false;
     return true;
   });
 
-  const winCount = {};
-  filteredOut.forEach(o => { winCount[o.w] = (winCount[o.w] || 0) + 1; });
-
-  const activeHours = sumUniqueOperationalHours(out, o => (S.fStatus && S.fStatus[o.fKey]) || o.status || 'Confirmado');
-
-  let h = `<div class="st">
-    <div><strong>${tot}</strong>missões na demanda</div>
-    <div><strong>${tot - rej}</strong>atendidas</div>
-    <div><strong>${fmtH(activeHours)}</strong>horas ativas</div>
-    <div><strong style="color:${al.length ? 'var(--er)' : 'var(--ok)'}">${al.length}</strong>alertas</div>
-  </div>`;
-
-  h += al.map(a => `<div class="al ${a.t}"><b>${esc(a.s)}</b>${esc(a.m)}</div>`).join('');
-
-  if (!filteredOut.length) {
-    h += `<p class="h">${tot ? 'Nenhum voo alocado.' : 'Nenhuma missão marcada em “5 · Demanda”.'}</p>`;
-  } else {
-    // 1º: Tabela Oficial da Escala do Dia
-    h += '<div class="tw" style="margin-top:10px"><table><thead><tr><th>Horário</th><th>Aluno</th><th>Missão</th><th>Equipamento</th><th>Instrutor</th><th>Duração</th><th>Peso</th><th>Encaixe</th><th>Status</th><th class="edit-only">Ação</th></tr></thead><tbody>';
-    let cw = -1;
-    for (const o of filteredOut) {
-      if (o.w !== cw) {
-        cw = o.w;
-        h += `<tr class="win"><td colspan="10">${WLB(o.w)} · ${winCount[o.w]} lançamento(s) iniciando</td></tr>`;
-      }
-      const stVal = (S.fStatus && S.fStatus[o.fKey]) || o.status || 'Confirmado';
-      const stKey = stVal.replace(/\s+/g, '');
-      const rowCancelCls = stVal === 'Cancelado' ? ' class="st-Cancelado"' : '';
-      const disabledAttr = isGestor() ? ' disabled' : '';
-      const tagCls = o.groupSize > 1 ? ' grp' : (o.baseTag && o.baseTag[0] !== 'P' ? ' fb' : '');
-      h += `<tr${rowCancelCls}>
-        <td>${hm(o.a)}–${hm(o.b)}</td>
-        <td><b>${esc(o.s)}</b></td>
-        <td>${esc(o.mis)}</td>
-        <td>${esc(o.r)}</td>
-        <td>${esc(o.ins)}</td>
-        <td>${HT(o)}</td>
-        <td>${o.kg ? o.kg + ' kg' : '—'}</td>
-        <td><span class="tag${tagCls}">${esc(o.tag)}</span></td>
-        <td>
-          <select class="st-sel st-${stKey}" data-f="fstatus" data-fkey="${o.fKey}" aria-label="Status do voo"${disabledAttr}>
-            ${FLIGHT_STATUSES.map(st => `<option value="${st}"${st === stVal ? ' selected' : ''}>${st}</option>`).join('')}
-          </select>
-        </td>
-        <td class="edit-only">${o.stuId ? `<button class="x" data-act="rm-fly" data-id="${o.stuId}" data-mid="${o.mid || 0}">✕</button>` : ''}</td>
-      </tr>`;
-    }
-    h += '</tbody></table></div>';
-
-    // 2º: Mapa Visual Interativo de Ocupação sincronizado logo após a tabela
-    h += renderVisualTimeline(filteredOut);
-  }
-
+  let h = resumo(out, al, tot);
+  if (!voos.length) h += `<p class="h">${tot ? 'Nenhum voo na escala com esses filtros.' : 'Nenhuma missão marcada na Demanda.'}</p>`;
+  else h += tabela(voos) + renderVisualTimeline(voos);
   $('#out').innerHTML = h;
 }

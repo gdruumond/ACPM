@@ -92,7 +92,7 @@ test.describe('Demanda', () => {
     await expect(page.locator('#audit-log-list')).toContainText('Pedido Aluno 1000: disponibilidade Tarde (Voo Local)');
     await abrirEscala(page);
     const voos = (await lerEscala(page)).linhas.filter(l => l.includes('Aluno 1000'));
-    expect(voos[0]).toMatch(/^12:40–13:40 \| Aluno 1000/);
+    expect(voos[0]).toMatch(/^12:40–13:40 1 h[^|]* \| Aluno 1000 \|/);
   });
 
   test('filtros "Só quem voa", nome e missão', async ({ page }) => {

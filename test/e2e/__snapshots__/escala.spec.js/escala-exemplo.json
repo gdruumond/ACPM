@@ -1,39 +1,38 @@
 {
   "resumo": [
-    "21 missões na demanda",
-    "21 atendidas",
-    "22 h horas ativas",
-    "0 alertas"
+    "21 missões pedidas",
+    "21 escaladas",
+    "22 h de voo e aula"
   ],
   "alertas": [],
   "linhas": [
-    "06:30 · 1º tempo · 1 lançamento(s) iniciando",
-    "06:30–08:00 | Aluno 01 | Ground PA-34 | SALA-GROUND | Instrutor 01 | 01h30 (1,5 h) | — | Pref. 1 | [Confirmado] | ✕",
-    "08:20 · 2º tempo · 10 lançamento(s) iniciando",
-    "08:20–09:50 | Aluno 02 | Ground C152 | SALA-GROUND | Instrutor 10 | 01h30 (1,5 h) | — | Pref. 2 · Turma (6) | [Confirmado] | ✕",
-    "08:20–09:50 | Aluno 03 | Ground C152 | SALA-GROUND | Instrutor 10 | 01h30 (1,5 h) | — | Pref. 2 · Turma (6) | [Confirmado] | ✕",
-    "08:20–09:50 | Aluno 04 | Ground C152 | SALA-GROUND | Instrutor 10 | 01h30 (1,5 h) | — | Pref. 2 · Turma (6) | [Confirmado] | ✕",
-    "08:20–09:50 | Aluno 05 | Ground C152 | SALA-GROUND | Instrutor 10 | 01h30 (1,5 h) | — | Pref. 2 · Turma (6) | [Confirmado] | ✕",
-    "08:20–09:50 | Aluno 06 | Ground C152 | SALA-GROUND | Instrutor 10 | 01h30 (1,5 h) | — | Pref. 2 · Turma (6) | [Confirmado] | ✕",
-    "08:20–09:50 | Aluno 07 | Ground C152 | SALA-GROUND | Instrutor 10 | 01h30 (1,5 h) | — | Pref. 2 · Turma (6) | [Confirmado] | ✕",
-    "08:20–10:20 | Aluno 01 | Multimotor | PR-VOM | Instrutor 09 | 2 h | 118 kg | Pref. 1 | [Confirmado] | ✕",
-    "08:20–10:20 | Aluno 12 | Navegação | PR-VOB | Instrutor 13 | 2 h | 158 kg | Pref. 1 | [Confirmado] | ✕",
-    "08:20–10:20 | Aluno 16 | Voo Solo | PR-VOC | Instrutor 05 | 2 h | 159 kg | Pref. 1 | [Confirmado] | ✕",
-    "08:20–09:20 | Aluno 17 | Navegação | PR-THI | Instrutor 04 | 1 h | 142 kg | Pref. 1 | [Confirmado] | ✕",
-    "10:10 · 3º tempo · 5 lançamento(s) iniciando",
-    "10:10–11:10 | Aluno 02 | Voo Local | PR-IGU | Instrutor 37 | 1 h | 169 kg | Pref. 2 | [Confirmado] | ✕",
-    "10:10–11:10 | Aluno 03 | Voo Local | PR-MLB | Instrutor 01 | 1 h | 125 kg | Pref. 2 | [Confirmado] | ✕",
-    "10:10–11:10 | Aluno 04 | Voo Local | PR-TBT | Instrutor 10 | 1 h | 140 kg | Pref. 2 | [Confirmado] | ✕",
-    "10:10–11:10 | Aluno 08 | Parafuso | PR-JPL | Instrutor 15 | 1 h | 151 kg | Pref. 1 | [Confirmado] | ✕",
-    "10:10–11:10 | Aluno 20 | Voo Local | PR-BTB | Instrutor 28 | 1 h | 139 kg | Pref. 1 | [Confirmado] | ✕",
-    "11:30 · 4º tempo · 1 lançamento(s) iniciando",
-    "11:30–12:30 | Aluno 14 | IFR | PP-AJS | Instrutor 08 | 1 h | 152 kg | Pref. 1 | [Confirmado] | ✕",
-    "12:40 · 5º tempo · 2 lançamento(s) iniciando",
-    "12:40–14:40 | Aluno 10 | Voo Local | PP-LJV | Instrutor 19 | 2 h | 168 kg | Pref. 1 | [Confirmado] | ✕",
-    "12:40–14:40 | Aluno 19 | Voo Solo | PR-VOI | Instrutor 23 | 2 h | 150 kg | Pref. 1 | [Confirmado] | ✕",
-    "17:30 · 9º tempo (noturno) · 2 lançamento(s) iniciando",
-    "17:30–18:30 | Aluno 01 | Noturno | PP-ABP | Instrutor 07 | 1 h | 129 kg | Pref. 1 | [Confirmado] | ✕",
-    "17:30–18:30 | Aluno 15 | Noturno | PP-AJS | Instrutor 08 | 1 h | 156 kg | Pref. 1 | [Confirmado] | ✕"
+    "06:30 · 1º tempo 1 decolagem ou aula",
+    "06:30–08:00 1h30 | Aluno 01 | Ground PA-34 | Sala Ground | Instrutor 01 |  | [Confirmado] | ✕",
+    "08:20 · 2º tempo 5 decolagens e aulas",
+    "08:20–09:50 1h30 2ª preferência | Aluno 02 | Ground C152 Turma de 6 alunos | Sala Ground | Instrutor 10 |  | [Confirmado] | ✕",
+    "Aluno 03 | [Confirmado] | ✕",
+    "Aluno 04 | [Confirmado] | ✕",
+    "Aluno 05 | [Confirmado] | ✕",
+    "Aluno 06 | [Confirmado] | ✕",
+    "Aluno 07 | [Confirmado] | ✕",
+    "08:20–10:20 2 h | Aluno 01 | Multimotor | PR-VOM PA-34 | Instrutor 09 | 118 / 250 kg | [Confirmado] | ✕",
+    "08:20–10:20 2 h | Aluno 12 | Navegação | PR-VOB C152 | Instrutor 13 | 158 / 170 kg | [Confirmado] | ✕",
+    "08:20–10:20 2 h | Aluno 16 | Voo Solo | PR-VOC C152 | Instrutor 05 | 159 / 170 kg | [Confirmado] | ✕",
+    "08:20–09:20 1 h | Aluno 17 | Navegação | PR-THI C152 | Instrutor 04 | 142 / 170 kg | [Confirmado] | ✕",
+    "10:10 · 3º tempo 5 decolagens e aulas",
+    "10:10–11:10 1 h 2ª preferência | Aluno 02 | Voo Local | PR-IGU C152 | Instrutor 37 | 169 / 170 kg | [Confirmado] | ✕",
+    "10:10–11:10 1 h 2ª preferência | Aluno 03 | Voo Local | PR-MLB C152 | Instrutor 01 | 125 / 170 kg | [Confirmado] | ✕",
+    "10:10–11:10 1 h 2ª preferência | Aluno 04 | Voo Local | PR-TBT C152 | Instrutor 10 | 140 / 170 kg | [Confirmado] | ✕",
+    "10:10–11:10 1 h | Aluno 08 | Parafuso | PR-JPL C152 | Instrutor 15 | 151 / 170 kg | [Confirmado] | ✕",
+    "10:10–11:10 1 h | Aluno 20 | Voo Local | PR-BTB C152 | Instrutor 28 | 139 / 170 kg | [Confirmado] | ✕",
+    "11:30 · 4º tempo 1 decolagem ou aula",
+    "11:30–12:30 1 h | Aluno 14 | IFR | PP-AJS C172 | Instrutor 08 | 152 / 222 kg | [Confirmado] | ✕",
+    "12:40 · 5º tempo 2 decolagens e aulas",
+    "12:40–14:40 2 h | Aluno 10 | Voo Local | PP-LJV C152 | Instrutor 19 | 168 / 170 kg | [Confirmado] | ✕",
+    "12:40–14:40 2 h | Aluno 19 | Voo Solo | PR-VOI C152 | Instrutor 23 | 150 / 170 kg | [Confirmado] | ✕",
+    "17:30 · 9º tempo (noturno) 2 decolagens e aulas",
+    "17:30–18:30 1 h | Aluno 01 | Noturno | PP-ABP C172 | Instrutor 07 | 129 / 222 kg | [Confirmado] | ✕",
+    "17:30–18:30 1 h | Aluno 15 | Noturno | PP-AJS C172 | Instrutor 08 | 156 / 222 kg | [Confirmado] | ✕"
   ],
   "mapa": [
     {
@@ -116,7 +115,7 @@
       ]
     },
     {
-      "rotulo": "SALA-GROUND Sala Ground · 3 h",
+      "rotulo": "Sala Ground 3 h",
       "barras": [
         "06:30–08:00 · Aluno 01 / Ground PA-34 · Instrutor 01",
         "08:20–09:50 · Ground C152 (6 alunos) / Instrutor 10 · Aluno 02, Aluno 03, Aluno 04, Aluno 05, Aluno 06, Aluno 07"

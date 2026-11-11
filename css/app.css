@@ -276,6 +276,48 @@ input[type=number] { width: 88px; }
 .btn.quiet { background: transparent; color: var(--ac); border-color: transparent; padding: 7px 8px; }
 .btn.quiet:hover:not(:disabled) { filter: none; background: var(--info-bg); }
 .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; }
+.bar .cresce { flex: 1; }
+/* Controle segmentado (uma opção de cada vez) */
+.seg { display: inline-flex; background: var(--pn); border: 1px solid var(--ln2); border-radius: 8px; padding: 2px; }
+.seg button {
+  border: 0; background: transparent; padding: 6px 12px; border-radius: 6px; cursor: pointer;
+  font: 600 14px 'Barlow Semi Condensed', sans-serif; color: var(--mu); display: inline-flex; align-items: center; gap: 6px;
+}
+.seg button.on { background: var(--hd); color: #fff; }
+
+/* Escala: resumo numa linha, erros e avisos agrupados, uma linha por voo e o mapa como outra visão */
+.resumo { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; margin: 0 0 12px; }
+.resumo .st { display: flex; gap: 22px; margin: 0; background: var(--pn); border: 1px solid var(--ln); border-radius: 8px; padding: 8px 16px; }
+.resumo .st div { border: 0; padding: 0; background: transparent; font: 400 12.5px 'Barlow', sans-serif; }
+.resumo .st strong { font: 700 22px 'Barlow Semi Condensed', sans-serif; line-height: 1.05; }
+details.caixa { flex: 1; min-width: 280px; border-radius: 8px; padding: 9px 14px; font-size: 14px; }
+details.caixa summary { cursor: pointer; font-weight: 600; }
+details.caixa ul { margin: 6px 0 2px; padding-left: 18px; }
+details.caixa .al { border: 0; padding: 0; margin: 3px 0; background: transparent; }
+details.caixa.erros { background: var(--er-bg); border: 1px solid var(--er); }
+details.caixa.erros summary { color: var(--er); }
+details.caixa.avisos { background: var(--wa-bg); border: 1px solid var(--wa); }
+details.caixa.avisos summary { color: var(--wa); }
+.tabela-escala table { min-width: 760px; font-size: 14.5px; }
+.tabela-escala td { padding: 7px 10px; }
+/* Uma linha por voo: a duração, o tipo do avião e a turma ficam ao lado, discretos */
+.tabela-escala td small { color: var(--mu); font-size: 12.5px; margin-left: 4px; }
+.tabela-escala tr.win td small { margin-left: 8px; font: 500 12.5px 'Barlow', sans-serif; }
+.tabela-escala td.hr { white-space: nowrap; }
+.tabela-escala td.hr .tag { margin-left: 4px; }
+.tabela-escala .nw { white-space: nowrap; }
+.tabela-escala .perto { color: var(--wa); font-weight: 700; }
+/* Status discreto quando confirmado; colorido só nas exceções */
+.tabela-escala .st-sel.st-Confirmado { border-color: transparent; color: var(--mu); background: transparent; }
+.tabela-escala tr:hover .st-sel.st-Confirmado, .tabela-escala .st-sel.st-Confirmado:focus { border-color: var(--ln2); }
+.tabela-escala .st-sel.st-EmVoo { background: var(--info-bg); }
+.tabela-escala .st-sel.st-Pendente { background: var(--wa-bg); }
+.tabela-escala .st-sel.st-Cancelado { background: var(--er-bg); }
+/* Tirar da escala: aparece ao passar o mouse ou com o foco (em tela de toque, sempre) */
+.tabela-escala .acao .x { opacity: 0; transition: opacity .1s; }
+.tabela-escala tr:hover .acao .x, .tabela-escala .acao .x:focus-visible { opacity: 1; }
+@media (hover: none) { .tabela-escala .acao .x { opacity: 1; } }
+#out[data-vista="lista"] .mapa, #out[data-vista="mapa"] .tabela-escala { display: none; }
 
 .tw { overflow-x: auto; border: 1px solid var(--ln); border-radius: 8px; background: var(--pn); }
 table { border-collapse: collapse; width: 100%; min-width: 840px; }
