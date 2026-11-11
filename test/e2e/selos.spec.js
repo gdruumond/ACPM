@@ -48,8 +48,12 @@ test.describe('Selos nas abas', () => {
     await expect(page.locator('#selo-age')).toHaveText('1');
 
     await irPara(page, 'dem');
+    await expect(page.locator('#importar-agenda')).toHaveText('Importar 1 pedido da agenda');
+    await expect(page.locator('#importar-agenda')).not.toHaveClass(/\bsec\b/);
     await page.locator('#importar-agenda').click();
     await expect(page.locator('#selo-age')).toBeHidden();
+    await expect(page.locator('#importar-agenda')).toHaveText('Importar da agenda');
+    await expect(page.locator('#importar-agenda')).toHaveClass(/\bsec\b/);
   });
 
   test('o Gestor não vê o selo da agenda (ele não importa pedidos)', async ({ page, context }) => {

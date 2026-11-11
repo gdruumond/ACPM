@@ -375,12 +375,28 @@ th {
 td { padding: 5px 10px; border-top: 1px solid var(--ln); vertical-align: middle; }
 td, .st strong, .num { font-variant-numeric: tabular-nums; }
 tr.off td { opacity: .5; }
-tr.on td:first-child { border-left: 5px solid var(--ln); font-weight: 600; }
-tr.p5 td:first-child { border-left-color: var(--ye); }
-tr.p4 td:first-child { border-left-color: #E48A1B; }
-tr.p3 td:first-child { border-left-color: var(--ac); }
-tr.p2 td:first-child { border-left-color: #7C93A8; }
-tr.extra-row td { background: rgba(31, 95, 168, 0.04); }
+tr.on td:first-child { font-weight: 600; }
+
+/* Demanda: campos discretos (parecem texto até o mouse passar ou o foco chegar), sem rolar para o lado */
+#s-dem table { min-width: 0; font-size: 14.5px; }
+#s-dem td { padding: 4px 6px; }
+#dem select, #dem input[type="number"] {
+  border: 1px solid transparent; background: transparent; -webkit-appearance: none; appearance: none;
+  padding: 4px 6px; border-radius: 6px; color: var(--ink); max-width: 100%;
+}
+#dem tr:hover select:not(:disabled), #dem select:focus { border-color: var(--ln2); background: var(--pn); }
+#dem select:disabled { color: var(--mu); opacity: 1; }
+#s-dem tr.extra-row td:first-child { padding-left: 22px; }
+#s-dem .btn-add-mis, #s-dem .stu-cell .x { opacity: 0; transition: opacity .1s; }
+#s-dem tr:hover .btn-add-mis, #s-dem tr:hover .stu-cell .x, #s-dem .btn-add-mis:focus-visible, #s-dem .stu-cell .x:focus-visible { opacity: 1; }
+@media (hover: none) { #s-dem .btn-add-mis, #s-dem .stu-cell .x { opacity: 1; } }
+/* Prioridade 5 em destaque */
+#s-dem tr.p5 [data-f="pr"] { background: var(--wa-bg); color: var(--wa); font-weight: 700; }
+#incluir-aluno { min-width: 240px; }
+#cnt { margin: -4px 0 8px; font-size: 13px; }
+.chk { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; cursor: pointer; }
+.menu-mais { position: relative; }
+.menu-mais .menu-itens { right: 0; }
 tr.st-Cancelado td { opacity: 0.45; text-decoration: line-through; }
 
 .stu-cell {
@@ -391,15 +407,15 @@ tr.st-Cancelado td { opacity: 0.45; text-decoration: line-through; }
 }
 .btn-add-mis {
   background: transparent;
-  border: 1px dashed var(--ac);
+  border: 0;
   color: var(--ac);
-  border-radius: 4px;
-  padding: 2px 7px;
-  font: 600 12px 'Barlow Semi Condensed', sans-serif;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font: 600 13px 'Barlow', sans-serif;
   cursor: pointer;
   white-space: nowrap;
 }
-.btn-add-mis:hover { background: var(--ac); color: var(--acT); }
+.btn-add-mis:hover { background: var(--info-bg); }
 
 .win td {
   background: var(--pn2);

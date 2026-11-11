@@ -178,33 +178,40 @@
   <section id="s-dem">
     <h2>Demanda</h2>
     <div class="bar">
-      <button class="btn sec edit-only" id="importar-agenda" title="Traz os pedidos da agenda da secretaria para esta data (só acrescenta; não repete)">Importar Solicitações da Agenda</button>
-      <button class="btn sec edit-only" id="clr">Limpar demanda</button>
-      <label class="chip"><input type="checkbox" id="onlyfly"> Só quem voa</label>
-      <input type="search" id="flt-dem" class="flt-ctrl" placeholder="Buscar aluno…" aria-label="Filtrar aluno na demanda">
+      <button class="btn sec edit-only" id="importar-agenda" title="Traz os pedidos da agenda da secretaria para esta data (só acrescenta; não repete)">Importar da agenda</button>
+      <input class="edit-only" id="incluir-aluno" list="alunos-fora" placeholder="+ Pôr um aluno na demanda…" aria-label="Pôr um aluno na demanda" autocomplete="off">
+      <datalist id="alunos-fora"></datalist>
+      <span class="cresce"></span>
+      <label class="chk"><input type="checkbox" id="onlyfly" checked> Só quem voa</label>
+      <input type="search" id="flt-dem" class="flt-ctrl" placeholder="Buscar na demanda…" aria-label="Filtrar aluno na demanda">
       <select id="flt-dem-mis" class="flt-ctrl" aria-label="Filtrar por missão">
         <option value="">Todas as missões</option>
       </select>
-      <span id="cnt" class="h"></span>
+      <div class="menu-mais edit-only">
+        <button class="btn quiet" type="button" id="btn-mais-dem" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-mais-dem">Mais<svg class="ico" aria-hidden="true"><use href="#i-baixo"/></svg></button>
+        <div class="menu-itens" id="menu-mais-dem" role="menu" hidden>
+          <button type="button" role="menuitem" id="clr">Limpar demanda</button>
+        </div>
+      </div>
     </div>
+    <p class="h" id="cnt"></p>
     <div class="tw">
       <table>
         <thead>
           <tr>
-            <th>Aluno / Missões no Dia</th>
-            <th>Vai voar?</th>
-            <th>Fase / missão</th>
-            <th>Equipamento</th>
-            <th>Início pref. 1</th>
-            <th>Início pref. 2</th>
+            <th>Aluno</th>
+            <th>Voa</th>
+            <th>Missão</th>
+            <th>Avião / sala</th>
+            <th>1ª preferência</th>
+            <th>2ª preferência</th>
             <th>Disponibilidade</th>
-            <th>Horas</th>
+            <th>Duração</th>
             <th>Sessões</th>
             <th>Prioridade</th>
-            <th>Resumo</th>
           </tr>
         </thead>
-        <tbody id="dem"></tbody>
+        <tbody id="dem" class="only"></tbody>
       </table>
     </div>
   </section>

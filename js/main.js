@@ -175,26 +175,53 @@ $('#dt-ant').onclick = () => irParaDia(-1);
 $('#dt-prox').onclick = () => irParaDia(1);
 $('#dt').addEventListener('click', e => { try { e.target.showPicker(); } catch (x) {} });
 
-// Menu da conta: abre e fecha no botão; Esc ou um clique fora fecham
-const menuConta = $('#menu-conta');
-function fecharMenuDaConta() {
-  menuConta.hidden = true;
-  $('#btn-menu-conta').setAttribute('aria-expanded', 'false');
+// Menus suspensos (conta e "Mais" da Demanda): abrem e fecham no botão; Esc ou um clique fora fecham
+function ligarMenu(botao, menu, { fecharAoEscolher = true } = {}) {
+  const fechar = () => { menu.hidden = true; botao.setAttribute('aria-expanded', 'false'); };
+  botao.onclick = () => {
+    const abrir = menu.hidden;
+    menu.hidden = !abrir;
+    botao.setAttribute('aria-expanded', String(abrir));
+    const primeiro = abrir && menu.querySelector('[role="menuitem"]:not([hidden])');
+    if (primeiro) primeiro.focus();
+  };
+  if (fecharAoEscolher) menu.addEventListener('click', e => { if (e.target.closest('[role="menuitem"]')) fechar(); });
+  document.addEventListener('click', e => { if (!menu.hidden && !menu.contains(e.target) && !botao.contains(e.target)) fechar(); });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape' || menu.hidden) return;
+    fechar();
+    botao.focus();
+  });
+  return fechar;
 }
-$('#btn-menu-conta').onclick = () => {
-  const abrir = menuConta.hidden;
-  menuConta.hidden = !abrir;
-  $('#btn-menu-conta').setAttribute('aria-expanded', String(abrir));
-  const primeiro = abrir && menuConta.querySelector('[role="menuitem"]:not([hidden])');
-  if (primeiro) primeiro.focus();
-};
-menuConta.addEventListener('click', e => { if (e.target.closest('[role="menuitem"]')) fecharMenuDaConta(); });
-document.addEventListener('click', e => { if (!menuConta.hidden && !e.target.closest('.menu-conta')) fecharMenuDaConta(); });
-document.addEventListener('keydown', e => {
-  if (e.key !== 'Escape' || menuConta.hidden) return;
-  fecharMenuDaConta();
-  $('#btn-menu-conta').focus();
+ligarMenu($('#btn-menu-conta'), $('#menu-conta'));
+// "Limpar demanda" pede confirmação no próprio menu (dois cliques): o menu só fecha depois
+const fecharMenuMais = ligarMenu($('#btn-mais-dem'), $('#menu-mais-dem'), { fecharAoEscolher: false });
+
+// "Pôr um aluno na demanda": quem ainda não voa passa a voar na data, com o pedido que já tinha
+function incluirAluno() {
+  const campo = $('#incluir-aluno');
+  const nome = campo.value.trim().toLowerCase();
+  if (!nome || isGestor()) return;
+  const s = S.stu.find(x => x.nm.toLowerCase() === nome);
+  if (!s) { showToast('Aluno não encontrado. Cadastre-o na aba Alunos.'); return; }
+  campo.value = '';
+  if (s.fly) { showToast(`${s.nm} já está na demanda.`); return; }
+  pushHistory();
+  s.fly = true;
+  save();
+  logChange('inc', `${s.nm} incluído na demanda`, { kind: 'setFly', stuId: s.id, mid: 0, val: false, label: '↶ Reverter' });
+  rDem();
+  const linha = document.querySelector(`#dem tr[data-k="d"][data-id="${s.id}"][data-mid="0"]`);
+  if (linha) linha.scrollIntoView({ block: 'center' });
+}
+$('#incluir-aluno').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  incluirAluno();
 });
+// Escolher um nome da lista inclui na hora
+$('#incluir-aluno').addEventListener('input', e => { if (e.inputType === 'insertReplacementText') incluirAluno(); });
 
 $('#bi-dt').onchange = () => carregarBI();
 $('#bi-flt-eq').onchange = () => rBI();
@@ -218,6 +245,7 @@ armed('#clr', 'Confirmar limpeza', () => {
   S.stu.forEach(d => { Object.assign(d, blank()); d.extra = []; });
   save(); rDem();
   logChange('exc', 'Demanda limpa');
+  fecharMenuMais();
 });
 
 // Só no modo local: grava 30 dias simulados (marcados como simulados) nas datas que ainda não têm escala

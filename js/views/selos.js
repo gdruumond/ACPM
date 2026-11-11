@@ -49,4 +49,9 @@ export const pedidosPendentes = () => (pedidosDaData.data === DATA
 export function atualizarSeloDaAgenda() {
   const n = isGestor() ? 0 : pedidosPendentes().length;
   selo('age', n, '', `${n} ${n === 1 ? 'pedido da agenda ainda não está' : 'pedidos da agenda ainda não estão'} na demanda`);
+  // Na Demanda, o botão diz quantos pedidos há para importar (e só se destaca quando há)
+  const botao = $('#importar-agenda');
+  if (!botao) return;
+  botao.textContent = n ? `Importar ${n} ${n === 1 ? 'pedido' : 'pedidos'} da agenda` : 'Importar da agenda';
+  botao.classList.toggle('sec', !n);
 }
