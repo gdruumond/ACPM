@@ -1,19 +1,37 @@
 // Regras das missões: Ground School, precedência Ground → voo
 // e normalização de pedidos (inclusive nomes de missão de versões anteriores).
-import { MIS, NI, WIN, PRE, GROUND_EQ_TYPE, GROUND_DURATION_H } from './config.js';
+import { MIS, NI, T, PRE, GROUND_EQ_TYPE, GROUND_DURATION_H } from './config.js';
+import { hm } from './format.js';
+import { periodoDoMinuto, minutoDaPreferencia, preferenciaValida } from './horarios.js';
 
-// Disponibilidade do aluno para o pedido (da agenda da secretaria ou escolhida na demanda): o voo só começa nessas
-// janelas. Sem disponibilidade, o voo pode começar em qualquer janela habilitada
+// Disponibilidade do aluno para o pedido (da agenda da secretaria ou escolhida na demanda): o voo só começa nesses
+// horários. "manha", "tarde" e "noite" valem por período (as janelas de operação de cada um); "h450" é um horário
+// exato (07:30, em minutos; "h5", dos dados antigos, é a janela 5). Sem disponibilidade, qualquer horário habilitado
 const PERIODOS = { manha: ['Manhã', PRE['Manhã']], tarde: ['Tarde', PRE['Tarde']], noite: ['Noite', PRE['Noturno']] };
-export function janelasDaDisponibilidade(jan) {
-  if (typeof jan !== 'string') return null;
-  if (Object.hasOwn(PERIODOS, jan)) return [...PERIODOS[jan][1]];
-  const horario = /^h([0-8])$/.exec(jan);
-  return horario ? [+horario[1]] : null;
+function minutoExato(jan) {
+  const horario = /^h(\d{1,4})$/.exec(jan);
+  const minuto = horario ? minutoDaPreferencia(+horario[1]) : -1;
+  return minuto >= T[0] && minuto <= T[NI] ? minuto : null;
 }
+// O que a disponibilidade permite: uma função do horário de início, ou null (sem disponibilidade: qualquer horário)
+export function disponibilidadeDoAluno(jan) {
+  if (typeof jan !== 'string') return null;
+  if (Object.hasOwn(PERIODOS, jan)) {
+    const periodos = PERIODOS[jan][1];
+    return minuto => periodos.includes(periodoDoMinuto(minuto));
+  }
+  const exato = minutoExato(jan);
+  return exato === null ? null : minuto => minuto === exato;
+}
+export const disponibilidadeValida = jan => disponibilidadeDoAluno(jan) !== null;
+// A disponibilidade no formato atual ("h5" vira "h820"); inválida: undefined
+export const disponibilidadeAtual = jan =>
+  (typeof jan === 'string' && Object.hasOwn(PERIODOS, jan) ? jan : minutoExato(jan) !== null ? `h${minutoExato(jan)}` : undefined);
 export const rotuloDaDisponibilidade = jan =>
-  Object.hasOwn(PERIODOS, jan) ? PERIODOS[jan][0] : janelasDaDisponibilidade(jan) ? `às ${WIN[+jan.slice(1)]}` : 'Qualquer horário';
-export const DISPONIBILIDADES = [['', 'Qualquer horário'], ...Object.keys(PERIODOS).map(j => [j, rotuloDaDisponibilidade(j)]), ...WIN.map((w, i) => [`h${i}`, `Só às ${w}`])];
+  (Object.hasOwn(PERIODOS, jan) ? PERIODOS[jan][0] : minutoExato(jan) !== null ? `às ${hm(minutoExato(jan))}` : 'Qualquer horário');
+// Opções da Demanda: os períodos e os horários da lista do pedido
+export const opcoesDeDisponibilidade = horarios => [['', 'Qualquer horário'], ...Object.keys(PERIODOS).map(j => [j, PERIODOS[j][0]]),
+  ...horarios.map(m => [`h${m}`, `Só às ${hm(m)}`])];
 
 // Regra da missão pelo nome, somente entre as missões cadastradas (nomes como "constructor" não contam)
 export const missionRule = mis => (Object.hasOwn(MIS, mis) ? MIS[mis] : null);
@@ -29,7 +47,7 @@ export function doesGroundGateFlight(gMis, flightReq) {
   return false;
 }
 
-export const blank = () => ({ fly: false, mis: 'Voo Local', eq: 'C152', p1: 1, p2: 2, nb: 1, ss: 1, pr: 3 });
+export const blank = () => ({ fly: false, mis: 'Voo Local', eq: 'C152', p1: T[1], p2: T[2], nb: 1, ss: 1, pr: 3 });
 
 export function migrateLegacyMissionName(mis) {
   if (missionRule(mis)) return mis;
@@ -50,14 +68,21 @@ export function normalizeMissionFields(target) {
   // Uma sessão por missão: a coluna Sessões saiu da Demanda (para dividir o voo no dia, "+ missão"). O campo
   // continua nos dados, sempre 1, e o motor recebe cada missão como um voo só
   target.ss = 1;
-  if (Object.hasOwn(target, 'jan') && !janelasDaDisponibilidade(target.jan)) delete target.jan;
+  // Preferências e disponibilidade em minutos (formato 12): o número da janela e o "h5" dos dados antigos convertem
+  if (Object.hasOwn(target, 'jan')) {
+    const jan = disponibilidadeAtual(target.jan);
+    if (jan) target.jan = jan;
+    else delete target.jan;
+  }
+  target.p1 = preferenciaValida(target.p1);
+  target.p2 = preferenciaValida(target.p2);
   const mRule = missionRule(target.mis) || MIS['Voo Local'];
   if (!mRule.eq.includes(target.eq)) target.eq = mRule.defEq;
   if (mRule.isGround) {
     target.eq = GROUND_EQ_TYPE;
     target.nb = GROUND_DURATION_H;
-    if (target.p1 === NI) target.p1 = 0;
-    if (target.p2 === NI) target.p2 = 1;
+    if (target.p1 === T[NI]) target.p1 = T[0];
+    if (target.p2 === T[NI]) target.p2 = T[1];
   } else if (+target.nb === GROUND_DURATION_H || !Number.isInteger(+target.nb)) {
     target.nb = 1;
   }

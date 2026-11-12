@@ -50,6 +50,116 @@ test.describe('Recursos', () => {
   });
 });
 
+test.describe('Recursos: acrescentar e retirar', () => {
+  test('acrescenta um C152: aparece na categoria, disponível, entra na escala e fica gravado', async ({ page }) => {
+    // Todos os C152 em manutenção: o voo só entra com o avião novo
+    await abrir(page, { estado: cenario({ stu: [aluno(1000)], semAeronaves: apenas('C152') }) });
+    await irPara(page, 'rec');
+    await expect(page.locator('#form-recurso')).toBeHidden();
+    await page.locator('#btn-novo-recurso').click();
+    await page.locator('#rec-reg').fill('pr-new');
+    await page.locator('#rec-tipo').selectOption('C152');
+    await page.locator('#form-recurso [type="submit"]').click();
+    const linha = page.locator('#revisao tr[data-r="PR-NEW"]');
+    await expect(linha).toBeVisible();
+    await expect(linha.locator('[data-a="av"]')).toBeChecked();
+    await expect(page.locator('#revisao tr.grupo', { hasText: 'C152' })).toContainText('1 de 14 disponíveis');
+    await expect(page.locator('#toast-box .toast.ok')).toContainText('PR-NEW');
+    await expect(page.locator('#form-recurso')).toBeHidden();
+    await abrirEscala(page);
+    expect((await lerEscala(page)).linhas.some(l => l.includes('PR-NEW'))).toBe(true);
+
+    await page.reload();
+    await irPara(page, 'rec');
+    await expect(page.locator('#revisao tr[data-r="PR-NEW"]')).toBeVisible();
+  });
+
+  test('não aceita matrícula repetida nem sem categoria; "Só Parafuso" só no C152', async ({ page }) => {
+    await abrirSintetico(page);
+    await irPara(page, 'rec');
+    await page.locator('#btn-novo-recurso').click();
+    await page.locator('#rec-reg').fill('PP-LJV');
+    await page.locator('#rec-tipo').selectOption('C152');
+    await page.locator('#form-recurso [type="submit"]').click();
+    await expect(page.locator('#rec-erro')).toHaveText('Já existe um recurso com a matrícula PP-LJV.');
+    await page.locator('#rec-reg').fill('PR-ZZZ');
+    await page.locator('#rec-tipo').selectOption('');
+    await page.locator('#form-recurso [type="submit"]').click();
+    await expect(page.locator('#rec-erro')).toHaveText('Escolha a categoria.');
+    await expect(page.locator('#rec-parafuso')).toBeHidden();
+    await page.locator('#rec-tipo').selectOption('C152');
+    await expect(page.locator('#rec-parafuso')).toBeVisible();
+    await page.locator('#rec-parafuso').check();
+    await page.locator('#form-recurso [type="submit"]').click();
+    await expect(page.locator('#revisao tr[data-r="PR-ZZZ"]')).toContainText('Só Parafuso');
+  });
+
+  test('retira um recurso com confirmação; o histórico desfaz', async ({ page }) => {
+    await abrirSintetico(page);
+    await irPara(page, 'rec');
+    const retirar = page.locator('#revisao tr[data-r="PT-KIW"] [data-act="retirar-recurso"]');
+    await retirar.click();
+    await expect(retirar).toHaveText('Confirmar retirada');
+    await retirar.click();
+    await expect(page.locator('#revisao tr[data-r="PT-KIW"]')).toHaveCount(0);
+    await expect(page.locator('#revisao tr.grupo', { hasText: 'PA-34' })).toContainText('2 de 2 disponíveis');
+    await page.locator('#btn-open-log').click();
+    await expect(page.locator('#audit-log-list')).toContainText('Recurso retirado: PT-KIW (PA-34)');
+    await page.locator('#audit-log-list [data-act="rev-log"]').first().click();
+    await expect(page.locator('#revisao tr[data-r="PT-KIW"]')).toHaveCount(1);
+  });
+
+  test('o Gestor não acrescenta nem retira recursos', async ({ page }) => {
+    await abrirSintetico(page);
+    await page.locator('#role-sel').selectOption('gestor');
+    await irPara(page, 'rec');
+    await expect(page.locator('#btn-novo-recurso')).toBeHidden();
+    await expect(page.locator('#revisao [data-act="retirar-recurso"]').first()).toBeHidden();
+  });
+});
+
+test.describe('Recursos: horários de decolagem por categoria', () => {
+  test('cada categoria mostra os seus horários; tirar e pôr um horário muda a escala', async ({ page }) => {
+    await abrir(page, { estado: cenario({ ins: [instrutor(1, 9)], stu: [aluno(1000, { mis: 'Multimotor', eq: 'PA-34', p1: 450, p2: -1 })] }) });
+    await irPara(page, 'rec');
+    const pa34 = page.locator('#horarios [data-cat="PA-34"]');
+    await expect(pa34.locator('.hr-chip')).toHaveCount(21);
+    await expect(page.locator('#horarios [data-cat="C152"] .hr-chip')).toHaveText(['06:30', '08:20', '10:10', '11:30', '12:40', '13:40', '14:30', '16:20']);
+    await abrirEscala(page);
+    expect((await lerEscala(page)).linhas.find(l => l.includes('Aluno 1000'))).toMatch(/^07:30/);
+
+    // Sem o 07:30, o pedido vai para o horário seguinte
+    await irPara(page, 'rec');
+    await pa34.locator('[data-act="remover-horario"][data-min="450"]').click();
+    await expect(pa34.locator('.hr-chip')).toHaveCount(20);
+    await abrirEscala(page);
+    expect((await lerEscala(page)).linhas.find(l => l.includes('Aluno 1000'))).toMatch(/^08:00/);
+
+    // Um horário novo e a volta às janelas do dia
+    await irPara(page, 'rec');
+    await pa34.locator('.hr-novo').fill('07:45');
+    await pa34.locator('[data-act="adicionar-horario"]').click();
+    await expect(pa34.locator('.hr-chip', { hasText: '07:45' })).toHaveCount(1);
+    await pa34.locator('[data-act="horarios-padrao"]').click();
+    await expect(pa34.locator('.hr-chip')).toHaveText(['06:30', '08:20', '10:10', '11:30', '12:40', '13:40', '14:30', '16:20']);
+    await pa34.locator('[data-act="horarios-30"]').click();
+    await expect(pa34.locator('.hr-chip')).toHaveCount(21);
+  });
+
+  test('não tira o último horário de uma categoria; o Gestor não edita', async ({ page }) => {
+    await abrirSintetico(page);
+    await irPara(page, 'rec');
+    const c152 = page.locator('#horarios [data-cat="C152"]');
+    for (let i = 0; i < 7; i++) await c152.locator('[data-act="remover-horario"]').first().click();
+    await expect(c152.locator('.hr-chip')).toHaveCount(1);
+    await c152.locator('[data-act="remover-horario"]').first().click();
+    await expect(c152.locator('.hr-chip')).toHaveCount(1);
+    await expect(page.locator('#toast-box')).toContainText('pelo menos um horário');
+    await page.locator('#role-sel').selectOption('gestor');
+    await expect(page.locator('#horarios [data-act="remover-horario"]').first()).toBeHidden();
+  });
+});
+
 test.describe('Recursos: categoria e grupos recolhíveis', () => {
   test('a categoria mostra só a frota dela; cada categoria recolhe e abre, e continua assim quando a escala é refeita', async ({ page }) => {
     await abrirSintetico(page);
@@ -98,19 +208,24 @@ test.describe('Instrutores', () => {
 
   test('disponibilidade do dia: a grade mostra as janelas e os voos de cada instrutor', async ({ page }) => {
     await abrirComExemplo(page);
+    await abrirEscala(page);
+    const linhasDaEscala = (await lerEscala(page)).linhas;
     await irPara(page, 'ins');
     await expect(page.locator('#s-ins [data-vista-ins="dia"]')).toHaveClass(/\bon\b/);
-    const linha = page.locator('#inst-dia tr[data-k="i"][data-id="10"]');
-    await expect(linha.locator('.voos')).toHaveText('2');
-    await expect(linha.locator('.cel.voo')).toHaveCount(2);
-    await expect(linha.locator('.cel').nth(1)).toHaveClass(/\bvoo\b/);
-    await linha.locator('[data-f="aw"][data-w="7"]').uncheck();
-    await expect(page.locator('#inst-dia tr[data-k="i"][data-id="10"] .cel').nth(7)).not.toHaveClass(/\bon\b/);
+    // A grade bate com a escala: o número de voos e aulas do instrutor (a turma de Ground conta uma vez)
+    const comVoos = page.locator('#inst-dia tr[data-k="i"]').filter({ has: page.locator('.voos:not(:empty)') }).first();
+    const id = await comVoos.getAttribute('data-id');
+    const nome = (await comVoos.locator('.nome').innerText()).trim();
+    await expect(comVoos.locator('.voos')).toHaveText(String(linhasDaEscala.filter(l => l.includes(`| ${nome} |`)).length));
+    expect(await comVoos.locator('.cel.voo').count()).toBeGreaterThanOrEqual(1);
+    const celula = () => page.locator(`#inst-dia tr[data-k="i"][data-id="${id}"] .cel`).nth(7);
+    await comVoos.locator('[data-f="aw"][data-w="7"]').uncheck();
+    await expect(celula()).not.toHaveClass(/\bon\b/);
     // Pelo teclado: a grade é refeita e o foco continua na mesma janela
-    await linha.locator('[data-f="aw"][data-w="7"]').focus();
+    await page.locator(`#inst-dia tr[data-id="${id}"] [data-f="aw"][data-w="7"]`).focus();
     await page.keyboard.press('Space');
-    await expect(page.locator('#inst-dia tr[data-k="i"][data-id="10"] .cel').nth(7)).toHaveClass(/\bon\b/);
-    await expect(page.locator('#inst-dia tr[data-id="10"] [data-f="aw"][data-w="7"]')).toBeFocused();
+    await expect(celula()).toHaveClass(/\bon\b/);
+    await expect(page.locator(`#inst-dia tr[data-id="${id}"] [data-f="aw"][data-w="7"]`)).toBeFocused();
   });
 
   test('cadastra instrutor e altera habilitações (no painel), peso e turno', async ({ page }) => {

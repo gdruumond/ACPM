@@ -1,10 +1,11 @@
 // Aba Recursos: janelas de operação e a frota numa tabela só: disponível ou em manutenção, horas desde a última
 // revisão de 50 horas, saldo até a revisão e o que o avião voa na escala do dia. A tabela mostra uma categoria ou
 // todas, e cada categoria recolhe e abre.
-import { WIN, NI, EQ, ACROBAT_REG, AIRCRAFT_EQ_TYPES, SIM_EQ_TYPES, REVISAO_H } from '../config.js';
+import { WIN, NI, AIRCRAFT_EQ_TYPES, SIM_EQ_TYPES, REVISAO_H } from '../config.js';
 import { S, RES } from '../state.js';
 import { $ } from '../dom.js';
-import { hm, fmtH } from '../format.js';
+import { hm, fmtH, esc } from '../format.js';
+import { CATEGORIAS_COM_HORARIOS } from '../horarios.js';
 
 // Os grupos usam os ids das categorias do filtro (js/categorias.js)
 const GRUPOS = [...AIRCRAFT_EQ_TYPES.map(tipo => ({ id: tipo, rotulo: tipo, tipos: [tipo] })), { id: 'sim', rotulo: 'Simuladores', tipos: SIM_EQ_TYPES }];
@@ -37,18 +38,18 @@ function saldo(horas) {
   return `<span class="saldo">${fmtH(resta)}</span><span class="barra ${cor}"><i style="width:${largura}%"></i></span>`;
 }
 
-function linha(r, tipo, grupo, voadas, revisao) {
+function linha({ reg: r, tipo, soParafuso }, grupo, voadas, revisao) {
   const aviao = AIRCRAFT_EQ_TYPES.includes(tipo);
   const horas = S.horas[r];
   const temHoras = typeof horas === 'number';
-  const parafuso = r === ACROBAT_REG ? ' <span class="tag fb" title="Exclusivo para a missão de Parafuso">Só Parafuso</span>' : '';
+  const parafuso = soParafuso ? ' <span class="tag fb" title="Exclusivo para a missão de Parafuso">Só Parafuso</span>' : '';
   return `<tr data-r="${r}" data-grupo="${grupo}"${S.av[r] ? '' : ' class="manutencao"'}${recolhidos.has(grupo) ? ' hidden' : ''}>
     <td><label class="alvo"><input type="checkbox" class="sw" data-a="av" data-id="${r}"${S.av[r] ? ' checked' : ''} aria-label="${r} disponível"></label></td>
     <td><b>${r}</b>${aviao ? '' : ` <small class="sm">${tipo}</small>`}${parafuso}</td>
     <td>${aviao ? `<input type="number" class="horas" min="0" max="60" step="0.1" inputmode="decimal" data-a="horas" data-horas="${r}" value="${temHoras ? horas : ''}" placeholder="—" aria-label="Horas do ${r} desde a última revisão"> h` : ''}</td>
     <td>${aviao && temHoras ? saldo(horas) : ''}</td>
     <td>${situacao(r, voadas, revisao)}</td>
-    <td class="edit-only">${aviao ? `<button class="btn quiet rev" data-act="revisao" data-id="${r}">Revisão feita</button>` : ''}</td>
+    <td class="edit-only acoes-frota">${aviao ? `<button class="btn quiet rev" data-act="revisao" data-id="${r}">Revisão feita</button>` : ''}<button class="btn quiet rev ret" data-act="retirar-recurso" data-id="${r}" aria-label="Retirar ${r} da frota">Retirar</button></td>
   </tr>`;
 }
 
@@ -59,14 +60,36 @@ export function rRevisao() {
   ((RES && RES.out) || []).forEach(o => { voadas[o.r] = (voadas[o.r] || 0) + o.h; });
   const categoria = ($('#flt-rec-cat') && $('#flt-rec-cat').value) || '';
   $('#revisao').innerHTML = GRUPOS.filter(g => !categoria || g.id === categoria).map(({ id, rotulo, tipos }) => {
-    const regs = tipos.flatMap(tipo => EQ[tipo].map(r => [r, tipo]));
-    const disponiveis = regs.filter(([r]) => S.av[r]).length;
-    return `<tr class="grupo"><td colspan="6"><button type="button" class="grupo-btn" data-recolher-grupo="${id}" aria-expanded="${!recolhidos.has(id)}"><svg class="ico seta" aria-hidden="true"><use href="#i-baixo"/></svg>${rotulo} <small>${disponiveis} de ${regs.length} disponíveis</small></button></td></tr>` +
-      regs.map(([r, tipo]) => linha(r, tipo, id, voadas[r] || 0, resumo[r])).join('');
+    // A frota do cadastro, na ordem de cada tipo (uma categoria sem recursos não aparece)
+    const recursos = tipos.flatMap(tipo => (S.frota || []).filter(f => f.tipo === tipo));
+    if (!recursos.length) return '';
+    const disponiveis = recursos.filter(f => S.av[f.reg]).length;
+    return `<tr class="grupo"><td colspan="6"><button type="button" class="grupo-btn" data-recolher-grupo="${id}" aria-expanded="${!recolhidos.has(id)}"><svg class="ico seta" aria-hidden="true"><use href="#i-baixo"/></svg>${rotulo} <small>${disponiveis} de ${recursos.length} disponíveis</small></button></td></tr>` +
+      recursos.map(f => linha(f, id, voadas[f.reg] || 0, resumo[f.reg])).join('');
+  }).join('');
+}
+
+// Horários de decolagem de cada categoria: tirar (✕), pôr um horário e os modelos (as janelas do dia e de 30 em 30)
+export const NOMES_DAS_CATEGORIAS = { C152: 'C152', C172: 'C172', sim: 'Simulador', 'PA-34': 'PA-34' };
+export function rHorarios() {
+  $('#horarios').innerHTML = CATEGORIAS_COM_HORARIOS.map(cat => {
+    const nome = NOMES_DAS_CATEGORIAS[cat];
+    const lista = (S.horarios && S.horarios[cat]) || [];
+    return `<div class="horarios-cat" data-cat="${cat}">
+      <b class="horarios-nome">${esc(nome)}</b>
+      <span class="horarios-lista">${lista.map(m => `<span class="hr-chip">${hm(m)}<button type="button" class="edit-only" data-act="remover-horario" data-cat="${cat}" data-min="${m}" aria-label="Tirar ${hm(m)} dos horários do ${esc(nome)}"><svg class="ico" aria-hidden="true"><use href="#i-fechar"/></svg></button></span>`).join('')}</span>
+      <span class="horarios-acoes edit-only">
+        <input type="time" class="hr-novo" step="300" min="06:00" max="17:00" aria-label="Novo horário do ${esc(nome)}">
+        <button type="button" class="btn quiet" data-act="adicionar-horario" data-cat="${cat}">Adicionar</button>
+        <button type="button" class="btn quiet" data-act="horarios-padrao" data-cat="${cat}">Janelas do dia</button>
+        <button type="button" class="btn quiet" data-act="horarios-30" data-cat="${cat}">De 30 em 30 min</button>
+      </span>
+    </div>`;
   }).join('');
 }
 
 export function rRec() {
   $('#wins').innerHTML = WIN.map((w, i) => `<label class="janela${S.win[i] ? '' : ' off'}"><input type="checkbox" class="sw" data-a="win" data-i="${i}"${S.win[i] ? ' checked' : ''}><b>${w}</b> <small>${i == NI ? 'noturno' : (i + 1) + 'º'}</small></label>`).join('');
+  rHorarios();
   rRevisao();
 }

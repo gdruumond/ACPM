@@ -145,7 +145,8 @@ test.describe('Aplicação', () => {
     // As abas na ordem do app, sem números, com os nomes novos dos botões e das vistas
     await expect(manual.locator('#manual-abas h4')).toHaveText(['Escala', 'Demanda', 'Agenda', 'Recursos', 'Instrutores', 'Alunos', 'Rodízio', 'BI']);
     for (const novo of ['menu da conta', 'Pôr um aluno na demanda', 'Disponibilidade do dia', 'Editar habilitações', 'Não escalar com',
-      'Ainda não importado', 'Atualizada às', 'Ver todos', 'Compartilhar', 'Por recurso']) {
+      'Ainda não importado', 'Atualizada às', 'Ver todos', 'Compartilhar', 'Por recurso', 'Novo recurso', 'Retirar', 'Horários de decolagem',
+      'de 30 em 30 minutos', 'divide as horas do dia']) {
       expect(texto, novo).toContain(novo);
     }
 

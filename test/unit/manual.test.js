@@ -23,7 +23,7 @@ describe('Manual', () => {
     assert.equal(linha('Voo Local').equipamentos, 'C152, C172 ou PA-34');
     assert.equal(linha('Ground C152').obs, 'Aula de 1h30, em turma; antes do primeiro voo de C152 do aluno no dia');
     assert.equal(linha('Ground Navegação').obs, 'Aula de 1h30, em turma; antes do primeiro voo de Navegação do aluno no dia');
-    assert.equal(linha('Parafuso').obs, 'No C152, sempre no PR-JPL (que só voa Parafuso)');
+    assert.equal(linha('Parafuso').obs, 'No C152, sempre num avião marcado “Só Parafuso” em Recursos (que só voa Parafuso)');
     assert.equal(linha('Noturno').obs, 'Só na janela das 17:30');
   });
 

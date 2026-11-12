@@ -2,7 +2,7 @@
 import { FLIGHT_STATUSES, GROUND_REG } from '../config.js';
 import { hm, WLB, fmtH, esc } from '../format.js';
 import { isGroundMission } from '../rules.js';
-import { categoriaDoRecurso, nomeDoRecurso } from '../categorias.js';
+import { categoriaDoTipo, nomeDoRecurso } from '../categorias.js';
 import { sumUniqueOperationalHours, consolidateTimelineSlots } from '../engine.js';
 import { S, RES, AUDIT_LOG, TL_MODE, isGestor } from '../state.js';
 import { $ } from '../dom.js';
@@ -292,7 +292,8 @@ export function rOut() {
 
   // Filtros: a categoria e, dentro dela, um recurso (só os que estão na escala da data)
   const categoria = ($('#flt-esc-cat') && $('#flt-esc-cat').value) || '';
-  const daCategoria = r => !categoria || categoriaDoRecurso(r) === categoria;
+  const tipoDoRecurso = new Map(out.map(o => [o.r, o.eqType]));
+  const daCategoria = r => !categoria || categoriaDoTipo(tipoDoRecurso.get(r)) === categoria;
   const usados = [...new Set(out.map(o => o.r))].filter(daCategoria).sort();
   const eqFilterEl = $('#flt-esc-eq');
   let curEqFilter = eqFilterEl ? eqFilterEl.value : '';

@@ -2,6 +2,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { ESQUEMA, migrarCadastro, migrarDia, precisaMigrar, renomearSimulador } from '../../js/migracoes.js';
+import { FROTA_INICIAL } from '../../js/frota.js';
+import { HORARIOS_INICIAIS } from '../../js/horarios.js';
 import { EQ } from '../../js/config.js';
 import { habilitacoesDoNivel } from '../../js/habilitacoes.js';
 
@@ -44,7 +46,8 @@ describe('Migrações do formato dos dados', () => {
     const cadastro = { nid: 1003, ins: [{ id: 1, nm: 'Instrutor 01', lv: 3, kg: 70 }], stu: [{ id: 1000, nm: 'Aluno 1000', kg: 60, bl: [1] }] };
     const novo = migrarCadastro(structuredClone(cadastro));
     assert.equal(novo.esquema, ESQUEMA);
-    assert.deepEqual({ ...novo, ins: null }, { ...cadastro, ins: null, esquema: ESQUEMA });
+    // Desde as versões 11 e 12, o cadastro também guarda a frota e os horários de decolagem
+    assert.deepEqual({ ...novo, ins: null }, { ...cadastro, ins: null, frota: FROTA_INICIAL, horarios: HORARIOS_INICIAIS, esquema: ESQUEMA });
     assert.equal(migrarCadastro(null), null);
   });
 

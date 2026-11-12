@@ -40,12 +40,12 @@ export function comExemplo(base) {
 
   estado.stu.forEach((d, idx) => {
     d.extra = [];
-    // Aluno 01: Ground PA-34 às 06:30, Multimotor PA-34 às 08:20 e Noturno
+    // Aluno 01: Ground PA-34 às 06:30, Multimotor PA-34 às 08:30 (o PA-34 sai de 30 em 30 minutos) e Noturno
     if (idx === 0) {
       Object.assign(d, {
         fly: true, mis: 'Ground PA-34', eq: GROUND_EQ_TYPE, p1: 0, p2: 1, nb: GROUND_DURATION_H, ss: 1, pr: 5,
         extra: [
-          { mid: estado.nid++, fly: true, mis: 'Multimotor', eq: 'PA-34', p1: 1, p2: 2, nb: 2, ss: 1, pr: 5 },
+          { mid: estado.nid++, fly: true, mis: 'Multimotor', eq: 'PA-34', p1: 510, p2: 630, nb: 2, ss: 1, pr: 5 },
           { mid: estado.nid++, fly: true, mis: 'Noturno', eq: 'C172', p1: NI, p2: NI, nb: 1, ss: 1, pr: 5 }
         ]
       });

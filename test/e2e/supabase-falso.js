@@ -18,14 +18,15 @@ export const CONTAS = {
 
 // Documentos no formato por data da fase 3 (sem a versão do formato) a partir de um estado da aplicação
 export function documentosFase3(estado, data) {
-  const { cadastro, dia } = separar(estado);
+  // A frota só passou a ficar no cadastro no formato 11
+  const { cadastro: { frota, ...cadastro }, dia } = separar(estado);
   return { documentos: { cadastro }, dias: { [data]: { ...dia, resultado: null } } };
 }
 
-// Os mesmos documentos no formato atual (o que o app grava hoje)
+// Os mesmos documentos no formato atual (o que o app grava hoje), com a frota do estado (ou a inicial)
 export function documentosAtuais(estado, data) {
-  const { documentos, dias } = documentosFase3(estado, data);
-  return { documentos: { cadastro: migrarCadastro(documentos.cadastro) }, dias: { [data]: migrarDia(dias[data]) } };
+  const { cadastro, dia } = separar(estado);
+  return { documentos: { cadastro: migrarCadastro(cadastro) }, dias: { [data]: migrarDia({ ...dia, resultado: null }) } };
 }
 
 const base64url = obj => Buffer.from(JSON.stringify(obj)).toString('base64url');

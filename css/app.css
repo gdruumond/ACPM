@@ -341,6 +341,24 @@ details.caixa.avisos summary { color: var(--wa); }
 /* Filtros com rótulo visível (Categoria e Avião / sala começam os dois em "Todos") */
 .flt-rotulo { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--mu); }
 .frota-cab { margin: 16px 0 8px; }
+/* Horários de decolagem por categoria: uma linha por categoria, com os horários em etiquetas */
+.horarios { display: flex; flex-direction: column; gap: 10px; }
+.horarios-cat { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.horarios-nome { min-width: 80px; font: 600 14px 'Barlow Semi Condensed', sans-serif; }
+.horarios-lista { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
+.hr-chip { display: inline-flex; align-items: center; gap: 2px; padding: 1px 2px 1px 8px; border: 1px solid var(--ln2); border-radius: 12px; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.hr-chip button { display: inline-grid; place-items: center; border: 0; background: transparent; color: var(--mu); border-radius: 50%; padding: 2px; cursor: pointer; }
+.hr-chip button:hover { color: var(--er); }
+.hr-chip .ico { width: 12px; height: 12px; }
+.horarios-acoes { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.hr-novo { width: 110px; }
+/* Recurso novo: matrícula, categoria e, no C152, "Só Parafuso" */
+.form-recurso { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 12px; margin: 0 0 10px; }
+.form-recurso label:not(.chk) { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--mu); }
+.form-recurso .chk { align-self: center; }
+.erro-campo { flex-basis: 100%; margin: 0; color: var(--er); }
+.erro-campo:empty { display: none; }
+table.frota .acoes-frota { white-space: nowrap; text-align: right; }
 .frota-cab .frota-titulo { margin: 0; }
 /* O mapa rola dentro do próprio painel quando não cabe na tela */
 .mapa { overflow-x: auto; }
@@ -1019,7 +1037,7 @@ body[data-backend="supabase"] #btn-bi-clr { display: none !important; }
   .topo-ico, .hd-btn, .hd-conta { min-width: 44px; min-height: 44px; justify-content: center; flex-shrink: 0; }
   .hd-sel, .topo-data-campo, .seg button, .menu-itens button, .cal .dia { min-height: 44px; }
   nav#nav button { min-width: 44px; min-height: 44px; justify-content: center; flex: none; }
-  .btn, .x, .btn-add-mis, .tg button { min-width: 44px; min-height: 44px; flex-shrink: 0; }
+  .btn, .x, .btn-add-mis, .tg button, .hr-chip button { min-width: 44px; min-height: 44px; flex-shrink: 0; }
   select, input:not([type="checkbox"]):not([type="radio"]) { min-height: 44px; }
   details.caixa summary { padding: 12px 0; }
   label.alvo, label.chk, .janela, .habs-painel label.hab { min-width: 44px; min-height: 44px; }
@@ -1029,5 +1047,8 @@ body[data-backend="supabase"] #btn-bi-clr { display: none !important; }
   .win-btn, .grupo-btn { min-height: 44px; }
   .tg { padding-right: 0; }
   .cal { gap: 2px; }
+  /* Horários de decolagem: o nome da categoria em cima, as etiquetas na largura toda */
+  .horarios-nome { flex-basis: 100%; }
+  .horarios-lista { flex-basis: 100%; }
 }
 

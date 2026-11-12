@@ -1,20 +1,23 @@
 // Escala por data. O estado da aplicação (o mesmo formato usado pelo motor e pelas telas) é guardado em
-// duas partes: o cadastro, igual em todas as datas (instrutores e alunos), e o dia, com o que muda de
+// duas partes: o cadastro, igual em todas as datas (instrutores, alunos e a frota), e o dia, com o que muda de
 // uma data para outra (janelas, aeronaves, disponibilidade dos instrutores, demanda e status dos voos).
-import { WIN, EQ, DEFAULT_LIM, AIRCRAFT_EQ_TYPES } from './config.js';
+import { WIN, DEFAULT_LIM, AIRCRAFT_EQ_TYPES } from './config.js';
 import { blank } from './rules.js';
 import { filasDoDiaSeguinte } from './rodizio.js';
+import { FROTA_INICIAL, normalizarFrota } from './frota.js';
+import { normalizarHorarios } from './horarios.js';
 
 // jan: disponibilidade do aluno (só quando o pedido tem uma)
 const CAMPOS_DO_PEDIDO = ['fly', 'mis', 'eq', 'p1', 'p2', 'nb', 'ss', 'pr', 'jan'];
 const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 
-const avPadrao = () => Object.fromEntries(Object.values(EQ).flat().map(r => [r, true]));
+// Cada recurso da frota começa disponível; o dia guarda só o que muda
+const avDaFrota = frota => Object.fromEntries(frota.map(f => [f.reg, true]));
 
 // horas: horas de voo de cada avião desde a última revisão de 50 horas, no início do dia (só dos aviões informados)
 // filas: filas do rodízio (cheque, MLTE, noturno e C172) no início do dia
 // importadas: solicitações da agenda já importadas para a demanda do dia
-export const diaPadrao = () => ({ win: WIN.map(() => true), av: avPadrao(), ins: {}, pedidos: {}, fStatus: {}, horas: {}, filas: {}, importadas: [] });
+export const diaPadrao = () => ({ win: WIN.map(() => true), av: avDaFrota(FROTA_INICIAL), ins: {}, pedidos: {}, fStatus: {}, horas: {}, filas: {}, importadas: [] });
 
 export function separar(estado) {
   return {
@@ -22,7 +25,9 @@ export function separar(estado) {
       nid: estado.nid,
       // O nível A01–A09 de antes da fase 4 fica só como cópia, em quem já o tinha
       ins: estado.ins.map(({ id, nm, lv, kg, hab }) => ({ id, nm, ...(lv === undefined ? {} : { lv }), kg, hab: [...(hab || [])] })),
-      stu: estado.stu.map(({ id, nm, kg, bl }) => ({ id, nm, kg, bl: [...(bl || [])] }))
+      stu: estado.stu.map(({ id, nm, kg, bl }) => ({ id, nm, kg, bl: [...(bl || [])] })),
+      ...(Array.isArray(estado.frota) ? { frota: estado.frota.map(f => ({ ...f })) } : {}),
+      ...(estado.horarios ? { horarios: structuredClone(estado.horarios) } : {})
     },
     dia: {
       win: [...estado.win],
@@ -45,10 +50,13 @@ export function separar(estado) {
 export function juntar(cadastro, dia = diaPadrao()) {
   const disponibilidade = dia.ins || {};
   const pedidos = dia.pedidos || {};
+  const frota = Array.isArray(cadastro.frota) ? normalizarFrota(cadastro.frota) : FROTA_INICIAL;
   return {
     schemaVer: 4,
+    ...(Array.isArray(cadastro.frota) ? { frota } : {}),
+    ...(cadastro.horarios ? { horarios: normalizarHorarios(cadastro.horarios) } : {}),
     win: Array.isArray(dia.win) ? [...dia.win] : WIN.map(() => true),
-    av: { ...avPadrao(), ...(dia.av || {}) },
+    av: { ...avDaFrota(frota), ...(dia.av || {}) },
     lim: { ...DEFAULT_LIM },
     nid: cadastro.nid,
     ins: cadastro.ins.map(x => {

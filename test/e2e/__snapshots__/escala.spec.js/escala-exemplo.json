@@ -7,18 +7,18 @@
   "alertas": [],
   "linhas": [
     "06:30 · 1º tempo 1 decolagem ou aula",
-    "06:30–08:00 1h30 | Aluno 01 | Ground PA-34 | Sala Ground | Instrutor 01 |  | [Confirmado] | ✕",
+    "06:30–08:00 1h30 | Aluno 01 | Ground PA-34 | Sala Ground | Instrutor 02 |  | [Confirmado] | ✕",
     "08:20 · 2º tempo 5 decolagens e aulas",
-    "08:20–09:50 1h30 2ª preferência | Aluno 02 | Ground C152 Turma de 6 alunos | Sala Ground | Instrutor 10 |  | [Confirmado] | ✕",
+    "08:20–09:50 1h30 2ª preferência | Aluno 02 | Ground C152 Turma de 6 alunos | Sala Ground | Instrutor 11 |  | [Confirmado] | ✕",
     "Aluno 03 | [Confirmado] | ✕",
     "Aluno 04 | [Confirmado] | ✕",
     "Aluno 05 | [Confirmado] | ✕",
     "Aluno 06 | [Confirmado] | ✕",
     "Aluno 07 | [Confirmado] | ✕",
-    "08:20–10:20 2 h | Aluno 01 | Multimotor | PR-VOM PA-34 | Instrutor 09 | 118 / 250 kg | [Confirmado] | ✕",
     "08:20–10:20 2 h | Aluno 12 | Navegação | PR-VOB C152 | Instrutor 13 | 158 / 170 kg | [Confirmado] | ✕",
     "08:20–10:20 2 h | Aluno 16 | Voo Solo | PR-VOC C152 | Instrutor 05 | 159 / 170 kg | [Confirmado] | ✕",
     "08:20–09:20 1 h | Aluno 17 | Navegação | PR-THI C152 | Instrutor 04 | 142 / 170 kg | [Confirmado] | ✕",
+    "08:30–10:30 2 h | Aluno 01 | Multimotor | PR-VOM PA-34 | Instrutor 09 | 118 / 250 kg | [Confirmado] | ✕",
     "10:10 · 3º tempo 5 decolagens e aulas",
     "10:10–11:10 1 h 2ª preferência | Aluno 02 | Voo Local | PR-IGU C152 | Instrutor 37 | 169 / 170 kg | [Confirmado] | ✕",
     "10:10–11:10 1 h 2ª preferência | Aluno 03 | Voo Local | PR-MLB C152 | Instrutor 01 | 125 / 170 kg | [Confirmado] | ✕",
@@ -111,14 +111,14 @@
     {
       "rotulo": "PR-VOM PA-34 · 2 h",
       "barras": [
-        "08:20–10:20 · Aluno 01 / Multimotor · Instrutor 09"
+        "08:30–10:30 · Aluno 01 / Multimotor · Instrutor 09"
       ]
     },
     {
       "rotulo": "Sala Ground 3 h",
       "barras": [
-        "06:30–08:00 · Aluno 01 / Ground PA-34 · Instrutor 01",
-        "08:20–09:50 · Ground C152 (6 alunos) / Instrutor 10 · Aluno 02, Aluno 03, Aluno 04, Aluno 05, Aluno 06, Aluno 07"
+        "06:30–08:00 · Aluno 01 / Ground PA-34 · Instrutor 02",
+        "08:20–09:50 · Ground C152 (6 alunos) / Instrutor 11 · Aluno 02, Aluno 03, Aluno 04, Aluno 05, Aluno 06, Aluno 07"
       ]
     }
   ]

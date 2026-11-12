@@ -45,7 +45,7 @@ describe('Migração de estado', () => {
     assert.deepEqual([x.stu[0].mis, x.stu[0].eq], ['Voo Local', 'PA-34']);
     assert.deepEqual(
       [x.stu[0].extra[0].mid, x.stu[0].extra[0].mis, x.stu[0].extra[0].eq, x.stu[0].extra[0].p1, x.stu[0].extra[0].nb],
-      [1000, 'Ground Navegação', 'Sala Ground', 0, 1.5]
+      [1000, 'Ground Navegação', 'Sala Ground', 390, 1.5]
     );
   });
 
@@ -120,7 +120,8 @@ describe('Persistência local (escala por data)', () => {
     const { estado: x } = await ApiClient.carregarDia('2026-11-11');
     assert.deepEqual(x.win, [true, true, false, false, true, true, true, true, false]);
     assert.deepEqual(x.ins[0].aw, [true, false, true, true, true, true, false, true, true]);
-    assert.deepEqual([x.stu[0].p1, x.stu[0].p2, x.stu[0].ss, x.stu[0].mis], [4, -1, 1, 'Voo Local']);
+    // A janela 3 do formato de 7 janelas vira a janela 4 (12:40), guardada em minutos
+    assert.deepEqual([x.stu[0].p1, x.stu[0].p2, x.stu[0].ss, x.stu[0].mis], [760, -1, 1, 'Voo Local']);
   });
 
   it('modo somente leitura (link compartilhado) não grava nada', async () => {
@@ -247,7 +248,7 @@ describe('Link compartilhável: validação do conteúdo (vem da URL, não é co
     const [ana] = estado.stu;
     assert.deepEqual(
       { id: ana.id, nm: ana.nm, kg: ana.kg, bl: ana.bl, fly: ana.fly, mis: ana.mis, eq: ana.eq, p1: ana.p1, p2: ana.p2, nb: ana.nb, ss: ana.ss, pr: ana.pr },
-      { id: 1000, nm: '<b>Ana</b>', kg: 0, bl: [7], fly: true, mis: 'Voo Local', eq: 'C152', p1: -1, p2: 2, nb: 1, ss: 1, pr: 3 }
+      { id: 1000, nm: '<b>Ana</b>', kg: 0, bl: [7], fly: true, mis: 'Voo Local', eq: 'C152', p1: -1, p2: 610, nb: 1, ss: 1, pr: 3 }
     );
     assert.deepEqual(ana.extra, [{ mid: 1003, fly: true, mis: 'IFR', eq: 'C172', p1: -1, p2: -1, nb: 2, ss: 1, pr: 3 }]);
   });

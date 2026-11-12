@@ -326,6 +326,12 @@ describe('Noturno', () => {
 });
 
 describe('Ground School', () => {
+  it('o aluno só entra numa turma já aberta se ela começa na disponibilidade dele', () => {
+    const manha = [1000, 1001].map(id => aluno(id, { ...GROUND_C152, p1: 390, p2: 500 }));
+    const { out } = alocar({ ins: [instrutor(1, 1), instrutor(2, 1)], stu: [...manha, aluno(1002, { ...GROUND_C152, p1: 760, p2: 820, jan: 'tarde' })] });
+    assert.equal(hm(out.find(o => o.stuId === 1002).a), '12:40');
+  });
+
   it('forma turma coletiva com um instrutor e conta 1,5 h uma única vez', () => {
     const { out } = alocar({
       ins: [instrutor(1, 1), instrutor(2, 1)],

@@ -32,4 +32,3 @@ export const fimDoMes = iso => new Date(Date.UTC(+iso.slice(0, 4), +iso.slice(5,
 export const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 export const opts = (a, sel) => a.map(([v, l]) => `<option value="${v}"${String(v) === String(sel) ? ' selected' : ''}>${l}</option>`).join('');
-export const wopt = (sel, none) => opts([...(none ? [[-1, '—']] : []), ...WIN.map((w, i) => [i, w + (i == NI ? ' (noturno)' : '')])], sel);
