@@ -1,6 +1,7 @@
 // Aba Demanda: pedidos de missão por aluno (inclusive missões extras) e filtros. Os campos são discretos (parecem
 // texto até o mouse passar ou o foco chegar); o que a missão exige do instrutor fica na dica do campo da missão.
-import { ACROBAT_REG, MIS, GROUND_EQ_TYPE } from '../config.js';
+import { MIS, GROUND_EQ_TYPE } from '../config.js';
+import { matriculasDoTipo } from '../frota.js';
 import { esc, opts, wopt } from '../format.js';
 import { isGroundMission, DISPONIBILIDADES } from '../rules.js';
 import { descreverExigencias } from '../habilitacoes.js';
@@ -20,7 +21,8 @@ export const singleDemandRowHTML = (stu, d, mid = 0) => {
   const firstCell = isExtra
     ? `<div class="stu-cell"><span class="sm">↳ missão extra</span><button class="x edit-only" data-act="del-mis" data-id="${stu.id}" data-mid="${mid}" aria-label="Tirar a missão extra de ${esc(stu.nm)}" title="Tirar esta missão extra">✕</button></div>`
     : `<div class="stu-cell"><span>${esc(stu.nm)}</span><button class="btn-add-mis edit-only" data-act="add-mis" data-id="${stu.id}" title="Outra missão para este aluno no mesmo dia" aria-label="Mais uma missão para ${esc(stu.nm)}">+ missão</button></div>`;
-  const exige = `Exige ${descreverExigencias(d.mis, isGnd ? GROUND_EQ_TYPE : d.eq)}${d.mis === 'Parafuso' && d.eq === 'C152' ? ` (no ${ACROBAT_REG})` : ''}`;
+  const soParafuso = d.mis === 'Parafuso' && d.eq === 'C152' ? matriculasDoTipo(S.frota || [], 'C152', { parafuso: true }) : [];
+  const exige = `Exige ${descreverExigencias(d.mis, isGnd ? GROUND_EQ_TYPE : d.eq)}${soParafuso.length ? ` (no ${soParafuso.join(' ou ')})` : ''}`;
   const de = ` de ${esc(stu.nm)}`;
 
   const nbOpts = isGnd

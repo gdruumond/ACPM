@@ -138,7 +138,18 @@
       <h3 class="frota-titulo">Aviões e simuladores <small>horas desde a última revisão de 50 horas, no início desta data; a escala não passa das 50 horas</small></h3>
       <span class="cresce"></span>
       <label class="flt-rotulo"><span>Categoria</span> <select id="flt-rec-cat" class="flt-ctrl"></select></label>
+      <button class="btn edit-only" type="button" id="btn-novo-recurso" aria-expanded="false" aria-controls="form-recurso">+ Novo recurso</button>
     </div>
+    <form class="pn form-recurso edit-only" id="form-recurso" autocomplete="off" novalidate hidden>
+      <label>Matrícula <input id="rec-reg" maxlength="15" placeholder="PR-ABC" required></label>
+      <label>Categoria <select id="rec-tipo" required>
+        <option value="">Escolha…</option><option>C152</option><option>C172</option><option>PA-34</option><option>Sim. Mono</option><option>Sim. Multi</option>
+      </select></label>
+      <label class="chk" id="rec-parafuso-rotulo" hidden><input type="checkbox" id="rec-parafuso"> Só Parafuso</label>
+      <button class="btn" type="submit">Adicionar</button>
+      <button class="btn quiet" type="button" id="rec-cancelar">Cancelar</button>
+      <p class="erro-campo" id="rec-erro" role="alert"></p>
+    </form>
     <div class="tw" id="eqs">
       <table class="frota">
         <thead><tr><th>Disponível</th><th>Recurso</th><th>Horas desde a revisão</th><th>Saldo até 50 h</th><th>Na escala do dia</th><th class="edit-only" aria-label="Revisão"></th></tr></thead>
@@ -407,7 +418,7 @@
       <h4>Recursos</h4>
       <p><b>Janelas de operação:</b> os horários em que um voo pode começar. Desligar uma janela tira esse horário da escala do dia.</p>
       <ul class="manual-lista-curta" id="manual-janelas"></ul>
-      <p><b>Aviões e simuladores:</b> desligado quer dizer indisponível (em manutenção). O PR-JPL só voa Parafuso. A tabela mostra quanto cada avião voa na escala do dia e o saldo até a revisão de 50 horas. Escolha uma categoria para ver só a frota dela; um clique no nome da categoria recolhe ou abre as linhas.</p>
+      <p><b>Aviões e simuladores:</b> desligado quer dizer indisponível (em manutenção). O avião marcado “Só Parafuso” só voa Parafuso. Para acrescentar um recurso à frota, use <i>+ Novo recurso</i>: a matrícula e a categoria (no C152, também “Só Parafuso”); o limite de peso e o controle das 50 horas vêm da categoria. <i>Retirar</i> (aparece ao passar o mouse na linha) tira um recurso da frota, com confirmação; o Histórico desfaz. A tabela mostra quanto cada avião voa na escala do dia e o saldo até a revisão de 50 horas. Escolha uma categoria para ver só a frota dela; um clique no nome da categoria recolhe ou abre as linhas.</p>
       <p><b>Revisão de 50 horas:</b> informe as horas de cada avião desde a última revisão. A escala não passa das 50 horas: o avião para quando não tem saldo para mais um voo, e o aviso aparece na escala. Depois da revisão, clique em <i>Revisão feita</i> (aparece ao passar o mouse na linha) para zerar. A data seguinte começa com as horas desta data mais os voos dela que não foram cancelados. Avião sem as horas informadas fica sem esse controle.</p>
 
       <h4>Instrutores</h4>

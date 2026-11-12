@@ -81,7 +81,9 @@ mais antigo do que o guardado. Nunca apague campos num passo: mantenha o que o p
 |---|---|
 | `index.html` | Marcação das oito abas |
 | `css/app.css` | Estilos e temas claro/escuro |
-| `js/config.js` | Janelas, frota, missões, limites de peso |
+| `js/config.js` | Janelas, missões, limites de peso e a frota inicial |
+| `js/frota.js` | A frota no cadastro (matrícula, tipo e "Só Parafuso"): validação de um recurso novo e as matrículas de cada tipo |
+| `js/categorias.js` | Categorias de recurso dos filtros (C152, C172, Simulador, PA-34 e Sala Ground) |
 | `js/habilitacoes.js` | Habilitações individuais dos instrutores e o que cada missão exige |
 | `js/rodizio.js` | Filas do rodízio (cheque, MLTE, noturno e C172) e a rotação de uma data para a seguinte |
 | `js/agenda.js` | Prazo da agenda de solicitações (13:00 do dia anterior) e a importação para a demanda |
@@ -93,7 +95,7 @@ mais antigo do que o guardado. Nunca apague campos num passo: mantenha o que o p
 | `js/dias.js` | Cadastro separado do dia, cópia do dia anterior, conversão dos dados da fase 2 e BI das escalas |
 | `js/migracoes.js` | Versões do formato dos dados guardados e os passos de uma versão para a seguinte |
 | `js/sessao.js`, `js/config-supabase.js` | Login, perfil de acesso e projeto Supabase de cada endereço |
-| `js/state.js`, `js/actions.js` | Estado da aplicação e ações (perfil, desfazer, histórico e a escala refeita a cada alteração) |
+| `js/state.js`, `js/actions.js` | Estado da aplicação e ações (perfil, data, histórico e a escala refeita a cada alteração) |
 | `js/manual.js` | Tabelas do manual geradas das regras (missões, habilitações exigidas, janelas, pesos e rodízio) |
 | `js/views/` | Renderização de cada aba |
 | `js/export.js` | CSV e PDF |

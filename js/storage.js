@@ -1,6 +1,7 @@
 // Camada de acesso a dados: estado inicial, migrações de schema, persistência por um backend
 // (localStorage ou Supabase) e o link compartilhável que abre a escala no perfil Gestor.
-import { WIN, NI, EQ, DEFAULT_LIM, FLIGHT_STATUSES, AIRCRAFT_EQ_TYPES } from './config.js';
+import { WIN, NI, DEFAULT_LIM, FLIGHT_STATUSES, AIRCRAFT_EQ_TYPES } from './config.js';
+import { FROTA_INICIAL, normalizarFrota } from './frota.js';
 import { pad } from './format.js';
 import { blank, normalizeMissionFields, janelasDaDisponibilidade } from './rules.js';
 import { backendLocal, CHAVES_LOCAIS, CHAVE_LEGADA } from './backends/local.js';
@@ -52,9 +53,10 @@ export const ApiClient = {
       stu: [],
       fStatus: {},
       horas: {},
-      importadas: []
+      importadas: [],
+      frota: FROTA_INICIAL.map(f => ({ ...f }))
     };
-    Object.values(EQ).flat().forEach(r => state.av[r] = true);
+    state.frota.forEach(f => { state.av[f.reg] = true; });
     return state;
   },
 
@@ -65,6 +67,13 @@ export const ApiClient = {
     if (!x.horas || typeof x.horas !== 'object' || Array.isArray(x.horas)) x.horas = {};
     if (!Array.isArray(x.importadas)) x.importadas = [];
     if (!x.nid || x.nid < 1000) x.nid = 1000;
+    // A frota (fase 7): disponibilidade e horas só dos recursos dela; um recurso que o dia não conhece começa disponível
+    // (os simuladores com os nomes de antes da fase 4 são renomeados antes)
+    x.frota = normalizarFrota(x.frota);
+    const naFrota = r => x.frota.some(f => f.reg === r);
+    const av = Object.fromEntries(Object.entries(x.av && typeof x.av === 'object' ? x.av : {}).map(([r, v]) => [renomearSimulador(r), v]));
+    x.av = Object.fromEntries(x.frota.map(f => [f.reg, typeof av[f.reg] === 'boolean' ? av[f.reg] : true]));
+    x.horas = Object.fromEntries(Object.entries(x.horas).map(([r, h]) => [renomearSimulador(r), h]).filter(([r]) => naFrota(r)));
 
     if (!x.schemaVer || x.schemaVer < 3) {
       // Versões antigas: mantém os instrutores do navegador (e os ids, usados nos bloqueios), completando campos ausentes
@@ -234,6 +243,7 @@ export const ApiClient = {
     const compact = {
       d: dateStr,
       w: state.win.map(v => v ? 1 : 0),
+      fr: (state.frota || []).map(f => [f.reg, f.tipo, f.soParafuso ? 1 : 0]),
       avOff: Object.keys(state.av).filter(k => !state.av[k]),
       ins: state.ins.map(x => [x.id, x.nm, x.on ? 1 : 0, x.hab, x.kg, x.aw.map(a => a ? 1 : 0)]),
       st: state.fStatus || {},
@@ -265,12 +275,18 @@ export const ApiClient = {
       if (!decoded || typeof decoded !== 'object') return null;
       if (Array.isArray(decoded.w)) state.win = WIN.map((_, i) => Boolean(decoded.w[i]));
       state.lim = { ...DEFAULT_LIM };
+      // A frota de quem compartilhou (links anteriores à fase 7 não a trazem: fica a frota inicial)
+      if (Array.isArray(decoded.fr)) {
+        state.frota = normalizarFrota(lista(decoded.fr, LIMITE.matriculas).filter(Array.isArray)
+          .map(([reg, tipo, parafuso]) => ({ reg, tipo, soParafuso: parafuso === 1 })));
+        state.av = Object.fromEntries(state.frota.map(f => [f.reg, true]));
+      }
       if (decoded.st && typeof decoded.st === 'object') {
         state.fStatus = Object.fromEntries(Object.entries(decoded.st)
           .filter(([fKey, st]) => /^\d+_\d+_\d+$/.test(fKey) && FLIGHT_STATUSES.includes(st)));
       }
       if (decoded.h && typeof decoded.h === 'object') {
-        const avioes = AIRCRAFT_EQ_TYPES.flatMap(tipo => EQ[tipo]);
+        const avioes = normalizarFrota(state.frota).filter(f => AIRCRAFT_EQ_TYPES.includes(f.tipo)).map(f => f.reg);
         state.horas = Object.fromEntries(Object.entries(decoded.h)
           .filter(([r, horas]) => avioes.includes(r) && typeof horas === 'number' && horas >= 0 && horas <= 60));
       }

@@ -13,7 +13,8 @@
  *   js/views/       Renderização das abas (recursos, cadastros, demanda, escala, BI e navegação)
  *   js/export.js    Exportação CSV e PDF
  */
-import { WIN, NI, T, EQ, GROUND_EQ_TYPE, GROUND_REG, GROUND_DURATION_MIN, GROUND_DURATION_H, ACROBAT_REG, MIS, PRE } from './config.js';
+import { WIN, NI, T, GROUND_EQ_TYPE, GROUND_REG, GROUND_DURATION_MIN, GROUND_DURATION_H, MIS, PRE } from './config.js';
+import { novoRecurso, matriculasDoTipo } from './frota.js';
 import { hm, fmtH, fmtDurLabel, pad, amanhaISO, isoMenosDias } from './format.js';
 import { isGroundMission, blank, rotuloDaDisponibilidade } from './rules.js';
 import { habilitacoesDoNivel, normalizarHabilitacoes, nomeDaHabilitacao, podeFazer } from './habilitacoes.js';
@@ -255,6 +256,35 @@ preencherFiltroDeHabilitacoes();
 $('#flt-dem-mis').insertAdjacentHTML('beforeend', Object.keys(MIS).map(m => `<option value="${m}">${m}</option>`).join(''));
 $('#flt-ins-hab').onchange = applyInstructorFilters;
 $('#flt-esc-eq').onchange = () => rOut();
+// Recursos: acrescentar um recurso à frota (matrícula, categoria e, no C152, "Só Parafuso")
+function mostrarFormDoRecurso(abrir) {
+  $('#form-recurso').hidden = !abrir;
+  $('#btn-novo-recurso').setAttribute('aria-expanded', String(abrir));
+  $('#rec-erro').textContent = '';
+  if (!abrir) return;
+  $('#form-recurso').reset();
+  $('#rec-parafuso-rotulo').hidden = true;
+  $('#rec-reg').focus();
+}
+$('#btn-novo-recurso').onclick = () => mostrarFormDoRecurso($('#form-recurso').hidden);
+$('#rec-cancelar').onclick = () => mostrarFormDoRecurso(false);
+$('#rec-tipo').onchange = () => {
+  $('#rec-parafuso-rotulo').hidden = $('#rec-tipo').value !== 'C152';
+  if ($('#rec-tipo').value !== 'C152') $('#rec-parafuso').checked = false;
+};
+$('#form-recurso').onsubmit = e => {
+  e.preventDefault();
+  if (isGestor()) return;
+  const { recurso, erro } = novoRecurso(S.frota, { reg: $('#rec-reg').value, tipo: $('#rec-tipo').value, soParafuso: $('#rec-parafuso').checked });
+  if (erro) { $('#rec-erro').textContent = erro; return; }
+  S.frota.push(recurso);
+  S.av[recurso.reg] = true;
+  logChange('inc', `Recurso adicionado: ${recurso.reg} (${recurso.tipo}${recurso.soParafuso ? ', só Parafuso' : ''})`);
+  save(); rRec();
+  mostrarFormDoRecurso(false);
+  showToast(`${recurso.reg} adicionado à frota.`, 'ok');
+};
+
 // Categoria (Escala, Recursos e BI); na Escala e no BI, o filtro de recurso mostra só os da categoria escolhida
 $('#flt-esc-cat').innerHTML = opcoesDeCategoria();
 $('#bi-flt-cat').innerHTML = opcoesDeCategoria();
@@ -308,11 +338,11 @@ armed('#btn-bi-sim', 'Confirmar simulação', async () => {
       const mis = pick([...allMis, 'Voo Local', 'Voo Local', 'Navegação', 'IFR']);
       const isGnd = isGroundMission(mis);
       const eqType = isGnd ? GROUND_EQ_TYPE : pick(MIS[mis].eq);
-      const reg = isGnd
-        ? GROUND_REG
-        : (mis === 'Parafuso' && eqType === 'C152')
-          ? ACROBAT_REG
-          : pick(EQ[eqType].filter(r => r !== ACROBAT_REG));
+      // Um recurso da frota do tipo (o Parafuso no C152, num avião "Só Parafuso"); tipo sem recurso: sem esse voo.
+      // Com um recurso só (a sala de Ground, o avião do Parafuso), não há sorteio
+      const doTipo = isGnd ? [GROUND_REG] : matriculasDoTipo(S.frota, eqType, { parafuso: mis === 'Parafuso' });
+      if (!doTipo.length) continue;
+      const reg = doTipo.length === 1 ? doTipo[0] : pick(doTipo);
       // Grounds simulados com os instrutores menos habilitados (como os A01–A02 de antes)
       const qualIns = isGnd
         ? S.ins.filter(x => podeFazer(x, mis, eqType) && x.hab.length <= habilitacoesDoNivel(2).length)
@@ -592,7 +622,27 @@ document.addEventListener('click', e => {
         logChange(rev.val ? 'inc' : 'exc', `Revertido: ${ins.nm} ${rev.val ? 'disponível' : 'indisponível'}`, null, entry.id);
         save(); rIns();
       }
+    } else if (rev.kind === 'readicionarRecurso' && rev.recurso && !S.frota.some(f => f.reg === rev.recurso.reg)) {
+      // Um recurso retirado volta para a frota, como estava
+      S.frota.push({ ...rev.recurso });
+      S.av[rev.recurso.reg] = rev.av !== false;
+      logChange('inc', `Revertido: ${rev.recurso.reg} de volta à frota`, null, entry.id);
+      save(); rRec();
     }
+    return;
+  }
+
+  // Retirar um recurso da frota (pede confirmação; o histórico desfaz)
+  if (a === 'retirar-recurso') {
+    if (!confirmado(b, 'Confirmar retirada')) return;
+    const recurso = S.frota.find(f => f.reg === b.dataset.id);
+    if (!recurso) return;
+    S.frota = S.frota.filter(f => f !== recurso);
+    logChange('exc', `Recurso retirado: ${recurso.reg} (${recurso.tipo})`, {
+      kind: 'readicionarRecurso', recurso: { ...recurso }, av: S.av[recurso.reg] !== false, label: '↶ Reverter'
+    });
+    save(); rRec();
+    showToast(`${recurso.reg} retirado da frota.`, 'ok');
     return;
   }
 

@@ -102,7 +102,9 @@ test.describe('Escala por data', () => {
 
   test('dados no formato anterior neste navegador são regravados no formato atual na abertura', async ({ page }) => {
     const { cadastro, dia } = separar(ApiClient.normalizeAndMigrateState({ ...estadoSintetico(), stu: [aluno(1000)] }));
-    const fase3 = comNomesAntigos({ acpm4_cadastro: cadastro, [`acpm4_dia_${AMANHA}`]: { ...dia, av: { ...dia.av, 'SIM-MONO-A': false }, resultado: null } });
+    // O cadastro antigo não tinha a frota (formato 11)
+    const { frota, ...cadastroAntigo } = cadastro;
+    const fase3 = comNomesAntigos({ acpm4_cadastro: cadastroAntigo, [`acpm4_dia_${AMANHA}`]: { ...dia, av: { ...dia.av, 'SIM-MONO-A': false }, resultado: null } });
     await page.addInitScript(json => {
       if (sessionStorage.getItem('semeado')) return;
       sessionStorage.setItem('semeado', '1');

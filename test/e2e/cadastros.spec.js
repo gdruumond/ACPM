@@ -50,6 +50,74 @@ test.describe('Recursos', () => {
   });
 });
 
+test.describe('Recursos: acrescentar e retirar', () => {
+  test('acrescenta um C152: aparece na categoria, disponível, entra na escala e fica gravado', async ({ page }) => {
+    // Todos os C152 em manutenção: o voo só entra com o avião novo
+    await abrir(page, { estado: cenario({ stu: [aluno(1000)], semAeronaves: apenas('C152') }) });
+    await irPara(page, 'rec');
+    await expect(page.locator('#form-recurso')).toBeHidden();
+    await page.locator('#btn-novo-recurso').click();
+    await page.locator('#rec-reg').fill('pr-new');
+    await page.locator('#rec-tipo').selectOption('C152');
+    await page.locator('#form-recurso [type="submit"]').click();
+    const linha = page.locator('#revisao tr[data-r="PR-NEW"]');
+    await expect(linha).toBeVisible();
+    await expect(linha.locator('[data-a="av"]')).toBeChecked();
+    await expect(page.locator('#revisao tr.grupo', { hasText: 'C152' })).toContainText('1 de 14 disponíveis');
+    await expect(page.locator('#toast-box .toast.ok')).toContainText('PR-NEW');
+    await expect(page.locator('#form-recurso')).toBeHidden();
+    await abrirEscala(page);
+    expect((await lerEscala(page)).linhas.some(l => l.includes('PR-NEW'))).toBe(true);
+
+    await page.reload();
+    await irPara(page, 'rec');
+    await expect(page.locator('#revisao tr[data-r="PR-NEW"]')).toBeVisible();
+  });
+
+  test('não aceita matrícula repetida nem sem categoria; "Só Parafuso" só no C152', async ({ page }) => {
+    await abrirSintetico(page);
+    await irPara(page, 'rec');
+    await page.locator('#btn-novo-recurso').click();
+    await page.locator('#rec-reg').fill('PP-LJV');
+    await page.locator('#rec-tipo').selectOption('C152');
+    await page.locator('#form-recurso [type="submit"]').click();
+    await expect(page.locator('#rec-erro')).toHaveText('Já existe um recurso com a matrícula PP-LJV.');
+    await page.locator('#rec-reg').fill('PR-ZZZ');
+    await page.locator('#rec-tipo').selectOption('');
+    await page.locator('#form-recurso [type="submit"]').click();
+    await expect(page.locator('#rec-erro')).toHaveText('Escolha a categoria.');
+    await expect(page.locator('#rec-parafuso')).toBeHidden();
+    await page.locator('#rec-tipo').selectOption('C152');
+    await expect(page.locator('#rec-parafuso')).toBeVisible();
+    await page.locator('#rec-parafuso').check();
+    await page.locator('#form-recurso [type="submit"]').click();
+    await expect(page.locator('#revisao tr[data-r="PR-ZZZ"]')).toContainText('Só Parafuso');
+  });
+
+  test('retira um recurso com confirmação; o histórico desfaz', async ({ page }) => {
+    await abrirSintetico(page);
+    await irPara(page, 'rec');
+    const retirar = page.locator('#revisao tr[data-r="PT-KIW"] [data-act="retirar-recurso"]');
+    await retirar.click();
+    await expect(retirar).toHaveText('Confirmar retirada');
+    await retirar.click();
+    await expect(page.locator('#revisao tr[data-r="PT-KIW"]')).toHaveCount(0);
+    await expect(page.locator('#revisao tr.grupo', { hasText: 'PA-34' })).toContainText('2 de 2 disponíveis');
+    await page.locator('#btn-open-log').click();
+    await expect(page.locator('#audit-log-list')).toContainText('Recurso retirado: PT-KIW (PA-34)');
+    await page.locator('#audit-log-list [data-act="rev-log"]').first().click();
+    await expect(page.locator('#revisao tr[data-r="PT-KIW"]')).toHaveCount(1);
+  });
+
+  test('o Gestor não acrescenta nem retira recursos', async ({ page }) => {
+    await abrirSintetico(page);
+    await page.locator('#role-sel').selectOption('gestor');
+    await irPara(page, 'rec');
+    await expect(page.locator('#btn-novo-recurso')).toBeHidden();
+    await expect(page.locator('#revisao [data-act="retirar-recurso"]').first()).toBeHidden();
+  });
+});
+
 test.describe('Recursos: categoria e grupos recolhíveis', () => {
   test('a categoria mostra só a frota dela; cada categoria recolhe e abre, e continua assim quando a escala é refeita', async ({ page }) => {
     await abrirSintetico(page);

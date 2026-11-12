@@ -1,6 +1,6 @@
 // Partes do manual geradas das regras do código (missões, janelas, pesos e rodízio): quando uma regra muda, o
 // manual muda junto. O texto explicativo fica em index.html (seção Manual).
-import { MIS, WIN, NI, DEFAULT_LIM, GROUND_DURATION_MIN, ACROBAT_REG } from './config.js';
+import { MIS, WIN, NI, DEFAULT_LIM, GROUND_DURATION_MIN } from './config.js';
 import { HABILITACOES, exigencias } from './habilitacoes.js';
 import { CATEGORIAS_DO_RODIZIO } from './rodizio.js';
 
@@ -23,7 +23,7 @@ export function quemPodeDar(mis, equipamentos) {
 
 function observacao(missao, regra) {
   if (regra.isGround) return `Aula de ${duracao(GROUND_DURATION_MIN)}, em turma; antes do primeiro voo de ${regra.gatesEq || regra.gatesMis} do aluno no dia`;
-  if (missao === 'Parafuso') return `No C152, sempre no ${ACROBAT_REG} (que só voa Parafuso)`;
+  if (missao === 'Parafuso') return 'No C152, sempre num avião marcado “Só Parafuso” em Recursos (que só voa Parafuso)';
   if (missao === 'Noturno') return `Só na janela das ${WIN[NI]}`;
   return '';
 }

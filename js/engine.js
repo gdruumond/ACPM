@@ -1,6 +1,7 @@
 // Motor de alocação determinístico da escala do dia e utilitários de horas e de ocupação.
 // runAllocationEngine é uma função pura: recebe o estado e devolve { out, al, tot } sem alterá-lo.
-import { T, NI, DAY, NIGHT_OK, EQ, MIS, DEFAULT_LIM, ACROBAT_REG, GROUND_EQ_TYPE, GROUND_REG, GROUND_DURATION_MIN, GROUND_DURATION_H, REVISAO_H, MENOR_VOO_H } from './config.js';
+import { T, NI, DAY, NIGHT_OK, MIS, DEFAULT_LIM, GROUND_EQ_TYPE, GROUND_REG, GROUND_DURATION_MIN, GROUND_DURATION_H, REVISAO_H, MENOR_VOO_H } from './config.js';
+import { FROTA_INICIAL, matriculasDoTipo } from './frota.js';
 import { hm, fmtH } from './format.js';
 import { isGroundMission, doesGroundGateFlight, janelasDaDisponibilidade, rotuloDaDisponibilidade } from './rules.js';
 import { podeFazer, descreverExigencias } from './habilitacoes.js';
@@ -48,10 +49,12 @@ function redistribuirTipo(voos, matriculas, saldo) {
   return nova;
 }
 
-function manterInstrutorNoMesmoAviao(out, state, saldo) {
+function manterInstrutorNoMesmoAviao(out, state, saldo, frota) {
+  // Os aviões "Só Parafuso" ficam de fora: o Parafuso no C152 só pode ir para eles
+  const soParafuso = matriculasDoTipo(frota, 'C152', { parafuso: true });
   for (const tipo of TIPOS_DE_AVIAO) {
-    const voos = out.filter(o => o.eqType === tipo && o.r !== ACROBAT_REG);
-    const matriculas = EQ[tipo].filter(r => r !== ACROBAT_REG && state.av[r]);
+    const voos = out.filter(o => o.eqType === tipo && !soParafuso.includes(o.r));
+    const matriculas = matriculasDoTipo(frota, tipo).filter(r => state.av[r]);
     const nova = redistribuirTipo(voos, matriculas, saldo);
     if (nova && trocasDeAviao(voos, o => nova.get(o)) < trocasDeAviao(voos, o => o.r)) voos.forEach(o => { o.r = nova.get(o); });
 
@@ -80,6 +83,10 @@ function manterInstrutorNoMesmoAviao(out, state, saldo) {
 
 export function runAllocationEngine(state) {
   const used = {}, busy = {}, stuBusy = {}, stuLastPick = {}, load = {}, eu = {}, out = [], al = [];
+  // A frota vem do cadastro (fase 7); sem ela (estados de teste antigos), a frota inicial
+  const frota = Array.isArray(state.frota) ? state.frota : FROTA_INICIAL;
+  const soParafuso = matriculasDoTipo(frota, 'C152', { parafuso: true });
+  const nomesSoParafuso = soParafuso.length ? soParafuso.join(' ou ') : 'marcada como “Só Parafuso”';
   // Aeronaves/simuladores que cada instrutor já usou no dia, na ordem em que foram escalados
   const insAircraft = {};
   // Armazena turmas abertas de Ground School por missão para permitir múltiplos alunos no mesmo horário/instrutor
@@ -349,10 +356,7 @@ export function runAllocationEngine(state) {
     })(0, minStartAfterGround, []);
 
     // Filtra a frota candidata respeitando a exclusividade do C152 PR-JPL (Acrobat) para Parafuso
-    const fleetPool = (EQ[d.eq] || []).filter(r => {
-      if (isParafuso && d.eq === 'C152') return r === ACROBAT_REG;
-      return r !== ACROBAT_REG;
-    });
+    const fleetPool = matriculasDoTipo(frota, d.eq, { parafuso: isParafuso });
 
     const fc = { stu_busy: 0, eq: 0, revisao: 0, disp: 0, busy: 0, bloq: 0, peso: 0 };
     let ch = null;
@@ -448,8 +452,10 @@ export function runAllocationEngine(state) {
       });
     } else {
       let why;
-      if (isParafuso && d.eq === 'C152' && !state.av[ACROBAT_REG]) {
-        why = `a aeronave acrobática ${ACROBAT_REG} (exclusiva para Parafuso no C152) está indisponível/em manutenção`;
+      if (isParafuso && d.eq === 'C152' && !soParafuso.some(r => state.av[r])) {
+        why = soParafuso.length
+          ? `a aeronave acrobática ${nomesSoParafuso} (exclusiva para Parafuso no C152) está indisponível/em manutenção`
+          : 'não há na frota um C152 marcado como “Só Parafuso” (aba Recursos)';
       } else if (!fleetPool.some(r => state.av[r])) {
         why = `nenhum equipamento ${d.eq} compatível disponível (manutenção/indisponível)`;
       } else if (!state.ins.some(x => x.on && podeFazer(x, d.mis, d.eq))) {
@@ -465,7 +471,7 @@ export function runAllocationEngine(state) {
         why = {
           stu_busy: `conflito de horário com outra missão/Ground do próprio aluno (${nm}) já agendada neste dia`,
           eq: isParafuso && d.eq === 'C152'
-            ? `a aeronave acrobática ${ACROBAT_REG} (exclusiva para Parafuso) já está ocupada nos horários testados`
+            ? `a aeronave acrobática ${nomesSoParafuso} (exclusiva para Parafuso) já está ocupada nos horários testados`
             : `falta de ${d.eq} livre nos horários testados (ocupado por voos de maior prioridade)`,
           revisao: `os ${d.eq} livres estão sem saldo até a revisão de 50 horas`,
           disp: `nenhum instrutor habilitado (${exige}) disponível durante todo o voo nos horários testados`,
@@ -478,12 +484,12 @@ export function runAllocationEngine(state) {
     }
   }
 
-  manterInstrutorNoMesmoAviao(out, state, saldo);
+  manterInstrutorNoMesmoAviao(out, state, saldo, frota);
 
   // Revisão de 50 horas: horas de cada avião controlado e onde ele para (sem saldo para mais uma missão de 1 h)
   const revisao = {};
   for (const r of Object.keys(horas)) {
-    if (typeof horas[r] !== 'number') continue;
+    if (typeof horas[r] !== 'number' || !frota.some(f => f.reg === r)) continue;
     const meus = out.filter(o => o.r === r);
     const voadas = Math.round(meus.reduce((total, o) => total + o.h, 0) * 10) / 10;
     const fim = Math.round((horas[r] + voadas) * 10) / 10;

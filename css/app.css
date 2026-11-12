@@ -341,6 +341,13 @@ details.caixa.avisos summary { color: var(--wa); }
 /* Filtros com rótulo visível (Categoria e Avião / sala começam os dois em "Todos") */
 .flt-rotulo { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--mu); }
 .frota-cab { margin: 16px 0 8px; }
+/* Recurso novo: matrícula, categoria e, no C152, "Só Parafuso" */
+.form-recurso { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 12px; margin: 0 0 10px; }
+.form-recurso label:not(.chk) { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--mu); }
+.form-recurso .chk { align-self: center; }
+.erro-campo { flex-basis: 100%; margin: 0; color: var(--er); }
+.erro-campo:empty { display: none; }
+table.frota .acoes-frota { white-space: nowrap; text-align: right; }
 .frota-cab .frota-titulo { margin: 0; }
 /* O mapa rola dentro do próprio painel quando não cabe na tela */
 .mapa { overflow-x: auto; }

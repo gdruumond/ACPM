@@ -4,8 +4,9 @@
 // os dados guardados são regravados no formato atual (ApiClient.atualizarFormatoGravado).
 // Sem o campo "esquema": formato da fase 3 (versão 4).
 import { habilitacoesDoNivel } from './habilitacoes.js';
+import { FROTA_INICIAL } from './frota.js';
 
-export const ESQUEMA = 10;
+export const ESQUEMA = 11;
 
 // Versão 5 (fase 4): simuladores com os nomes usados no aeroclube
 const SIMULADORES_RENOMEADOS = { 'SIM-MONO-1': 'SIM-MONO-A', 'SIM-MONO-2': 'SIM-MONO-C', 'SIM-MULTI-1': 'SIM-MLTE-E', 'SIM-MULTI-2': 'SIM-MLTE-D' };
@@ -52,6 +53,17 @@ const PASSOS = {
   // Versão 10 (fase 4): os dias guardam as solicitações da agenda já importadas (campo "importadas"), pelo mesmo motivo
   10: {
     cadastro: cadastro => cadastro,
+    dia: dia => dia
+  },
+  // Versão 11 (fase 7): a frota sai do código e vai para o cadastro (matrícula, tipo e "Só Parafuso"). O cadastro
+  // que não tem a frota recebe a que estava no código
+  11: {
+    cadastro: cadastro => {
+      if (Array.isArray(cadastro.frota)) return cadastro;
+      // A frota entra antes de "esquema", na ordem em que o app grava (o cadastro não é regravado à toa)
+      const { esquema, ...resto } = cadastro;
+      return { ...resto, frota: FROTA_INICIAL.map(f => ({ ...f })), ...(esquema === undefined ? {} : { esquema }) };
+    },
     dia: dia => dia
   }
 };
