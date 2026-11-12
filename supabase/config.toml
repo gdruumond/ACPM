@@ -251,7 +251,7 @@ port = 587
 user = "env(SUPABASE_AUTH_SMTP_USER)"
 pass = "env(SUPABASE_AUTH_SMTP_PASS)"
 admin_email = "env(SUPABASE_AUTH_SMTP_USER)"
-sender_name = "ACPM Escala de Voo"
+sender_name = "AutoEscala - ACPM"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]
@@ -260,7 +260,7 @@ sender_name = "ACPM Escala de Voo"
 
 # E-mail da troca de endereço em português (o padrão do Supabase é em inglês); os dois endereços recebem um link
 [auth.email.template.email_change]
-subject = "Confirme a troca de e-mail na Escala de Voo do ACPM"
+subject = "Confirme a troca de e-mail no AutoEscala - ACPM"
 content_path = "./supabase/templates/troca-de-email.html"
 
 # Uncomment to customize notification email template

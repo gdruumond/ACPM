@@ -1,8 +1,10 @@
-// Aba BI: horas por avião e sala, instrutor e missão (dia, semana e mês).
+// Aba BI: horas por recurso, instrutor e missão (dia, semana e mês). Os filtros seguem a Escala: a categoria e,
+// dentro dela, um recurso.
 import { EQ, GROUND_EQ_TYPE, GROUND_REG, ACROBAT_REG, MIS } from '../config.js';
 import { fmtH, esc } from '../format.js';
 import { isGroundMission, migrateLegacyMissionName } from '../rules.js';
 import { S, BI_HISTORY } from '../state.js';
+import { categoriaDoRecurso, nomeDoRecurso } from '../categorias.js';
 import { $ } from '../dom.js';
 
 // Renderizador do Dashboard Business Intelligence (BI)
@@ -30,7 +32,7 @@ export function rBI() {
 
   const refDate = ($('#bi-dt') && $('#bi-dt').value) || ($('#dt') && $('#dt').value) || new Date().toISOString().slice(0, 10);
   const refMonth = refDate.slice(0, 7);
-  const fltEqType = $('#bi-flt-eq') ? $('#bi-flt-eq').value : '';
+  const categoria = ($('#bi-flt-cat') && $('#bi-flt-cat').value) || '';
   const fltInsQ = ($('#bi-flt-ins') && $('#bi-flt-ins').value || '').toLowerCase();
 
   const eqStats = {};
@@ -94,8 +96,19 @@ export function rBI() {
     });
   });
 
+  // Categoria e, dentro dela, um recurso: o filtro de recurso lista só os da categoria (e volta a "Todos" se a
+  // categoria muda e o recurso não é dela)
+  const daCategoria = r => !categoria || categoriaDoRecurso(r) === categoria;
+  const recursos = Object.keys(eqStats).filter(daCategoria).sort();
+  const eqFilterEl = $('#bi-flt-eq');
+  let recurso = eqFilterEl ? eqFilterEl.value : '';
+  if (!recursos.includes(recurso)) recurso = '';
+  if (eqFilterEl) {
+    eqFilterEl.innerHTML = '<option value="">Todos</option>' +
+      recursos.map(r => `<option value="${r}"${r === recurso ? ' selected' : ''}>${esc(nomeDoRecurso(r))}</option>`).join('');
+  }
   const eqList = Object.values(eqStats)
-    .filter(e => !fltEqType || e.type === fltEqType)
+    .filter(e => daCategoria(e.reg) && (!recurso || e.reg === recurso))
     .sort((a, b) => b.m - a.m || b.w - a.w || b.d - a.d || a.reg.localeCompare(b.reg));
 
   const insList = Object.values(insStats)
@@ -112,23 +125,23 @@ export function rBI() {
       <div><strong>${fmtH(totH_D)}</strong>No dia (${fmtDateBR})<small>${totF_D} voos/aulas ativas</small></div>
       <div><strong>${fmtH(totH_W)}</strong>Na semana (7 dias)<small>${totF_W} voos/aulas ativas</small></div>
       <div><strong>${fmtH(totH_M)}</strong>No mês (${refMonth.split('-').reverse().join('/')})<small>${daysRecordedInMonth} dias registrados</small></div>
-      <div><strong>${Object.values(S.av).filter(Boolean).length}/${Object.keys(S.av).length}</strong>Aviões e salas disponíveis<small>${S.ins.filter(x => x.on).length}/${S.ins.length} instrutores</small></div>
+      <div><strong>${Object.values(S.av).filter(Boolean).length}/${Object.keys(S.av).length}</strong>Recursos disponíveis<small>${S.ins.filter(x => x.on).length}/${S.ins.length} instrutores</small></div>
     </div>
 
     <div class="bi-grid-2">
       <div class="pn">
-        <h3>Horas por avião e sala (dia, semana e mês)</h3>
+        <h3>Horas por recurso (dia, semana e mês)</h3>
         <div class="tw">
           <table style="min-width:100%" data-bi="eq">
-            <thead><tr><th>Avião / sala</th><th>Tipo</th><th>Dia</th><th>Semana</th><th>Mês</th><th>Uso</th></tr></thead>
+            <thead><tr><th>Recurso</th><th>Tipo</th><th>Dia</th><th>Semana</th><th>Mês</th><th>Uso</th></tr></thead>
             <tbody>
               ${visiveis('eq', eqList).map(e => {
                 const pct = Math.round((e.m / maxEqM) * 100);
                 const disp = (e.reg !== GROUND_REG && !S.av[e.reg]) ? ' <span class="tag fb">Manut.</span>' : '';
                 const acro = e.reg === ACROBAT_REG ? ' <span class="tag">Acrobat</span>' : '';
                 return `<tr>
-                  <td><b>${esc(e.reg)}</b>${acro}${disp}</td>
-                  <td class="sm">${esc(e.type)}</td>
+                  <td><b>${esc(nomeDoRecurso(e.reg))}</b>${acro}${disp}</td>
+                  <td class="sm">${e.reg === GROUND_REG ? '' : esc(e.type)}</td>
                   <td><b>${fmtH(e.d)}</b></td>
                   <td>${fmtH(e.w)}</td>
                   <td><b>${fmtH(e.m)}</b></td>
@@ -168,7 +181,7 @@ export function rBI() {
       <h3>Horas por missão</h3>
       <div class="tw">
         <table style="min-width:100%">
-          <thead><tr><th>Missão</th><th>Equipamentos permitidos</th><th>Dia</th><th>Semana</th><th>Mês</th><th>Proporção</th></tr></thead>
+          <thead><tr><th>Missão</th><th>Recursos permitidos</th><th>Dia</th><th>Semana</th><th>Mês</th><th>Proporção</th></tr></thead>
           <tbody>
             ${Object.values(misStats).map(ms => {
               const rule = MIS[ms.mis] || MIS['Voo Local'];

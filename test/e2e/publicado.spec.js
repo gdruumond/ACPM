@@ -73,8 +73,8 @@ test.describe('Site publicado (login real)', () => {
     await page.locator('#dt').dispatchEvent('change');
     // A data base do BI só muda quando a nova data termina de carregar
     await expect(page.locator('#bi-dt')).toHaveValue('2099-01-01');
-    // A prévia não tem alunos: a escala calculada da data nova fica vazia
-    await expect(page.locator('#out')).toContainText('Nenhum voo nesta data');
+    // A data nova mostra a escala calculada com a demanda copiada do dia anterior (vazia se a prévia não tiver alunos)
+    await expect(page.locator('#out')).toContainText(/Nenhum voo nesta data|missões pedidas/);
     await expect(page.locator('#inst .cd')).toHaveCount(instrutores);
     await abrirMenuDaConta(page);
     await page.locator('#btn-sair').click();

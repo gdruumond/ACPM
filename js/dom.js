@@ -1,13 +1,15 @@
-// Utilitários de DOM: seletor, avisos (toast e aviso fixo), mensagem de status e foco no último campo.
+// Utilitários de DOM: seletor, avisos (notificação temporária e aviso fixo) e foco no último campo.
 
 export const $ = s => document.querySelector(s);
 
-export function showToast(text) {
+// Notificação temporária. tipo 'ok': deu certo (verde, com o sinal de certo); sem tipo: aviso (amarelo)
+export function showToast(text, tipo = '') {
   const box = $('#toast-box');
   if (!box) return;
   const el = document.createElement('div');
-  el.className = 'toast';
-  el.textContent = text;
+  el.className = tipo ? `toast ${tipo}` : 'toast';
+  if (tipo === 'ok') el.innerHTML = '<svg class="ico" aria-hidden="true"><use href="#i-ok"/></svg>';
+  el.append(text);
   box.appendChild(el);
   setTimeout(() => { el.remove(); }, 2800);
 }
@@ -27,8 +29,6 @@ export function fecharAviso(tipo) {
   avisoAtual = null;
   $('#aviso-sync').hidden = true;
 }
-
-export const msg = t => { const el = $('#msg'); if (el) el.textContent = t; if (t) showToast(t); };
 
 export const focusLast = sel => {
   const e = [...document.querySelectorAll(sel)].pop();

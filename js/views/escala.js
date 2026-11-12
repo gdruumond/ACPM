@@ -1,7 +1,8 @@
-// Aba Escala: resumo do dia, a lista dos voos (ou o mapa por avião e sala ou por instrutor) e o histórico da data.
+// Aba Escala: resumo do dia, a lista dos voos (ou o mapa por recurso ou por instrutor) e o histórico da data.
 import { FLIGHT_STATUSES, GROUND_REG } from '../config.js';
 import { hm, WLB, fmtH, esc } from '../format.js';
 import { isGroundMission } from '../rules.js';
+import { categoriaDoRecurso, nomeDoRecurso } from '../categorias.js';
 import { sumUniqueOperationalHours, consolidateTimelineSlots } from '../engine.js';
 import { S, RES, AUDIT_LOG, TL_MODE, isGestor } from '../state.js';
 import { $ } from '../dom.js';
@@ -159,7 +160,6 @@ export function renderAuditPanel() {
 }
 
 const PERTO_DO_LIMITE_KG = 10;
-export const nomeDoRecurso = r => (r === GROUND_REG ? 'Sala Ground' : r);
 const ehGround = o => o.isGround || isGroundMission(o.mis);
 const duracao = o => (ehGround(o) ? '1h30' : fmtH(o.h)) + (o.ss && o.ss !== '1/1' ? ` · sessão ${o.ss}` : '');
 const statusDe = o => (S.fStatus && S.fStatus[o.fKey]) || o.status || 'Confirmado';
@@ -224,8 +224,19 @@ function resumo(out, al, tot) {
   return h + '</div>';
 }
 
+// Horários recolhidos na Lista (continuam assim quando a escala é refeita, até recarregar a página)
+const temposRecolhidos = new Set();
+export function alternarTempo(w) {
+  const recolher = !temposRecolhidos.has(w);
+  if (recolher) temposRecolhidos.add(w);
+  else temposRecolhidos.delete(w);
+  document.querySelectorAll(`#out .tabela-escala tbody tr[data-w="${w}"]:not(.win)`).forEach(tr => { tr.hidden = recolher; });
+  const botao = document.querySelector(`#out [data-recolher-tempo="${w}"]`);
+  if (botao) botao.setAttribute('aria-expanded', String(!recolher));
+}
+
 // Uma linha por voo. Na turma de Ground, horário, missão, sala e instrutor aparecem uma vez; cada aluno tem a
-// sua linha, com o seu status e a sua ação
+// sua linha, com o seu status e a sua ação. Um clique no horário recolhe ou abre os voos dele
 function tabela(voos) {
   const grupos = [];
   const turmas = new Map();
@@ -239,18 +250,20 @@ function tabela(voos) {
   const porTempo = {};
   grupos.forEach(g => { porTempo[g[0].w] = (porTempo[g[0].w] || 0) + 1; });
 
-  let h = `<div class="tw tabela-escala"><table><thead><tr><th>Horário</th><th>Aluno</th><th>Missão</th><th>Avião / sala</th><th>Instrutor</th><th>Peso</th><th>Status</th><th class="edit-only" aria-label="Ação"></th></tr></thead><tbody>`;
+  let h = `<div class="tw tabela-escala"><table><thead><tr><th>Horário</th><th>Aluno</th><th>Missão</th><th>Recurso</th><th>Instrutor</th><th>Peso</th><th>Status</th><th class="edit-only" aria-label="Ação"></th></tr></thead><tbody>`;
   let tempo = -1;
   for (const grupo of grupos) {
     const o = grupo[0];
+    const recolhido = temposRecolhidos.has(o.w);
     if (o.w !== tempo) {
       tempo = o.w;
       const n = porTempo[o.w];
-      h += `<tr class="win"><td colspan="8">${WLB(o.w)} <small>${n} ${n === 1 ? 'decolagem ou aula' : 'decolagens e aulas'}</small></td></tr>`;
+      h += `<tr class="win" data-w="${o.w}"><td colspan="8"><button type="button" class="win-btn" data-recolher-tempo="${o.w}" aria-expanded="${!recolhido}"><svg class="ico seta" aria-hidden="true"><use href="#i-baixo"/></svg>${WLB(o.w)} <small>${n} ${n === 1 ? 'decolagem ou aula' : 'decolagens e aulas'}</small></button></td></tr>`;
     }
     const rs = grupo.length > 1 ? ` rowspan="${grupo.length}"` : '';
     const cancelado = voo => (statusDe(voo) === 'Cancelado' ? ' class="st-Cancelado"' : '');
-    h += `<tr${cancelado(o)}>
+    const doTempo = ` data-w="${o.w}"${recolhido ? ' hidden' : ''}`;
+    h += `<tr${cancelado(o)}${doTempo}>
       <td class="c-hr hr"${rs}>${hm(o.a)}–${hm(o.b)} <small>${duracao(o)}</small>${preferencia(o)}</td>
       <td class="c-aluno"><b>${esc(o.s)}</b></td>
       <td class="c-missao"${rs}>${esc(o.mis)}${grupo.length > 1 ? ` <small>Turma de ${grupo.length} alunos</small>` : ''}</td>
@@ -261,7 +274,7 @@ function tabela(voos) {
       <td class="c-acao edit-only acao">${acao(o)}</td>
     </tr>`;
     for (const aluno of grupo.slice(1)) {
-      h += `<tr class="membro${statusDe(aluno) === 'Cancelado' ? ' st-Cancelado' : ''}"><td class="c-aluno"><b>${esc(aluno.s)}</b></td><td class="c-status">${seletorDeStatus(aluno)}</td><td class="c-acao edit-only acao">${acao(aluno)}</td></tr>`;
+      h += `<tr class="membro${statusDe(aluno) === 'Cancelado' ? ' st-Cancelado' : ''}"${doTempo}><td class="c-aluno"><b>${esc(aluno.s)}</b></td><td class="c-status">${seletorDeStatus(aluno)}</td><td class="c-acao edit-only acao">${acao(aluno)}</td></tr>`;
     }
   }
   return h + '</tbody></table></div>';
@@ -277,16 +290,20 @@ export function rOut() {
   }
   const { out, al, tot } = RES;
 
+  // Filtros: a categoria e, dentro dela, um recurso (só os que estão na escala da data)
+  const categoria = ($('#flt-esc-cat') && $('#flt-esc-cat').value) || '';
+  const daCategoria = r => !categoria || categoriaDoRecurso(r) === categoria;
+  const usados = [...new Set(out.map(o => o.r))].filter(daCategoria).sort();
   const eqFilterEl = $('#flt-esc-eq');
-  const curEqFilter = eqFilterEl ? eqFilterEl.value : '';
+  let curEqFilter = eqFilterEl ? eqFilterEl.value : '';
+  if (!usados.includes(curEqFilter)) curEqFilter = '';
   if (eqFilterEl) {
-    const usados = [...new Set(out.map(o => o.r))].sort();
-    eqFilterEl.innerHTML = `<option value="">Todos os aviões e salas (${usados.length})</option>` +
+    eqFilterEl.innerHTML = '<option value="">Todos</option>' +
       usados.map(r => `<option value="${r}"${r === curEqFilter ? ' selected' : ''}>${esc(nomeDoRecurso(r))}</option>`).join('');
   }
   const qFilter = ($('#flt-esc-q') && $('#flt-esc-q').value || '').toLowerCase();
   const voos = out.filter(o => {
-    if (curEqFilter && o.r !== curEqFilter) return false;
+    if (!daCategoria(o.r) || (curEqFilter && o.r !== curEqFilter)) return false;
     if (qFilter && !o.s.toLowerCase().includes(qFilter) && !o.ins.toLowerCase().includes(qFilter) && !o.mis.toLowerCase().includes(qFilter)) return false;
     return true;
   });

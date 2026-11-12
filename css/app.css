@@ -72,8 +72,10 @@ header.topo {
   column-gap: 12px;
   row-gap: 4px;
 }
-.topo-marca { grid-area: marca; margin: 0; font: 700 21px 'Barlow Semi Condensed', sans-serif; letter-spacing: .2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.topo-marca span { font-size: 13px; color: var(--ye); letter-spacing: .08em; margin-left: 4px; }
+/* Marca: a águia do ACPM e "AutoEscala", centralizados na mesma linha */
+.topo-marca { grid-area: marca; margin: 0; min-width: 0; display: flex; align-items: center; gap: 8px; font: 700 21px/1.2 'Barlow Semi Condensed', sans-serif; letter-spacing: .2px; }
+.topo-logo { flex: none; width: auto; height: 24px; }
+.topo-titulo { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topo-data {
   grid-area: data; display: flex; align-items: center; gap: 2px;
   background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.16); border-radius: 8px; padding: 2px;
@@ -81,10 +83,12 @@ header.topo {
 .topo-ico { width: 32px; height: 32px; border: 0; background: transparent; color: var(--hdT); border-radius: 6px; cursor: pointer; display: grid; place-items: center; }
 .topo-ico:hover:not(:disabled) { background: rgba(255,255,255,.1); }
 .topo-ico:disabled { opacity: .35; cursor: default; }
+/* Largura fixa (cabe a data mais longa, com o ano e "amanhã"): as setas não mudam de lugar quando a data muda */
 .topo-data-campo {
-  position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 6px;
-  font: 600 15.5px 'Barlow Semi Condensed', sans-serif; white-space: nowrap; cursor: pointer;
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 256px;
+  padding: 4px 10px; border-radius: 6px; font: 600 15.5px 'Barlow Semi Condensed', sans-serif; white-space: nowrap; cursor: pointer;
 }
+#dt-rotulo { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .topo-data-campo:hover { background: rgba(255,255,255,.1); }
 .topo-data-rel { font: 700 12px 'Barlow', sans-serif; background: var(--ye); color: #12263A; border-radius: 10px; padding: 1px 8px; }
 /* O campo de data cobre o rótulo: um clique abre o calendário do navegador */
@@ -107,8 +111,6 @@ header.topo {
 .hd-sel option { background: var(--hd); color: var(--hdT); }
 .hd-btn:hover:not(:disabled) { background: rgba(255,255,255,.1); }
 .hd-btn:disabled, .hd-sel:disabled { opacity: 0.65; cursor: not-allowed; }
-/* Desfazer só aparece quando há o que desfazer */
-#btn-undo:disabled { display: none; }
 .badge-cnt {
   background: rgba(255,255,255,.18);
   color: var(--hdT);
@@ -141,6 +143,13 @@ header.topo {
 }
 .menu-itens button:hover, .menu-itens button:focus-visible { background: var(--info-bg); }
 #btn-sair { color: var(--er); }
+/* Tema: interruptor com o sol (claro) e a lua (escuro); o lado em uso fica destacado */
+.menu-itens button.tema { display: flex; align-items: center; gap: 8px; color: var(--mu); }
+.tema-trilho { position: relative; width: 34px; height: 20px; border-radius: 10px; background: var(--ln2); transition: background .15s; flex: none; }
+.tema-botao { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: left .15s; }
+#btn-theme[aria-checked="true"] .tema-trilho { background: var(--ac); }
+#btn-theme[aria-checked="true"] .tema-botao { left: 16px; }
+#btn-theme[aria-checked="false"] .ico:first-child, #btn-theme[aria-checked="true"] .ico:last-child { color: var(--ink); }
 
 /* Abas: sem número, na ordem de uso; a ativa sublinhada em amarelo; selos de atenção */
 nav#nav { grid-area: abas; display: flex; align-items: center; gap: 2px; margin: 0 -8px; overflow-x: auto; scrollbar-width: none; }
@@ -167,7 +176,7 @@ body[data-perfil="secretaria"] #btn-share-link { display: none !important; }
   header.topo { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "marca ferramentas" "data data" "abas abas"; padding: 8px 12px 0; }
   .hd-sel { max-width: 110px; }
   .topo-marca { font-size: 18px; }
-  .topo-marca span { display: none; }
+  .topo-logo { height: 20px; }
   .topo-data { justify-content: space-between; }
   .hd-txt, .hd-usuario, .hd-seta { display: none; }
   .hd-conta { padding: 3px; }
@@ -318,6 +327,21 @@ details.caixa.avisos summary { color: var(--wa); }
 .tabela-escala tr:hover .acao .x, .tabela-escala .acao .x:focus-visible { opacity: 1; }
 @media (hover: none) { .tabela-escala .acao .x { opacity: 1; } }
 #out[data-vista="lista"] .mapa, #out[data-vista="mapa"] .tabela-escala { display: none; }
+/* A hora da última atualização da escala: discreta, com um relógio, ao lado do título */
+.atualizada { display: inline-flex; align-items: center; gap: 4px; margin-left: 10px; vertical-align: middle; font: 400 13px 'Barlow', sans-serif; color: var(--mu); }
+.atualizada .ico { width: 14px; height: 14px; vertical-align: 0; }
+/* Horários da Lista e categorias da frota: um clique recolhe ou abre (a seta gira) */
+.win-btn, .grupo-btn {
+  display: flex; align-items: center; gap: 6px; width: 100%; padding: 0; border: 0; background: transparent;
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.win-btn .seta, .grupo-btn .seta { flex: none; transition: transform .15s; }
+.win-btn[aria-expanded="false"] .seta, .grupo-btn[aria-expanded="false"] .seta { transform: rotate(-90deg); }
+.tabela-escala tbody tr[hidden], table.frota tr[hidden] { display: none !important; }
+/* Filtros com rótulo visível (Categoria e Avião / sala começam os dois em "Todos") */
+.flt-rotulo { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--mu); }
+.frota-cab { margin: 16px 0 8px; }
+.frota-cab .frota-titulo { margin: 0; }
 /* O mapa rola dentro do próprio painel quando não cabe na tela */
 .mapa { overflow-x: auto; }
 .mapa .tl-wrap { min-width: 720px; }
@@ -327,7 +351,8 @@ details.caixa.avisos summary { color: var(--wa); }
   .seg { width: 100%; }
   .seg button { flex: 1; justify-content: center; padding: 6px 4px; font-size: 13.5px; }
   .seg .ico { display: none; }
-  #flt-esc-eq, #flt-esc-q { flex: 1 1 140px; min-width: 0; }
+  #s-esc .flt-rotulo, #flt-esc-q { flex: 1 1 140px; min-width: 0; }
+  .flt-rotulo select { flex: 1; min-width: 0; }
   .bar .cresce { display: none; }
   .resumo .st { width: 100%; justify-content: space-between; gap: 8px; }
   details.caixa { min-width: 0; flex-basis: 100%; }
@@ -904,8 +929,7 @@ a { color: var(--ac); }
 
 /* Manual do Usuário Recolhível (Final da Aba 6) */
 /* Manual (botão no topo): leitura confortável, índice de seções e tabelas geradas das regras */
-.manual { max-width: 980px; }
-.manual-intro { font-size: 15px; max-width: 80ch; margin: 0 0 12px; }
+.manual-intro { font-size: 15px; margin: 0 0 12px; }
 .manual-indice { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
 .manual-indice a {
   border: 1px solid var(--ln); border-radius: 999px; padding: 4px 12px; color: var(--ac);
@@ -915,7 +939,7 @@ a { color: var(--ac); }
 .manual .pn { margin-bottom: 16px; scroll-margin-top: 120px; }
 .manual h3 { margin: 0 0 8px; }
 .manual h4 { margin: 18px 0 4px; }
-.manual p, .manual li, .manual dd { line-height: 1.55; max-width: 80ch; }
+.manual p, .manual li, .manual dd { line-height: 1.55; }
 .manual-destaque { border-left: 4px solid var(--ac); padding: 4px 10px; margin: 10px 0; }
 .manual-lista-curta { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 6px 0 10px; }
 .manual-lista-curta li { border: 1px solid var(--ln); border-radius: 4px; padding: 2px 8px; }
@@ -935,15 +959,18 @@ a { color: var(--ac); }
   pointer-events: none;
 }
 .toast {
+  display: flex; align-items: center; gap: 10px; max-width: min(460px, calc(100vw - 36px));
   background: var(--hd);
   color: var(--hdT);
-  border-left: 4px solid var(--ye);
-  padding: 9px 14px;
-  border-radius: 5px;
-  font: 500 13px 'Barlow', sans-serif;
+  border-left: 5px solid var(--ye);
+  padding: 13px 18px;
+  border-radius: 8px;
+  font: 500 15px 'Barlow', sans-serif;
   box-shadow: 0 6px 18px rgba(0,0,0,0.35);
   animation: fadeIn .2s ease;
 }
+.toast.ok { background: #14532F; color: #fff; border-left-color: #5FD39A; }
+.toast.ok .ico { width: 20px; height: 20px; color: #5FD39A; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 [hidden] { display: none !important; }
@@ -999,6 +1026,7 @@ body[data-backend="supabase"] #btn-bi-clr { display: none !important; }
   input[type="checkbox"]:not(.sw) { width: 24px; height: 24px; }
   .cel { height: 44px; min-width: 44px; }
   .fila li { min-height: 48px; }
+  .win-btn, .grupo-btn { min-height: 44px; }
   .tg { padding-right: 0; }
   .cal { gap: 2px; }
 }
