@@ -5,8 +5,27 @@
 // Sem o campo "esquema": formato da fase 3 (versão 4).
 import { habilitacoesDoNivel } from './habilitacoes.js';
 import { FROTA_INICIAL } from './frota.js';
+import { HORARIOS_INICIAIS, minutoDaPreferencia, ajustarPreferencias } from './horarios.js';
+import { disponibilidadeAtual } from './rules.js';
 
-export const ESQUEMA = 11;
+export const ESQUEMA = 12;
+
+// Um pedido do dia com as preferências em minutos e a disponibilidade no formato atual (formato 12)
+function pedidoEmMinutos(pedido) {
+  if (!pedido || typeof pedido !== 'object') return pedido;
+  const novo = { ...pedido };
+  if ('p1' in pedido) novo.p1 = minutoDaPreferencia(pedido.p1);
+  if ('p2' in pedido) novo.p2 = minutoDaPreferencia(pedido.p2);
+  if ('jan' in pedido) {
+    const jan = disponibilidadeAtual(pedido.jan);
+    if (jan) novo.jan = jan;
+    else delete novo.jan;
+  }
+  // O PA-34 passa a sair de 30 em 30 minutos: a preferência vai para o horário mais próximo da lista nova
+  if (novo.eq === 'PA-34') ajustarPreferencias(novo, HORARIOS_INICIAIS['PA-34']);
+  if (Array.isArray(pedido.extra)) novo.extra = pedido.extra.map(pedidoEmMinutos);
+  return novo;
+}
 
 // Versão 5 (fase 4): simuladores com os nomes usados no aeroclube
 const SIMULADORES_RENOMEADOS = { 'SIM-MONO-1': 'SIM-MONO-A', 'SIM-MONO-2': 'SIM-MONO-C', 'SIM-MULTI-1': 'SIM-MLTE-E', 'SIM-MULTI-2': 'SIM-MLTE-D' };
@@ -65,6 +84,18 @@ const PASSOS = {
       return { ...resto, frota: FROTA_INICIAL.map(f => ({ ...f })), ...(esquema === undefined ? {} : { esquema }) };
     },
     dia: dia => dia
+  },
+  // Versão 12 (fase 7): o cadastro guarda os horários de decolagem de cada categoria (o PA-34 sai de 30 em 30
+  // minutos); os pedidos guardam as preferências em minutos (antes, o número da janela) e "h5" vira "h820"
+  12: {
+    cadastro: cadastro => {
+      if (cadastro.horarios && typeof cadastro.horarios === 'object') return cadastro;
+      const { esquema, ...resto } = cadastro;
+      return { ...resto, horarios: structuredClone(HORARIOS_INICIAIS), ...(esquema === undefined ? {} : { esquema }) };
+    },
+    dia: dia => (dia.pedidos && typeof dia.pedidos === 'object'
+      ? { ...dia, pedidos: Object.fromEntries(Object.entries(dia.pedidos).map(([id, pedido]) => [id, pedidoEmMinutos(pedido)])) }
+      : dia)
   }
 };
 

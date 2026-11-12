@@ -15,6 +15,7 @@
  */
 import { WIN, NI, T, GROUND_EQ_TYPE, GROUND_REG, GROUND_DURATION_MIN, GROUND_DURATION_H, MIS, PRE } from './config.js';
 import { novoRecurso, matriculasDoTipo } from './frota.js';
+import { HORARIOS_PADRAO, DE_30_EM_30, horariosDaMissao, ajustarPreferencias, paraMinuto } from './horarios.js';
 import { hm, fmtH, fmtDurLabel, pad, amanhaISO, isoMenosDias } from './format.js';
 import { isGroundMission, blank, rotuloDaDisponibilidade } from './rules.js';
 import { habilitacoesDoNivel, normalizarHabilitacoes, nomeDaHabilitacao, podeFazer } from './habilitacoes.js';
@@ -26,8 +27,8 @@ import { rBI, alternarTodosDoBI } from './views/bi.js';
 import { renderAuditPanel, rOut, alternarTempo } from './views/escala.js';
 import { singleDemandRowHTML, cnt, rDem, applyDemandFilters } from './views/demanda.js';
 import { rIns, rAlu, applyInstructorFilters, preencherFiltroDeHabilitacoes, mostrarVistaDosInstrutores, abrirPainelDoInstrutor, fecharPainelDoInstrutor, atualizarLinhaDoCadastro, atualizarLinhaDoAluno } from './views/cadastros.js';
-import { rRec, rRevisao, alternarGrupoDaFrota } from './views/recursos.js';
-import { opcoesDeCategoria } from './categorias.js';
+import { rRec, rRevisao, alternarGrupoDaFrota, NOMES_DAS_CATEGORIAS } from './views/recursos.js';
+import { opcoesDeCategoria, categoriaDoTipo } from './categorias.js';
 import { setRole, save, logChange, refazerEscala, escalaCalculada, marcarEscalaSoCalculada, gravarEscalaCalculada, abrirData, historicoParaPainel, carregarData, carregarBI } from './actions.js';
 import { exp, pdf } from './export.js';
 import { projetoSupabase } from './config-supabase.js';
@@ -37,7 +38,7 @@ import { abrirConta, carregarContas, gerarSenha, mensagem } from './views/conta.
 import { rManual } from './views/manual.js';
 import { atualizarSelosDaEscala, lerPedidosDaData } from './views/selos.js';
 import { importarSolicitacoes, disponibilidadeDaSolicitacao } from './agenda.js';
-import { abrirAgenda, carregarMes, mudarMes, escolherDia, diaDaAgenda, lembrarRegistradoPor, podeEditarAgenda, rAgenda } from './views/agenda.js';
+import { abrirAgenda, carregarMes, mudarMes, escolherDia, diaDaAgenda, lembrarRegistradoPor, podeEditarAgenda, rAgenda, preencherHorariosDaAgenda } from './views/agenda.js';
 import { ESQUEMA } from './migracoes.js';
 import { iniciarSessaoSupabase } from './sessao.js';
 
@@ -522,6 +523,7 @@ async function registrarPedido(excecao) {
 $('#form-agenda').onsubmit = e => { e.preventDefault(); registrarPedido(false); };
 $('#ag-excecao').onclick = () => registrarPedido(true);
 $('#ag-janela').onchange = () => { $('#ag-horario-rotulo').hidden = $('#ag-janela').value !== 'horario'; };
+$('#ag-missao').onchange = preencherHorariosDaAgenda;
 
 async function cancelarPedido(b) {
   if (!podeEditarAgenda() || !confirmado(b, 'Confirmar cancelamento')) return;
@@ -558,8 +560,8 @@ document.addEventListener('click', e => {
       fly: true,
       mis: 'Voo Local',
       eq: 'C152',
-      p1: 4,
-      p2: 6,
+      p1: T[4],
+      p2: T[6],
       nb: 1,
       ss: 1,
       pr: s.pr || 3
@@ -629,6 +631,37 @@ document.addEventListener('click', e => {
       logChange('inc', `Revertido: ${rev.recurso.reg} de volta à frota`, null, entry.id);
       save(); rRec();
     }
+    return;
+  }
+
+  // Horários de decolagem de uma categoria (Recursos); os pedidos dela acompanham (o horário mais próximo da lista nova)
+  if (a === 'remover-horario' || a === 'adicionar-horario' || a === 'horarios-padrao' || a === 'horarios-30') {
+    const cat = b.dataset.cat;
+    const nome = NOMES_DAS_CATEGORIAS[cat];
+    const atual = (S.horarios && S.horarios[cat]) || [];
+    let lista, descricao;
+    if (a === 'remover-horario') {
+      if (atual.length <= 1) { showToast('Cada categoria precisa de pelo menos um horário.'); return; }
+      lista = atual.filter(m => m !== +b.dataset.min);
+      descricao = `sem ${hm(+b.dataset.min)}`;
+    } else if (a === 'adicionar-horario') {
+      const minuto = paraMinuto(b.closest('.horarios-cat').querySelector('.hr-novo').value);
+      if (minuto === null || minuto < 6 * 60 || minuto > 17 * 60) { showToast('Escolha um horário entre 06:00 e 17:00.'); return; }
+      lista = [...new Set([...atual, minuto])].sort((x, y) => x - y);
+      descricao = `com ${hm(minuto)}`;
+    } else if (a === 'horarios-padrao') {
+      lista = [...HORARIOS_PADRAO];
+      descricao = 'as janelas do dia';
+    } else {
+      lista = [...DE_30_EM_30];
+      descricao = 'de 30 em 30 minutos';
+    }
+    S.horarios = { ...S.horarios, [cat]: lista };
+    S.stu.forEach(s => [s, ...(s.extra || [])].forEach(p => {
+      if (categoriaDoTipo(p.eq) === cat) ajustarPreferencias(p, horariosDaMissao(S.horarios, p.mis, p.eq));
+    }));
+    logChange('mod', `Horários de decolagem do ${nome}: ${descricao}`);
+    save(); rRec(); rDem();
     return;
   }
 
@@ -846,18 +879,12 @@ document.addEventListener('change', e => {
           if (mRule.isGround) {
             target.eq = GROUND_EQ_TYPE;
             target.nb = GROUND_DURATION_H;
-            if (target.p1 === NI) { target.p1 = 0; target.p2 = 1; }
-          } else {
-            if (+target.nb === GROUND_DURATION_H || !Number.isInteger(+target.nb)) target.nb = 1;
-            if (target.mis === 'Noturno') {
-              target.p1 = NI;
-              target.p2 = NI;
-            } else if (target.p1 === NI) {
-              target.p1 = 1;
-              target.p2 = 2;
-            }
+          } else if (+target.nb === GROUND_DURATION_H || !Number.isInteger(+target.nb)) {
+            target.nb = 1;
           }
         }
+        // Os horários da missão e do avião novos (o Noturno sai às 17:30; o PA-34 tem os seus)
+        if (f === 'mis' || f === 'eq') ajustarPreferencias(target, horariosDaMissao(S.horarios, target.mis, target.eq));
         logChange('mod', `Pedido ${s.nm}: ${target.mis} · ${target.eq} · ${fmtDurLabel(target.nb)}`);
       }
       save();

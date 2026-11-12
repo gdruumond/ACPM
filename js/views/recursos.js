@@ -4,7 +4,8 @@
 import { WIN, NI, AIRCRAFT_EQ_TYPES, SIM_EQ_TYPES, REVISAO_H } from '../config.js';
 import { S, RES } from '../state.js';
 import { $ } from '../dom.js';
-import { hm, fmtH } from '../format.js';
+import { hm, fmtH, esc } from '../format.js';
+import { CATEGORIAS_COM_HORARIOS } from '../horarios.js';
 
 // Os grupos usam os ids das categorias do filtro (js/categorias.js)
 const GRUPOS = [...AIRCRAFT_EQ_TYPES.map(tipo => ({ id: tipo, rotulo: tipo, tipos: [tipo] })), { id: 'sim', rotulo: 'Simuladores', tipos: SIM_EQ_TYPES }];
@@ -68,7 +69,27 @@ export function rRevisao() {
   }).join('');
 }
 
+// Horários de decolagem de cada categoria: tirar (✕), pôr um horário e os modelos (as janelas do dia e de 30 em 30)
+export const NOMES_DAS_CATEGORIAS = { C152: 'C152', C172: 'C172', sim: 'Simulador', 'PA-34': 'PA-34' };
+export function rHorarios() {
+  $('#horarios').innerHTML = CATEGORIAS_COM_HORARIOS.map(cat => {
+    const nome = NOMES_DAS_CATEGORIAS[cat];
+    const lista = (S.horarios && S.horarios[cat]) || [];
+    return `<div class="horarios-cat" data-cat="${cat}">
+      <b class="horarios-nome">${esc(nome)}</b>
+      <span class="horarios-lista">${lista.map(m => `<span class="hr-chip">${hm(m)}<button type="button" class="edit-only" data-act="remover-horario" data-cat="${cat}" data-min="${m}" aria-label="Tirar ${hm(m)} dos horários do ${esc(nome)}"><svg class="ico" aria-hidden="true"><use href="#i-fechar"/></svg></button></span>`).join('')}</span>
+      <span class="horarios-acoes edit-only">
+        <input type="time" class="hr-novo" step="300" min="06:00" max="17:00" aria-label="Novo horário do ${esc(nome)}">
+        <button type="button" class="btn quiet" data-act="adicionar-horario" data-cat="${cat}">Adicionar</button>
+        <button type="button" class="btn quiet" data-act="horarios-padrao" data-cat="${cat}">Janelas do dia</button>
+        <button type="button" class="btn quiet" data-act="horarios-30" data-cat="${cat}">De 30 em 30 min</button>
+      </span>
+    </div>`;
+  }).join('');
+}
+
 export function rRec() {
   $('#wins').innerHTML = WIN.map((w, i) => `<label class="janela${S.win[i] ? '' : ' off'}"><input type="checkbox" class="sw" data-a="win" data-i="${i}"${S.win[i] ? ' checked' : ''}><b>${w}</b> <small>${i == NI ? 'noturno' : (i + 1) + 'º'}</small></label>`).join('');
+  rHorarios();
   rRevisao();
 }

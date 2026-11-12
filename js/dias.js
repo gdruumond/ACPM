@@ -5,6 +5,7 @@ import { WIN, DEFAULT_LIM, AIRCRAFT_EQ_TYPES } from './config.js';
 import { blank } from './rules.js';
 import { filasDoDiaSeguinte } from './rodizio.js';
 import { FROTA_INICIAL, normalizarFrota } from './frota.js';
+import { normalizarHorarios } from './horarios.js';
 
 // jan: disponibilidade do aluno (só quando o pedido tem uma)
 const CAMPOS_DO_PEDIDO = ['fly', 'mis', 'eq', 'p1', 'p2', 'nb', 'ss', 'pr', 'jan'];
@@ -25,7 +26,8 @@ export function separar(estado) {
       // O nível A01–A09 de antes da fase 4 fica só como cópia, em quem já o tinha
       ins: estado.ins.map(({ id, nm, lv, kg, hab }) => ({ id, nm, ...(lv === undefined ? {} : { lv }), kg, hab: [...(hab || [])] })),
       stu: estado.stu.map(({ id, nm, kg, bl }) => ({ id, nm, kg, bl: [...(bl || [])] })),
-      ...(Array.isArray(estado.frota) ? { frota: estado.frota.map(f => ({ ...f })) } : {})
+      ...(Array.isArray(estado.frota) ? { frota: estado.frota.map(f => ({ ...f })) } : {}),
+      ...(estado.horarios ? { horarios: structuredClone(estado.horarios) } : {})
     },
     dia: {
       win: [...estado.win],
@@ -52,6 +54,7 @@ export function juntar(cadastro, dia = diaPadrao()) {
   return {
     schemaVer: 4,
     ...(Array.isArray(cadastro.frota) ? { frota } : {}),
+    ...(cadastro.horarios ? { horarios: normalizarHorarios(cadastro.horarios) } : {}),
     win: Array.isArray(dia.win) ? [...dia.win] : WIN.map(() => true),
     av: { ...avDaFrota(frota), ...(dia.av || {}) },
     lim: { ...DEFAULT_LIM },

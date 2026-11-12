@@ -40,6 +40,19 @@ test.describe('Agenda de Solicitações', () => {
     await expect(page.locator('#agenda-cal [data-dia="2026-11-11"] .qtd')).toHaveText('2');
   });
 
+  test('o horário específico oferece os horários da missão: o Multimotor (PA-34), de 30 em 30 minutos', async ({ page }) => {
+    await abrir(page, { estado: comAlunos() });
+    await irPara(page, 'age');
+    await page.locator('#ag-janela').selectOption('horario');
+    await expect(page.locator('#ag-horario option')).toHaveText(['06:30', '08:20', '10:10', '11:30', '12:40', '13:40', '14:30', '16:20']);
+    await page.locator('#ag-missao').selectOption('Multimotor');
+    await expect(page.locator('#ag-horario option')).toHaveCount(21);
+    await registrar(page, { missao: 'Multimotor', janela: 'horario', horario: '07:30' });
+    await expect(page.locator('#agenda-lista tbody tr').first()).toContainText('às 07:30');
+    await page.locator('#ag-missao').selectOption('Noturno');
+    await expect(page.locator('#ag-horario option')).toHaveText(['17:30']);
+  });
+
   test('"Registrado por" é obrigatório', async ({ page }) => {
     await abrir(page, { estado: comAlunos() });
     await irPara(page, 'age');
@@ -113,7 +126,7 @@ test.describe('Agenda de Solicitações', () => {
     await expect(linha(1000).locator('[data-f="fly"]')).toBeChecked();
     await expect(linha(1000).locator('[data-f="jan"]')).toHaveValue('tarde');
     await expect(linha(1001).locator('[data-f="mis"]')).toHaveValue('IFR');
-    await expect(linha(1001).locator('[data-f="jan"]')).toHaveValue('h6');
+    await expect(linha(1001).locator('[data-f="jan"]')).toHaveValue('h870');
     await expect(page.locator('#audit-log-list')).toContainText('Agenda: Aluno 1000 incluído (Voo Local · Tarde)');
 
     await page.locator('#importar-agenda').click();

@@ -24,21 +24,27 @@ describe('Agenda de solicitações', () => {
     assert.equal(primeiraDataAberta(em('2026-12-31T14:00:00-03:00')), '2027-01-02');
   });
 
-  it('a disponibilidade da solicitação vira a do pedido (o horário específico vira a janela daquele horário)', () => {
+  it('a disponibilidade da solicitação vira a do pedido (o horário específico vira aquele horário, em minutos)', () => {
     assert.deepEqual(['manha', 'tarde', 'noite'].map(janela => disponibilidadeDaSolicitacao({ janela })), ['manha', 'tarde', 'noite']);
-    assert.equal(disponibilidadeDaSolicitacao({ janela: 'horario', horario: '14:30' }), 'h6');
-    assert.equal(disponibilidadeDaSolicitacao({ janela: 'horario', horario: '15:00' }), undefined, 'horário fora das janelas: sem restrição');
+    assert.equal(disponibilidadeDaSolicitacao({ janela: 'horario', horario: '14:30' }), 'h870');
+    assert.equal(disponibilidadeDaSolicitacao({ janela: 'horario', horario: '07:30' }), 'h450');
+    assert.equal(disponibilidadeDaSolicitacao({ janela: 'horario', horario: '25:00' }), undefined, 'horário inválido: sem restrição');
   });
 
-  it('cada solicitação vira um pedido pronto para a escala', () => {
+  it('cada solicitação vira um pedido pronto para a escala, com os horários da categoria', () => {
     assert.deepEqual(pedidoDaSolicitacao({ missao: 'Voo Local', janela: 'tarde' }),
-      { fly: true, mis: 'Voo Local', eq: 'C152', p1: 4, p2: 5, nb: 1, ss: 1, pr: 3, jan: 'tarde' });
+      { fly: true, mis: 'Voo Local', eq: 'C152', p1: 760, p2: 820, nb: 1, ss: 1, pr: 3, jan: 'tarde' });
     assert.deepEqual(pedidoDaSolicitacao({ missao: 'IFR', janela: 'horario', horario: '14:30' }),
-      { fly: true, mis: 'IFR', eq: 'C172', p1: 6, p2: 6, nb: 1, ss: 1, pr: 3, jan: 'h6' });
+      { fly: true, mis: 'IFR', eq: 'C172', p1: 870, p2: 870, nb: 1, ss: 1, pr: 3, jan: 'h870' });
     assert.deepEqual(pedidoDaSolicitacao({ missao: 'Noturno', janela: 'noite' }),
-      { fly: true, mis: 'Noturno', eq: 'C172', p1: 8, p2: 8, nb: 1, ss: 1, pr: 3, jan: 'noite' });
+      { fly: true, mis: 'Noturno', eq: 'C172', p1: 1050, p2: 1050, nb: 1, ss: 1, pr: 3, jan: 'noite' });
     const ground = pedidoDaSolicitacao({ missao: 'Ground C152', janela: 'manha' });
-    assert.deepEqual([ground.eq, ground.nb, ground.p1, ground.p2, ground.jan], ['Sala Ground', 1.5, 0, 1, 'manha']);
+    assert.deepEqual([ground.eq, ground.nb, ground.p1, ground.p2, ground.jan], ['Sala Ground', 1.5, 390, 500, 'manha']);
+    // O PA-34 tem horários de 30 em 30 minutos
+    assert.deepEqual(pedidoDaSolicitacao({ missao: 'Multimotor', janela: 'horario', horario: '07:30' }),
+      { fly: true, mis: 'Multimotor', eq: 'PA-34', p1: 450, p2: 450, nb: 1, ss: 1, pr: 3, jan: 'h450' });
+    const manhaPa34 = pedidoDaSolicitacao({ missao: 'Multimotor', janela: 'manha' });
+    assert.deepEqual([manhaPa34.p1, manhaPa34.p2], [390, 420]);
   });
 });
 
@@ -50,7 +56,7 @@ describe('Importar as solicitações da agenda para a demanda', () => {
     const e = estado();
     const resumo = importarSolicitacoes(e, [pedido(1, 1000)]);
     assert.deepEqual(resumo, { novos: 1, atualizados: 0, semAluno: 0 });
-    assert.deepEqual([e.stu[0].fly, e.stu[0].mis, e.stu[0].jan, e.stu[0].p1], [true, 'Voo Local', 'tarde', 4]);
+    assert.deepEqual([e.stu[0].fly, e.stu[0].mis, e.stu[0].jan, e.stu[0].p1], [true, 'Voo Local', 'tarde', 760]);
     assert.deepEqual(e.importadas, [1]);
   });
 
@@ -66,7 +72,7 @@ describe('Importar as solicitações da agenda para a demanda', () => {
     const e = estado();
     const resumo = importarSolicitacoes(e, [pedido(3, 1002)]);
     assert.deepEqual(resumo, { novos: 0, atualizados: 1, semAluno: 0 });
-    assert.deepEqual([e.stu[2].jan, e.stu[2].p1, e.stu[2].extra], ['tarde', 4, []]);
+    assert.deepEqual([e.stu[2].jan, e.stu[2].p1, e.stu[2].extra], ['tarde', 760, []]);
   });
 
   it('ignora cancelados e os já importados; conta os alunos que não estão mais no cadastro', () => {

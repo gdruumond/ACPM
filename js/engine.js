@@ -3,7 +3,8 @@
 import { T, NI, DAY, NIGHT_OK, MIS, DEFAULT_LIM, GROUND_EQ_TYPE, GROUND_REG, GROUND_DURATION_MIN, GROUND_DURATION_H, REVISAO_H, MENOR_VOO_H } from './config.js';
 import { FROTA_INICIAL, matriculasDoTipo } from './frota.js';
 import { hm, fmtH } from './format.js';
-import { isGroundMission, doesGroundGateFlight, janelasDaDisponibilidade, rotuloDaDisponibilidade } from './rules.js';
+import { isGroundMission, doesGroundGateFlight, disponibilidadeDoAluno, rotuloDaDisponibilidade } from './rules.js';
+import { HORARIOS_INICIAIS, horariosDaMissao, periodoDoMinuto, minutoDaPreferencia } from './horarios.js';
 import { podeFazer, descreverExigencias } from './habilitacoes.js';
 import { categoriaDoRodizio, ajustarFilas } from './rodizio.js';
 
@@ -87,6 +88,8 @@ export function runAllocationEngine(state) {
   const frota = Array.isArray(state.frota) ? state.frota : FROTA_INICIAL;
   const soParafuso = matriculasDoTipo(frota, 'C152', { parafuso: true });
   const nomesSoParafuso = soParafuso.length ? soParafuso.join(' ou ') : 'marcada como “Só Parafuso”';
+  // Os horários de decolagem de cada categoria vêm do cadastro (fase 7); sem eles, os iniciais
+  const horarios = state.horarios || HORARIOS_INICIAIS;
   // Aeronaves/simuladores que cada instrutor já usou no dia, na ordem em que foram escalados
   const insAircraft = {};
   // Armazena turmas abertas de Ground School por missão para permitir múltiplos alunos no mesmo horário/instrutor
@@ -149,9 +152,11 @@ export function runAllocationEngine(state) {
     const nm = stu.nm;
     const labelStu = mid ? `${nm} (${d.mis})` : nm;
     const isGnd = Boolean(m.isGround);
-    // Disponibilidade do aluno: o voo (ou o Ground) só começa nessas janelas
-    const permitidas = janelasDaDisponibilidade(d.jan);
-    const naDisponibilidade = w => !permitidas || permitidas.includes(w);
+    // Disponibilidade do aluno: o voo (ou o Ground) só começa nesses horários (por período ou num horário exato)
+    const permitidas = disponibilidadeDoAluno(d.jan);
+    const naDisponibilidade = minuto => !permitidas || permitidas(minuto);
+    // Preferências em minutos (o número da janela dos dados antigos vale como o horário dela)
+    const preferidos = [minutoDaPreferencia(d.p1), minutoDaPreferencia(d.p2)];
 
     // ========================================================================
     // RAMO A: ALOCAÇÃO DE GROUND SCHOOL (01h30 = 90 MIN · TURMA COLETIVA)
@@ -160,14 +165,14 @@ export function runAllocationEngine(state) {
       const habilitado = x => podeFazer(x, d.mis, GROUND_EQ_TYPE);
       const durMin = GROUND_DURATION_MIN; // 90 min (1.5 h)
       const endMax = T[NI]; // 17:30 (1050 min)
-      const starts = DAY.filter(w => state.win[w] && T[w] + durMin <= endMax && naDisponibilidade(w));
-      const pf = [+d.p1, +d.p2];
+      const starts = DAY.filter(w => state.win[w] && T[w] + durMin <= endMax && naDisponibilidade(T[w]));
+      const pf = preferidos.map(m => T.indexOf(m));
 
       // Se o aluno também tem um voo dependente hoje com horário preferido, prioriza janelas que terminem antes do voo
       const dependentFlights = act.filter(other => other.stuId === stuId && doesGroundGateFlight(d.mis, other.ref));
       const earliestFlightPrefMin = dependentFlights.reduce((minT, flt) => {
-        const fp1 = +flt.ref.p1;
-        return (fp1 >= 0 && T[fp1] < minT) ? T[fp1] : minT;
+        const fp1 = minutoDaPreferencia(flt.ref.p1);
+        return (fp1 >= 0 && fp1 < minT) ? fp1 : minT;
       }, Infinity);
 
       const candidateWins = [...new Set([...pf.filter(w => w >= 0), ...starts])].filter(w => starts.includes(w));
@@ -183,8 +188,8 @@ export function runAllocationEngine(state) {
 
       // 1ª Tentativa: Unir-se a uma turma já aberta da mesma temática de Ground (mesmo horário e mesmo instrutor)
       const orderedExisting = [...existingClasses].sort((c1, c2) => {
-        const inPref1 = (c1.w == d.p1 || c1.w == d.p2) ? 0 : 1;
-        const inPref2 = (c2.w == d.p1 || c2.w == d.p2) ? 0 : 1;
+        const inPref1 = pf.includes(c1.w) ? 0 : 1;
+        const inPref2 = pf.includes(c2.w) ? 0 : 1;
         if (inPref1 !== inPref2) return inPref1 - inPref2;
         const okFlt1 = c1.b <= earliestFlightPrefMin ? 0 : 1;
         const okFlt2 = c2.b <= earliestFlightPrefMin ? 0 : 1;
@@ -261,7 +266,7 @@ export function runAllocationEngine(state) {
         if (gRec) gRec.allocatedEnd = chosenClass.b;
 
         const fKey = `${stuId}_${mid}_1`;
-        const baseTag = chosenClass.w == d.p1 ? 'Pref. 1' : chosenClass.w == d.p2 ? 'Pref. 2' : 'Próximo livre';
+        const baseTag = chosenClass.w === pf[0] ? 'Pref. 1' : chosenClass.w === pf[1] ? 'Pref. 2' : 'Próximo livre';
 
         out.push({
           fKey,
@@ -342,17 +347,19 @@ export function runAllocationEngine(state) {
     }
     const minStartAfterGround = gatingGrounds.reduce((maxEnd, g) => Math.max(maxEnd, g.allocatedEnd || 0), 0);
 
-    const starts = (night ? NIGHT_OK : DAY).filter(w => state.win[w] && naDisponibilidade(w));
+    // Os horários de decolagem da categoria (o noturno, às 17:30), com o período aberto e na disponibilidade do aluno
+    const starts = horariosDaMissao(horarios, d.mis, d.eq).filter(m => state.win[periodoDoMinuto(m)] && naDisponibilidade(m));
     const endMax = night ? 1440 : T[NI];
-    const pf = [+d.p1, +d.p2];
+    const pf = preferidos;
     const len = Array.from({ length: K }, (_, j) => (Math.floor(H / K) + (j < H % K ? 1 : 0)) * 60);
     const plans = [];
 
     (function rec(j, from, pl) {
       if (j === K) { plans.push(pl); return; }
+      // Horários em minutos; w é o período (a janela de operação em que o voo começa), para agrupar a escala
       const c = [...new Set([...(j < 2 ? [pf[j]] : []), ...(j == 0 ? [pf[1]] : []), ...starts])]
-        .filter(w => starts.includes(w) && T[w] >= from && T[w] + len[j] <= endMax);
-      for (const w of c) rec(j + 1, T[w] + len[j], [...pl, { w, a: T[w], b: T[w] + len[j] }]);
+        .filter(m => starts.includes(m) && m >= from && m + len[j] <= endMax);
+      for (const m of c) rec(j + 1, m + len[j], [...pl, { w: periodoDoMinuto(m), a: m, b: m + len[j] }]);
     })(0, minStartAfterGround, []);
 
     // Filtra a frota candidata respeitando a exclusividade do C152 PR-JPL (Acrobat) para Parafuso
@@ -419,7 +426,7 @@ export function runAllocationEngine(state) {
         if (!avioesDoInstrutor.includes(r)) avioesDoInstrutor.push(r);
 
         const fKey = `${stuId}_${mid}_${j + 1}`;
-        const baseTag = p.w == d.p1 ? 'Pref. 1' : p.w == d.p2 ? 'Pref. 2' : 'Próximo livre';
+        const baseTag = p.a === pf[0] ? 'Pref. 1' : p.a === pf[1] ? 'Pref. 2' : 'Próximo livre';
         out.push({
           fKey,
           classKey: fKey,

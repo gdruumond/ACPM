@@ -1,7 +1,8 @@
 // Agenda de solicitações da secretaria: a regra do prazo (a mesma do servidor, no horário de São Paulo) e o pedido
 // da demanda que cada solicitação vira ao ser importada.
-import { WIN, MIS } from './config.js';
-import { janelasDaDisponibilidade, normalizeMissionFields } from './rules.js';
+import { MIS } from './config.js';
+import { disponibilidadeAtual, disponibilidadeDoAluno, normalizeMissionFields } from './rules.js';
+import { horariosDaMissao, preferenciasPadrao, paraMinuto } from './horarios.js';
 
 export const FUSO_DO_AEROCLUBE = 'America/Sao_Paulo';
 
@@ -32,20 +33,24 @@ export const primeiraDataAberta = (agora = new Date()) => {
 export const horaEmSaoPaulo = (agora = new Date()) => emSaoPaulo(agora).hora;
 
 export function disponibilidadeDaSolicitacao({ janela, horario }) {
-  if (janela !== 'horario') return janelasDaDisponibilidade(janela) ? janela : undefined;
-  const i = WIN.indexOf(horario);
-  return i < 0 ? undefined : `h${i}`;
+  if (janela !== 'horario') return disponibilidadeAtual(janela);
+  const minuto = paraMinuto(horario);
+  return minuto === null ? undefined : disponibilidadeAtual(`h${minuto}`);
 }
 
-// Pedido da demanda: a missão com o equipamento padrão, as duas primeiras janelas da disponibilidade como
-// preferências, 1 h (o Ground tem 01h30) e prioridade 3
-export function pedidoDaSolicitacao(solicitacao) {
+// Pedido da demanda: a missão com o equipamento padrão; como preferências, os dois primeiros horários dela que a
+// disponibilidade permite (sem disponibilidade, os primeiros a partir das 08:20 e das 10:10); 1 h (o Ground tem
+// 01h30) e prioridade 3. Os horários são os da categoria do equipamento (o PA-34 tem os seus)
+export function pedidoDaSolicitacao(solicitacao, horarios) {
   const jan = disponibilidadeDaSolicitacao(solicitacao);
-  const janelas = janelasDaDisponibilidade(jan) || [1, 2];
   const regra = Object.hasOwn(MIS, solicitacao.missao) ? MIS[solicitacao.missao] : MIS['Voo Local'];
+  const lista = horariosDaMissao(horarios, solicitacao.missao, regra.defEq);
+  const permitida = disponibilidadeDoAluno(jan);
+  const naDisponibilidade = permitida ? lista.filter(permitida) : [];
+  const [p1, p2] = naDisponibilidade.length ? [naDisponibilidade[0], naDisponibilidade[Math.min(1, naDisponibilidade.length - 1)]] : preferenciasPadrao(lista);
   const pedido = {
     fly: true, mis: solicitacao.missao, eq: regra.defEq,
-    p1: janelas[0], p2: janelas[Math.min(1, janelas.length - 1)], nb: 1, ss: 1, pr: 3,
+    p1, p2, nb: 1, ss: 1, pr: 3,
     ...(jan ? { jan } : {})
   };
   normalizeMissionFields(pedido);
@@ -63,7 +68,7 @@ export function importarSolicitacoes(estado, solicitacoes) {
     estado.importadas.push(solicitacao.id);
     const aluno = estado.stu.find(x => x.id === solicitacao.aluno);
     if (!aluno) { resumo.semAluno++; continue; }
-    const pedido = pedidoDaSolicitacao(solicitacao);
+    const pedido = pedidoDaSolicitacao(solicitacao, estado.horarios);
     const mesmaMissao = [aluno, ...(aluno.extra || [])].find(m => m.fly && m.mis === pedido.mis);
     if (mesmaMissao) {
       Object.assign(mesmaMissao, { p1: pedido.p1, p2: pedido.p2 });

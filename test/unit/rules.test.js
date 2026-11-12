@@ -1,7 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  isGroundMission, doesGroundGateFlight, migrateLegacyMissionName, normalizeMissionFields, blank, janelasDaDisponibilidade, rotuloDaDisponibilidade
+  isGroundMission, doesGroundGateFlight, migrateLegacyMissionName, normalizeMissionFields, blank, disponibilidadeDoAluno, disponibilidadeAtual,
+  rotuloDaDisponibilidade, opcoesDeDisponibilidade
 } from '../../js/rules.js';
 import { podeFazer, descreverExigencias } from '../../js/habilitacoes.js';
 
@@ -31,22 +32,22 @@ describe('Regras de missão', () => {
     );
   });
 
-  it('normaliza pedidos de Ground: sala, 01h30, sessão única e sem janela noturna', () => {
-    const pedido = { mis: 'Ground C172', eq: 'C172', p1: 8, p2: 8, nb: 3, ss: 2 };
+  it('normaliza pedidos de Ground: sala, 01h30, sessão única e sem horário noturno', () => {
+    const pedido = { mis: 'Ground C172', eq: 'C172', p1: 8, p2: 1050, nb: 3, ss: 2 };
     normalizeMissionFields(pedido);
-    assert.deepEqual(pedido, { mis: 'Ground C172', eq: 'Sala Ground', p1: 0, p2: 1, nb: 1.5, ss: 1 });
+    assert.deepEqual(pedido, { mis: 'Ground C172', eq: 'Sala Ground', p1: 390, p2: 500, nb: 1.5, ss: 1 });
   });
 
   it('uma sessão por missão: pedidos antigos com 2 ou 3 sessões passam a ter uma só (para dividir, "+ missão")', () => {
-    const pedido = { mis: 'Navegação', eq: 'C152', p1: 1, p2: 2, nb: 3, ss: 2 };
+    const pedido = { mis: 'Navegação', eq: 'C152', p1: 500, p2: 610, nb: 3, ss: 2 };
     normalizeMissionFields(pedido);
-    assert.deepEqual(pedido, { mis: 'Navegação', eq: 'C152', p1: 1, p2: 2, nb: 3, ss: 1 });
+    assert.deepEqual(pedido, { mis: 'Navegação', eq: 'C152', p1: 500, p2: 610, nb: 3, ss: 1 });
   });
 
-  it('normaliza pedidos de voo: equipamento permitido e horas inteiras', () => {
+  it('normaliza pedidos de voo: equipamento permitido, horas inteiras e preferências em minutos', () => {
     const pedido = { mis: 'Multi', eq: 'C152', p1: 1, p2: 2, nb: 1.5, ss: 1 };
     normalizeMissionFields(pedido);
-    assert.deepEqual(pedido, { mis: 'Multimotor', eq: 'PA-34', p1: 1, p2: 2, nb: 1, ss: 1 });
+    assert.deepEqual(pedido, { mis: 'Multimotor', eq: 'PA-34', p1: 500, p2: 610, nb: 1, ss: 1 });
   });
 
   it('nomes herdados do Object (constructor, __proto__, toString) não são missões nem equipamentos', () => {
@@ -62,24 +63,28 @@ describe('Regras de missão', () => {
     assert.deepEqual([pedido.mis, pedido.eq], ['Voo Local', 'C152']);
   });
 
-  it('disponibilidade do aluno: em que janelas o voo pode começar', () => {
-    assert.equal(janelasDaDisponibilidade(''), null);
-    assert.equal(janelasDaDisponibilidade(undefined), null);
-    assert.deepEqual(janelasDaDisponibilidade('manha'), [0, 1, 2, 3]);
-    assert.deepEqual(janelasDaDisponibilidade('tarde'), [4, 5, 6, 7]);
-    assert.deepEqual(janelasDaDisponibilidade('noite'), [8]);
-    assert.deepEqual(janelasDaDisponibilidade('h5'), [5]);
-    assert.equal(janelasDaDisponibilidade('h9'), null);
-    assert.equal(janelasDaDisponibilidade('constructor'), null);
-    assert.deepEqual(['manha', 'tarde', 'noite', 'h5'].map(rotuloDaDisponibilidade), ['Manhã', 'Tarde', 'Noite', 'às 13:40']);
-    const pedido = { mis: 'Voo Local', eq: 'C152', p1: 1, p2: 2, nb: 1, ss: 1, jan: 'xyz' };
+  it('disponibilidade do aluno: em que horários o voo pode começar (por período ou num horário exato)', () => {
+    assert.equal(disponibilidadeDoAluno(''), null);
+    assert.equal(disponibilidadeDoAluno(undefined), null);
+    assert.equal(disponibilidadeDoAluno('h9'), null);
+    assert.equal(disponibilidadeDoAluno('constructor'), null);
+    const comeca = (jan, ...horarios) => horarios.map(disponibilidadeDoAluno(jan));
+    assert.deepEqual(comeca('manha', 390, 420, 690, 760), [true, true, true, false]);
+    assert.deepEqual(comeca('tarde', 750, 760, 980, 1050), [false, true, true, false]);
+    assert.deepEqual(comeca('noite', 980, 1050), [false, true]);
+    assert.deepEqual(comeca('h450', 420, 450), [false, true]);
+    assert.deepEqual(comeca('h5', 820, 830), [true, false], 'o "h5" dos dados antigos é a janela das 13:40');
+    assert.deepEqual(['manha', 'tarde', 'noite', 'h5', 'h450'].map(rotuloDaDisponibilidade), ['Manhã', 'Tarde', 'Noite', 'às 13:40', 'às 07:30']);
+    assert.deepEqual(['h5', 'h450', 'tarde', 'xyz'].map(disponibilidadeAtual), ['h820', 'h450', 'tarde', undefined]);
+    assert.deepEqual(opcoesDeDisponibilidade([450]), [['', 'Qualquer horário'], ['manha', 'Manhã'], ['tarde', 'Tarde'], ['noite', 'Noite'], ['h450', 'Só às 07:30']]);
+    const pedido = { mis: 'Voo Local', eq: 'C152', p1: 500, p2: 610, nb: 1, ss: 1, jan: 'xyz' };
     normalizeMissionFields(pedido);
     assert.equal(Object.hasOwn(pedido, 'jan'), false, 'disponibilidade inválida sai do pedido');
   });
 
   it('pedido em branco é um objeto novo a cada chamada', () => {
     const a = blank();
-    assert.deepEqual(a, { fly: false, mis: 'Voo Local', eq: 'C152', p1: 1, p2: 2, nb: 1, ss: 1, pr: 3 });
+    assert.deepEqual(a, { fly: false, mis: 'Voo Local', eq: 'C152', p1: 500, p2: 610, nb: 1, ss: 1, pr: 3 });
     assert.notEqual(blank(), a);
   });
 });

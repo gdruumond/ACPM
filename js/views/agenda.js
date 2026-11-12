@@ -1,11 +1,12 @@
 // Agenda de Solicitações: a agenda de papel da secretaria, digitalizada. Calendário do mês com os pedidos de cada dia,
 // a lista do dia escolhido (com a situação de cada pedido na demanda) e o registro de pedidos, com o prazo das 13:00
 // do dia anterior.
-import { MIS, WIN } from '../config.js';
+import { MIS } from '../config.js';
+import { horariosDaMissao } from '../horarios.js';
 import { S, DATA, isGestor } from '../state.js';
 import { ApiClient } from '../storage.js';
 import { $ } from '../dom.js';
-import { esc, opts } from '../format.js';
+import { esc, opts, hm } from '../format.js';
 import { registraNaAgenda, operaEscala } from '../perfis.js';
 import { JANELAS_DA_AGENDA, FUSO_DO_AEROCLUBE, prazoDaAgendaPermite, primeiraDataAberta, hojeEmSaoPaulo, horaEmSaoPaulo, somarDias } from '../agenda.js';
 
@@ -142,6 +143,15 @@ function listaHTML() {
     </tr>`).join('')}</tbody></table>`;
 }
 
+// Horário específico: os horários da missão escolhida (os da categoria do avião padrão dela; o Noturno, 17:30)
+export function preencherHorariosDaAgenda() {
+  const missao = $('#ag-missao').value || 'Voo Local';
+  const regra = MIS[missao] || MIS['Voo Local'];
+  const lista = horariosDaMissao(S.horarios, missao, regra.defEq).map(hm);
+  const atual = $('#ag-horario').value;
+  $('#ag-horario').innerHTML = opts(lista.map(h => [h, h]), lista.includes(atual) ? atual : lista[0]);
+}
+
 export function rAgenda() {
   if (!diaEscolhido) return;
   $('#agenda-prazo').textContent = prazoDoDia();
@@ -160,7 +170,7 @@ export function rAgenda() {
   if (!$('#ag-missao').options.length) {
     $('#ag-missao').innerHTML = opts(Object.keys(MIS).map(m => [m, m]), 'Voo Local');
     $('#ag-janela').innerHTML = opts(JANELAS_DA_AGENDA, 'manha');
-    $('#ag-horario').innerHTML = opts(WIN.map(w => [w, w]), WIN[0]);
+    preencherHorariosDaAgenda();
     try { $('#ag-por').value = localStorage.getItem(CHAVE_REGISTRADO_POR) || ''; } catch (e) {}
   }
   $('#ag-horario-rotulo').hidden = $('#ag-janela').value !== 'horario';

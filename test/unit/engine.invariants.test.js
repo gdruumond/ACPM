@@ -1,4 +1,5 @@
 // Propriedades que toda escala gerada deve respeitar, verificadas em centenas de cenários aleatórios.
+import { horariosDaMissao, periodoDoMinuto } from '../../js/horarios.js';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { runAllocationEngine } from '../../js/engine.js';
@@ -94,10 +95,11 @@ describe('Invariantes do motor de alocação', () => {
     }
   }));
 
-  it('janelas habilitadas, Noturno às 17:30 e demais missões até 17:30', () => emTodos(({ estado, out }) => {
+  it('horários da categoria em períodos habilitados, Noturno às 17:30 e demais missões até 17:30', () => emTodos(({ estado, out }) => {
     for (const o of out) {
       assert.ok(estado.win[o.w], `${o.fKey}: janela ${o.w} desativada`);
-      assert.equal(o.a, T[o.w]);
+      assert.equal(o.w, periodoDoMinuto(o.a), `${o.fKey}: período errado`);
+      assert.ok(horariosDaMissao(estado.horarios, o.mis, o.eqType).includes(o.a), `${o.fKey}: ${o.a} fora dos horários do ${o.eqType}`);
       if (o.mis === 'Noturno') assert.equal(o.w, NI, `${o.fKey}: Noturno fora das 17:30`);
       else assert.ok(o.w < NI && o.b <= T[NI], `${o.fKey}: termina às ${o.b}`);
       if (o.isGround) assert.equal(o.b - o.a, 90);

@@ -3,7 +3,8 @@
 import { WIN, NI, DEFAULT_LIM, FLIGHT_STATUSES, AIRCRAFT_EQ_TYPES } from './config.js';
 import { FROTA_INICIAL, normalizarFrota } from './frota.js';
 import { pad } from './format.js';
-import { blank, normalizeMissionFields, janelasDaDisponibilidade } from './rules.js';
+import { blank, normalizeMissionFields, disponibilidadeValida } from './rules.js';
+import { HORARIOS_INICIAIS, normalizarHorarios, preferenciaValida } from './horarios.js';
 import { backendLocal, CHAVES_LOCAIS, CHAVE_LEGADA } from './backends/local.js';
 import { separar, juntar, diaPadrao, diaParaCopiar, converterLegado, biDosDias } from './dias.js';
 import { ESQUEMA, migrarCadastro, migrarDia, precisaMigrar, renomearSimulador } from './migracoes.js';
@@ -19,9 +20,10 @@ const lista = (v, max) => (Array.isArray(v) ? v.slice(0, max) : []);
 const id = v => inteiro(v, 1, Number.MAX_SAFE_INTEGER, null);
 const pedido = (mis, eq, p1, p2, nb, ss, pr, jan) => ({
   mis: texto(mis), eq: texto(eq),
-  p1: inteiro(p1, -1, NI, -1), p2: inteiro(p2, -1, NI, -1),
+  // Preferências em minutos (links anteriores ao formato 12 trazem o número da janela, convertido ao normalizar)
+  p1: preferenciaValida(p1), p2: preferenciaValida(p2),
   nb: numero(nb, 1, 11, 1), ss: inteiro(ss, 1, 3, 1), pr: inteiro(pr, 1, 5, 3),
-  ...(janelasDaDisponibilidade(jan) ? { jan } : {})
+  ...(disponibilidadeValida(jan) ? { jan } : {})
 });
 
 export const ApiClient = {
@@ -54,7 +56,8 @@ export const ApiClient = {
       fStatus: {},
       horas: {},
       importadas: [],
-      frota: FROTA_INICIAL.map(f => ({ ...f }))
+      frota: FROTA_INICIAL.map(f => ({ ...f })),
+      horarios: normalizarHorarios(HORARIOS_INICIAIS)
     };
     state.frota.forEach(f => { state.av[f.reg] = true; });
     return state;
@@ -70,6 +73,8 @@ export const ApiClient = {
     // A frota (fase 7): disponibilidade e horas só dos recursos dela; um recurso que o dia não conhece começa disponível
     // (os simuladores com os nomes de antes da fase 4 são renomeados antes)
     x.frota = normalizarFrota(x.frota);
+    // Horários de decolagem de cada categoria (fase 7)
+    x.horarios = normalizarHorarios(x.horarios);
     const naFrota = r => x.frota.some(f => f.reg === r);
     const av = Object.fromEntries(Object.entries(x.av && typeof x.av === 'object' ? x.av : {}).map(([r, v]) => [renomearSimulador(r), v]));
     x.av = Object.fromEntries(x.frota.map(f => [f.reg, typeof av[f.reg] === 'boolean' ? av[f.reg] : true]));
@@ -244,6 +249,7 @@ export const ApiClient = {
       d: dateStr,
       w: state.win.map(v => v ? 1 : 0),
       fr: (state.frota || []).map(f => [f.reg, f.tipo, f.soParafuso ? 1 : 0]),
+      hr: state.horarios || null,
       avOff: Object.keys(state.av).filter(k => !state.av[k]),
       ins: state.ins.map(x => [x.id, x.nm, x.on ? 1 : 0, x.hab, x.kg, x.aw.map(a => a ? 1 : 0)]),
       st: state.fStatus || {},
@@ -281,6 +287,8 @@ export const ApiClient = {
           .map(([reg, tipo, parafuso]) => ({ reg, tipo, soParafuso: parafuso === 1 })));
         state.av = Object.fromEntries(state.frota.map(f => [f.reg, true]));
       }
+      // Os horários de decolagem de quem compartilhou (links anteriores à fase 7: os iniciais)
+      if (decoded.hr && typeof decoded.hr === 'object') state.horarios = normalizarHorarios(decoded.hr);
       if (decoded.st && typeof decoded.st === 'object') {
         state.fStatus = Object.fromEntries(Object.entries(decoded.st)
           .filter(([fKey, st]) => /^\d+_\d+_\d+$/.test(fKey) && FLIGHT_STATUSES.includes(st)));

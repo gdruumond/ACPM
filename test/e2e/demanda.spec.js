@@ -4,6 +4,20 @@ import { aluno, cenario, instrutor } from '../helpers/montar.js';
 const linhaDoAluno = (page, nome) => page.locator(`#dem tr[data-k="d"][data-mid="0"][data-nm="${nome.toLowerCase()}"]`);
 
 test.describe('Demanda', () => {
+  test('os horários do pedido são os da categoria: o PA-34 de 30 em 30 minutos; trocar de avião ajusta as preferências', async ({ page }) => {
+    await abrir(page, { estado: cenario({ stu: [aluno(1000, { mis: 'Multimotor', eq: 'PA-34', p1: 450, p2: 510 })] }) });
+    await irPara(page, 'dem');
+    const linha = page.locator('#dem tr[data-k="d"][data-id="1000"]');
+    await expect(linha.locator('[data-f="p1"] option[value="420"]')).toHaveText('07:00');
+    await expect(linha.locator('[data-f="p1"] option:checked')).toHaveText('07:30');
+    await expect(linha.locator('[data-f="jan"] option[value="h450"]')).toHaveText('Só às 07:30');
+    await linha.locator('[data-f="mis"]').selectOption('Voo Local');
+    await linha.locator('[data-f="eq"]').selectOption('C152');
+    const nova = page.locator('#dem tr[data-k="d"][data-id="1000"]');
+    await expect(nova.locator('[data-f="p1"] option:checked')).toHaveText('08:20');
+    await expect(nova.locator('[data-f="p1"] option[value="450"]')).toHaveCount(0);
+  });
+
   test('"Pôr um aluno na demanda" inclui quem ainda não voa (com "Só quem voa" ligado)', async ({ page }) => {
     await abrirComExemplo(page);
     await irPara(page, 'dem');
@@ -56,7 +70,7 @@ test.describe('Demanda', () => {
     await expect(extra).toHaveCount(1);
     await expect(extra.locator('td').first()).toContainText('↳ missão extra');
     await expect(extra.locator('[data-f="mis"]')).toHaveValue('Voo Local');
-    await expect(extra.locator('[data-f="p1"]')).toHaveValue('4');
+    await expect(extra.locator('[data-f="p1"]')).toHaveValue('760');
     await extra.locator('[data-act="del-mis"]').click();
     await expect(extra).toHaveCount(0);
     await expect(page.locator('#audit-log-list')).toContainText('Missão extra removida de Aluno 09');
@@ -74,16 +88,17 @@ test.describe('Demanda', () => {
     ));
 
     await linha.locator('[data-f="mis"]').selectOption('Noturno');
-    expect(await valores()).toEqual({ eq: 'C172', p1: '8', p2: '8', nb: '1' });
+    // Horários em minutos: o Noturno sai às 17:30 (1050)
+    expect(await valores()).toEqual({ eq: 'C172', p1: '1050', p2: '1050', nb: '1' });
 
     await linha.locator('[data-f="mis"]').selectOption('Ground C152');
-    expect(await valores()).toEqual({ eq: 'Sala Ground', p1: '0', p2: '1', nb: '1.5' });
+    expect(await valores()).toEqual({ eq: 'Sala Ground', p1: '500', p2: '610', nb: '1.5' });
     await expect(linha.locator('[data-f="eq"]')).toBeDisabled();
     // O que a missão exige do instrutor aparece na dica do campo
     await expect(linha.locator('[data-f="mis"]')).toHaveAttribute('title', 'Exige Grounds (C152, C172 e Navegação)');
 
     await linha.locator('[data-f="mis"]').selectOption('Voo Local');
-    expect(await valores()).toEqual({ eq: 'C152', p1: '0', p2: '1', nb: '1' });
+    expect(await valores()).toEqual({ eq: 'C152', p1: '500', p2: '610', nb: '1' });
   });
 
   test('TGL (TMA) e voos de cheque na demanda: equipamentos do cheque e o checador credenciado', async ({ page }) => {

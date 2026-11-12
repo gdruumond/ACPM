@@ -24,7 +24,7 @@ describe('Separar e juntar', () => {
   it('o cadastro não tem dados do dia e o dia não tem nomes nem pesos', () => {
     const estado = normalizado(goldens.exemplo.estado);
     const { cadastro, dia } = separar(estado);
-    assert.deepEqual(Object.keys(cadastro).sort(), ['frota', 'ins', 'nid', 'stu']);
+    assert.deepEqual(Object.keys(cadastro).sort(), ['frota', 'horarios', 'ins', 'nid', 'stu']);
     assert.deepEqual(Object.keys(cadastro.ins[0]).sort(), ['hab', 'id', 'kg', 'lv', 'nm']);
     assert.deepEqual(Object.keys(cadastro.stu[0]).sort(), ['bl', 'id', 'kg', 'nm']);
     assert.deepEqual(Object.keys(dia).sort(), ['av', 'fStatus', 'filas', 'horas', 'importadas', 'ins', 'pedidos', 'win']);
@@ -37,7 +37,7 @@ describe('Separar e juntar', () => {
     const cadastro = { nid: 1003, ins: [{ id: 1, nm: 'Instrutor 01', lv: 3, kg: 70 }], stu: [{ id: 1000, nm: 'Aluno 1000', kg: 70, bl: [1] }] };
     const estado = juntar(cadastro, diaPadrao());
     assert.deepEqual(estado.ins, [{ id: 1, nm: 'Instrutor 01', lv: 3, kg: 70, on: true, aw: Array(9).fill(true) }]);
-    assert.deepEqual(estado.stu[0], { id: 1000, nm: 'Aluno 1000', kg: 70, bl: [1], fly: false, mis: 'Voo Local', eq: 'C152', p1: 1, p2: 2, nb: 1, ss: 1, pr: 3, extra: [] });
+    assert.deepEqual(estado.stu[0], { id: 1000, nm: 'Aluno 1000', kg: 70, bl: [1], fly: false, mis: 'Voo Local', eq: 'C152', p1: 500, p2: 610, nb: 1, ss: 1, pr: 3, extra: [] });
     assert.equal(Object.keys(estado.av).length, 26);
     assert.ok(Object.values(estado.av).every(Boolean));
     assert.deepEqual(estado.win, Array(9).fill(true));
@@ -197,7 +197,7 @@ describe('Disponibilidade do aluno nos pedidos', () => {
     const { cadastro, dia } = separar(estado);
     assert.equal(dia.pedidos[1000].jan, 'tarde');
     const volta = juntar(cadastro, dia).stu[0];
-    assert.deepEqual([volta.jan, volta.extra[0].jan], ['tarde', 'h2']);
+    assert.deepEqual([volta.jan, volta.extra[0].jan], ['tarde', 'h610']);
   });
 });
 
