@@ -208,19 +208,24 @@ test.describe('Instrutores', () => {
 
   test('disponibilidade do dia: a grade mostra as janelas e os voos de cada instrutor', async ({ page }) => {
     await abrirComExemplo(page);
+    await abrirEscala(page);
+    const linhasDaEscala = (await lerEscala(page)).linhas;
     await irPara(page, 'ins');
     await expect(page.locator('#s-ins [data-vista-ins="dia"]')).toHaveClass(/\bon\b/);
-    const linha = page.locator('#inst-dia tr[data-k="i"][data-id="10"]');
-    await expect(linha.locator('.voos')).toHaveText('2');
-    await expect(linha.locator('.cel.voo')).toHaveCount(2);
-    await expect(linha.locator('.cel').nth(1)).toHaveClass(/\bvoo\b/);
-    await linha.locator('[data-f="aw"][data-w="7"]').uncheck();
-    await expect(page.locator('#inst-dia tr[data-k="i"][data-id="10"] .cel').nth(7)).not.toHaveClass(/\bon\b/);
+    // A grade bate com a escala: o número de voos e aulas do instrutor (a turma de Ground conta uma vez)
+    const comVoos = page.locator('#inst-dia tr[data-k="i"]').filter({ has: page.locator('.voos:not(:empty)') }).first();
+    const id = await comVoos.getAttribute('data-id');
+    const nome = (await comVoos.locator('.nome').innerText()).trim();
+    await expect(comVoos.locator('.voos')).toHaveText(String(linhasDaEscala.filter(l => l.includes(`| ${nome} |`)).length));
+    expect(await comVoos.locator('.cel.voo').count()).toBeGreaterThanOrEqual(1);
+    const celula = () => page.locator(`#inst-dia tr[data-k="i"][data-id="${id}"] .cel`).nth(7);
+    await comVoos.locator('[data-f="aw"][data-w="7"]').uncheck();
+    await expect(celula()).not.toHaveClass(/\bon\b/);
     // Pelo teclado: a grade é refeita e o foco continua na mesma janela
-    await linha.locator('[data-f="aw"][data-w="7"]').focus();
+    await page.locator(`#inst-dia tr[data-id="${id}"] [data-f="aw"][data-w="7"]`).focus();
     await page.keyboard.press('Space');
-    await expect(page.locator('#inst-dia tr[data-k="i"][data-id="10"] .cel').nth(7)).toHaveClass(/\bon\b/);
-    await expect(page.locator('#inst-dia tr[data-id="10"] [data-f="aw"][data-w="7"]')).toBeFocused();
+    await expect(celula()).toHaveClass(/\bon\b/);
+    await expect(page.locator(`#inst-dia tr[data-id="${id}"] [data-f="aw"][data-w="7"]`)).toBeFocused();
   });
 
   test('cadastra instrutor e altera habilitações (no painel), peso e turno', async ({ page }) => {

@@ -82,6 +82,60 @@ function manterInstrutorNoMesmoAviao(out, state, saldo, frota) {
   }
 }
 
+// Divisão igual das horas do dia (fase 7): depois de montada a escala, voos e aulas passam do instrutor com mais
+// horas para o com menos, enquanto todas as regras continuam valendo: a habilitação, a disponibilidade durante todo o
+// voo, o horário livre, o bloqueio do aluno, o peso e o aluno não repetir o instrutor no dia. Os voos do rodízio
+// (cheque, MLTE, noturno e C172) ficam com quem a fila escolheu; a turma de Ground se move inteira e conta 1h30 uma
+// vez. Cada troca diminui a soma dos quadrados das horas, então a repetição termina. O status dos voos não conta: o
+// equilíbrio não muda quando um voo é cancelado
+function equalizarHoras(out, state, cover) {
+  const ativos = state.ins.filter(x => x.on);
+  const alunos = new Map(state.stu.map(s => [s.id, s]));
+  const grupos = new Map();
+  out.forEach(o => {
+    const chave = o.classKey || o.fKey;
+    if (!grupos.has(chave)) grupos.set(chave, []);
+    grupos.get(chave).push(o);
+  });
+  const unidades = [...grupos.values()].map(voos => ({ voos, a: voos[0].a, b: voos[0].b, h: voos[0].h, mis: voos[0].mis, eqType: voos[0].eqType, isGround: voos[0].isGround }));
+  const instrutorDa = u => u.voos[0].insId;
+  const daQuem = id => unidades.filter(u => instrutorDa(u) === id);
+
+  const podeReceber = (x, u) => {
+    if (instrutorDa(u) === x.id || !podeFazer(x, u.mis, u.isGround ? GROUND_EQ_TYPE : u.eqType) || !cover(x.aw, u.a, u.b)) return false;
+    const deles = daQuem(x.id);
+    if (deles.some(o => o.a < u.b && o.b > u.a)) return false;
+    return u.voos.every(v => {
+      const aluno = alunos.get(v.stuId);
+      if (aluno && aluno.bl.includes(x.id)) return false;
+      if (deles.some(o => o.voos.some(w => w.stuId === v.stuId))) return false;
+      return u.isGround || !v.limKg || !v.stuKg || (x.kg > 0 && v.stuKg + x.kg <= v.limKg);
+    });
+  };
+
+  for (let rodada = 0; rodada < 1000; rodada++) {
+    const horas = new Map(ativos.map(x => [x.id, 0]));
+    unidades.forEach(u => horas.set(instrutorDa(u), (horas.get(instrutorDa(u)) || 0) + u.h));
+    let troca = null;
+    for (const doador of [...horas.keys()].sort((p, q) => horas.get(q) - horas.get(p) || p - q)) {
+      for (const u of daQuem(doador).filter(o => !categoriaDoRodizio(o.mis, o.eqType)).sort((p, q) => p.a - q.a)) {
+        const receptor = ativos
+          .filter(x => horas.get(x.id) + u.h < horas.get(doador) - 1e-9 && podeReceber(x, u))
+          .sort((p, q) => horas.get(p.id) - horas.get(q.id) || qtdHabilitacoes(p) - qtdHabilitacoes(q) || p.id - q.id)[0];
+        if (receptor) { troca = { u, x: receptor }; break; }
+      }
+      if (troca) break;
+    }
+    if (!troca) return;
+    for (const v of troca.u.voos) {
+      v.insId = troca.x.id;
+      v.ins = troca.x.nm;
+      v.insKg = troca.x.kg || 0;
+      v.kg = v.stuKg && troca.x.kg ? v.stuKg + troca.x.kg : 0;
+    }
+  }
+}
+
 export function runAllocationEngine(state) {
   const used = {}, busy = {}, stuBusy = {}, stuLastPick = {}, load = {}, eu = {}, out = [], al = [];
   // A frota vem do cadastro (fase 7); sem ela (estados de teste antigos), a frota inicial
@@ -197,6 +251,8 @@ export function runAllocationEngine(state) {
       });
 
       for (const cls of orderedExisting) {
+        // A turma precisa começar na disponibilidade do aluno (manhã, tarde ou um horário exato)
+        if (!naDisponibilidade(cls.a)) continue;
         if (!free(stuBusy, stuId, cls.a, cls.b)) continue;
         if (stu.bl.includes(cls.x.id)) continue;
         if (cls.b > earliestFlightPrefMin && candidateWins.some(w => T[w] + durMin <= earliestFlightPrefMin)) continue;
@@ -491,6 +547,7 @@ export function runAllocationEngine(state) {
     }
   }
 
+  equalizarHoras(out, state, cover);
   manterInstrutorNoMesmoAviao(out, state, saldo, frota);
 
   // Revisão de 50 horas: horas de cada avião controlado e onde ele para (sem saldo para mais uma missão de 1 h)
