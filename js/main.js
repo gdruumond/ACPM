@@ -24,7 +24,7 @@ import { S, RES, AUDIT_LOG, DATA, setS, setRES, setAuditLog, setTLMode, isGestor
 import { $, showToast, focusLast, mostrarAviso, avisoAberto } from './dom.js';
 import { show } from './views/tabs.js';
 import { rBI, alternarTodosDoBI } from './views/bi.js';
-import { renderAuditPanel, rOut, alternarTempo } from './views/escala.js';
+import { renderAuditPanel, rOut, alternarTempo, abrirPopupDoMapa, fecharPopupDoMapa, popupDoMapaAberto, reposicionarPopupDoMapa } from './views/escala.js';
 import { singleDemandRowHTML, cnt, rDem, applyDemandFilters } from './views/demanda.js';
 import { rIns, rAlu, applyInstructorFilters, preencherFiltroDeHabilitacoes, mostrarVistaDosInstrutores, abrirPainelDoInstrutor, fecharPainelDoInstrutor, atualizarLinhaDoCadastro, atualizarLinhaDoAluno } from './views/cadastros.js';
 import { rRec, rRevisao, alternarGrupoDaFrota, NOMES_DAS_CATEGORIAS } from './views/recursos.js';
@@ -77,6 +77,23 @@ document.addEventListener('click', e => {
     $('#' + manual.dataset.manual).scrollIntoView({ block: 'start' });
   }
 });
+
+// Popup do voo no mapa da escala: a barra abre e fecha; Esc (o foco volta para a barra) e um clique fora fecham, e ele
+// acompanha a barra quando a página ou o mapa rolam
+document.addEventListener('click', e => {
+  const barra = e.target.closest('#out .tl-bar');
+  if (barra) {
+    if (barra.getAttribute('aria-expanded') === 'true') fecharPopupDoMapa();
+    else abrirPopupDoMapa(barra);
+    return;
+  }
+  if (popupDoMapaAberto() && !e.target.closest('#tl-pop')) fecharPopupDoMapa();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && popupDoMapaAberto()) fecharPopupDoMapa({ devolverFoco: true });
+});
+document.addEventListener('scroll', reposicionarPopupDoMapa, { capture: true, passive: true });
+window.addEventListener('resize', reposicionarPopupDoMapa);
 
 // Painel das habilitações de um instrutor: ✕ e Esc fecham (o foco volta para o botão que abriu)
 document.addEventListener('click', e => {

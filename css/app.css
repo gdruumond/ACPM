@@ -798,16 +798,20 @@ a { color: var(--ac); }
   display: flex;
   flex-direction: column;
   justify-content: center;
+  overflow: hidden;
+  font: inherit;
+  text-align: left;
   box-shadow: 0 1px 3px rgba(0,0,0,0.2);
   border: 1px solid rgba(255,255,255,0.25);
   transition: transform .12s, z-index .12s, box-shadow .12s, opacity .15s;
   z-index: 2;
 }
-.tl-bar:hover, .tl-bar:focus-within {
+.tl-bar:hover, .tl-bar:focus-visible, .tl-bar[aria-expanded="true"] {
   transform: translateY(-1px);
   z-index: 30;
   box-shadow: 0 4px 12px rgba(0,0,0,0.35);
 }
+.tl-bar[aria-expanded="true"] { outline: 2px solid var(--ac); outline-offset: 1px; }
 
 .tl-bar.tl-st-EmVoo {
   border: 2px solid var(--ye);
@@ -840,14 +844,12 @@ a { color: var(--ac); }
   line-height: 1.15;
 }
 
+/* Popup do voo: um só, fixo na tela (fora do painel do mapa, que rola e o cortava); posicionado pelo script */
 .tl-pop {
-  visibility: hidden;
-  opacity: 0;
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%) translateY(4px);
-  width: 280px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: min(280px, calc(100vw - 16px));
   background: var(--pop-bg);
   color: var(--pop-txt);
   border: 1px solid var(--ln);
@@ -856,27 +858,20 @@ a { color: var(--ac); }
   font-size: 12px;
   line-height: 1.4;
   box-shadow: 0 8px 24px rgba(0,0,0,0.45);
-  pointer-events: none;
-  transition: opacity .15s ease, transform .15s ease;
-  z-index: 50;
-  text-decoration: none !important;
+  z-index: 150;
 }
+.tl-pop[hidden] { display: none; }
 .tl-pop::after {
   content: "";
   position: absolute;
   top: 100%;
-  left: 50%;
+  left: var(--seta, 50%);
   margin-left: -6px;
   border-width: 6px;
   border-style: solid;
   border-color: var(--pop-bg) transparent transparent transparent;
 }
-.tl-bar:hover .tl-pop, .tl-bar:focus-within .tl-pop {
-  visibility: visible;
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-  pointer-events: auto;
-}
+.tl-pop.abaixo::after { top: auto; bottom: 100%; border-color: transparent transparent var(--pop-bg) transparent; }
 .tl-pop-hd {
   font: 700 13px 'Barlow Semi Condensed', sans-serif;
   border-bottom: 1px solid rgba(255,255,255,0.18);

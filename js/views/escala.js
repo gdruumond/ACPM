@@ -18,6 +18,93 @@ export function missionColorClass(mis) {
   return 'm-mu';
 }
 
+// Popup do voo no mapa: um só, fixo na tela e fora do painel que rola (dentro dele o popup era cortado e, nas
+// primeiras linhas, sumia sob os filtros e o cabeçalho). Cada barra guarda a chave do voo; o conteúdo sai do registro
+// feito no último desenho do mapa, e o popup aberto acompanha a escala refeita (ex.: depois de mudar o status nele)
+const VOOS_DO_MAPA = new Map();
+let popupDe = null;
+
+function conteudoDoPopup(o) {
+  const ativos = o.items.filter(it => statusDe(it) !== 'Cancelado');
+  const principal = ativos[0] || o.items[0];
+  const st = ativos.length ? statusDe(principal) : 'Cancelado';
+  const turma = o.students.length > 1;
+  return `<div class="tl-pop-hd"><span>${hm(o.a)} – ${hm(o.b)}</span><span>${HT(o)}</span></div>
+    <div class="tl-pop-grid">
+      <span>${turma ? 'Turma:' : 'Aluno:'}</span><span>${esc(turma ? `${o.students.length} alunos: ${o.students.join(', ')}` : o.s)}</span>
+      <span>Instrutor:</span><span>${esc(o.ins)}</span>
+      <span>Recurso:</span><span>${esc(nomeDoRecurso(o.r))}</span>
+      <span>Missão:</span><span>${esc(o.mis)}</span>
+      <span>Peso Trip.:</span><span>${o.kg ? `${o.kg} kg` : '—'}</span>
+      <span>Status:</span>
+      <span>
+        <select class="st-sel st-${st.replace(/\s+/g, '')}" data-f="fstatus" data-fkey="${principal.fKey}" aria-label="Status do voo"${isGestor() ? ' disabled' : ''}>
+          ${FLIGHT_STATUSES.map(v => `<option value="${v}"${v === st ? ' selected' : ''}>${v}</option>`).join('')}
+        </select>
+      </span>
+    </div>
+    ${!turma && o.stuId ? `<button type="button" class="tl-pop-btn edit-only" data-act="rm-fly" data-id="${o.stuId}" data-mid="${o.mid || 0}">✕ Excluir da escala</button>` : ''}`;
+}
+
+// Acima da barra (ou abaixo, quando não cabe), sempre inteiro na tela; a seta aponta para o meio da barra
+const MARGEM = 8, DISTANCIA = 10;
+function posicionarPopup(pop, barra) {
+  const r = barra.getBoundingClientRect();
+  const { offsetWidth: largura, offsetHeight: altura } = pop;
+  const acima = r.top - DISTANCIA - altura >= MARGEM || r.bottom + DISTANCIA + altura > innerHeight - MARGEM && r.top > innerHeight - r.bottom;
+  const topo = Math.min(Math.max(acima ? r.top - DISTANCIA - altura : r.bottom + DISTANCIA, MARGEM), innerHeight - altura - MARGEM);
+  const meio = r.left + r.width / 2;
+  const esquerda = Math.min(Math.max(meio - largura / 2, MARGEM), innerWidth - largura - MARGEM);
+  pop.style.top = `${Math.round(topo)}px`;
+  pop.style.left = `${Math.round(esquerda)}px`;
+  pop.style.setProperty('--seta', `${Math.round(Math.min(Math.max(meio - esquerda, 14), largura - 14))}px`);
+  pop.classList.toggle('abaixo', !acima);
+}
+
+const barraDoPopup = () => (popupDe === null ? null : document.querySelector(`#out .tl-bar[data-pop="${CSS.escape(popupDe)}"]`));
+
+export function abrirPopupDoMapa(barra) {
+  const o = VOOS_DO_MAPA.get(barra.dataset.pop), pop = $('#tl-pop');
+  if (!o || !pop) return;
+  fecharPopupDoMapa();
+  pop.innerHTML = conteudoDoPopup(o);
+  pop.hidden = false;
+  barra.setAttribute('aria-expanded', 'true');
+  popupDe = barra.dataset.pop;
+  posicionarPopup(pop, barra);
+}
+
+export function fecharPopupDoMapa({ devolverFoco = false } = {}) {
+  const pop = $('#tl-pop'), barra = barraDoPopup();
+  if (pop) pop.hidden = true;
+  popupDe = null;
+  if (!barra) return;
+  barra.setAttribute('aria-expanded', 'false');
+  if (devolverFoco) barra.focus();
+}
+
+export const popupDoMapaAberto = () => popupDe !== null;
+
+// Rolagem ou mudança de tamanho da janela: o popup acompanha a barra (e fecha se ela sumiu)
+export function reposicionarPopupDoMapa() {
+  if (popupDe === null) return;
+  const barra = barraDoPopup();
+  if (barra && barra.checkVisibility()) posicionarPopup($('#tl-pop'), barra);
+  else fecharPopupDoMapa();
+}
+
+// Depois de redesenhar o mapa: o popup aberto volta para a mesma barra, com o conteúdo novo
+function reancorarPopupDoMapa() {
+  if (popupDe === null) return;
+  const barra = barraDoPopup();
+  if (!barra || !barra.checkVisibility()) { fecharPopupDoMapa(); return; }
+  const chave = popupDe;
+  popupDe = null;
+  const foco = document.activeElement && $('#tl-pop').contains(document.activeElement) ? document.activeElement.dataset.f : null;
+  abrirPopupDoMapa(barra);
+  if (popupDe === chave && foco) { const campo = $(`#tl-pop [data-f="${foco}"]`); if (campo) campo.focus(); }
+}
+
 export function buildTimelineGroup(out, groupKey, subLabelFn, barLine1Fn, barLine2Fn, minStart, maxEnd) {
   const span = maxEnd - minStart;
   const groups = {};
@@ -37,38 +124,16 @@ export function buildTimelineGroup(out, groupKey, subLabelFn, barLine1Fn, barLin
       const width = ((o.b - o.a) / span) * 100;
       const cls = missionColorClass(o.mis);
 
-      // Para turmas coletivas, verifica o status consolidado
-      const activeItems = o.items.filter(it => ((S.fStatus && S.fStatus[it.fKey]) || it.status || 'Confirmado') !== 'Cancelado');
-      const primaryItem = activeItems[0] || o.items[0];
-      const stVal = activeItems.length === 0
-        ? 'Cancelado'
-        : ((S.fStatus && S.fStatus[primaryItem.fKey]) || primaryItem.status || 'Confirmado');
-      const stKey = stVal.replace(/\s+/g, '');
-      const pesoTxt = o.kg ? `${o.kg} kg` : '—';
-      const isCollective = o.students.length > 1;
-      const stuListTxt = isCollective ? `${o.students.length} alunos: ${o.students.join(', ')}` : o.s;
+      // Turma coletiva: cancelada só quando todos os alunos estão cancelados
+      const activeItems = o.items.filter(it => statusDe(it) !== 'Cancelado');
+      const stKey = (activeItems.length ? statusDe(activeItems[0]) : 'Cancelado').replace(/\s+/g, '');
+      const chave = o.classKey || o.fKey || `${groupKey}:${key}:${o.a}`;
+      VOOS_DO_MAPA.set(chave, o);
 
-      return `<div class="tl-bar ${cls} tl-st-${stKey}" tabindex="0" style="left:${left.toFixed(2)}%;width:${width.toFixed(2)}%">
-        <div class="tl-bar-t1">${barLine1Fn(o)}</div>
-        <div class="tl-bar-t2">${barLine2Fn(o)}</div>
-        <div class="tl-pop">
-          <div class="tl-pop-hd"><span>${hm(o.a)} – ${hm(o.b)}</span><span>${HT(o)}</span></div>
-          <div class="tl-pop-grid">
-            <span>${isCollective ? 'Turma:' : 'Aluno:'}</span><span>${esc(stuListTxt)}</span>
-            <span>Instrutor:</span><span>${esc(o.ins)}</span>
-            <span>Recurso:</span><span>${esc(o.r)}</span>
-            <span>Missão:</span><span>${esc(o.mis)}</span>
-            <span>Peso Trip.:</span><span>${pesoTxt}</span>
-            <span>Status:</span>
-            <span>
-              <select class="st-sel st-${stKey}" data-f="fstatus" data-fkey="${primaryItem.fKey}" aria-label="Status do voo">
-                ${FLIGHT_STATUSES.map(st => `<option value="${st}"${st === stVal ? ' selected' : ''}>${st}</option>`).join('')}
-              </select>
-            </span>
-          </div>
-          ${!isCollective && o.stuId ? `<button class="tl-pop-btn edit-only" data-act="rm-fly" data-id="${o.stuId}" data-mid="${o.mid || 0}">✕ Excluir da escala</button>` : ''}
-        </div>
-      </div>`;
+      return `<button type="button" class="tl-bar ${cls} tl-st-${stKey}" data-pop="${esc(chave)}" aria-haspopup="dialog" aria-controls="tl-pop" aria-expanded="false" style="left:${left.toFixed(2)}%;width:${width.toFixed(2)}%">
+        <span class="tl-bar-t1">${barLine1Fn(o)}</span>
+        <span class="tl-bar-t2">${barLine2Fn(o)}</span>
+      </button>`;
     }).join('');
 
     return `<div class="tl-row">
@@ -81,6 +146,7 @@ export function buildTimelineGroup(out, groupKey, subLabelFn, barLine1Fn, barLin
 }
 
 export function renderVisualTimeline(out) {
+  VOOS_DO_MAPA.clear();
   if (!out.length) return '';
   const minStart = 360; // 06:00
   const maxEnd = Math.max(1080, ...out.map(o => o.b));
@@ -313,4 +379,5 @@ export function rOut() {
   if (!voos.length) h += `<p class="h">${tot ? 'Nenhum voo na escala com esses filtros.' : 'Nenhuma missão marcada na Demanda.'}</p>`;
   else h += tabela(voos) + renderVisualTimeline(voos);
   $('#out').innerHTML = h;
+  reancorarPopupDoMapa();
 }

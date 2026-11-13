@@ -199,8 +199,42 @@ Decisions (Pedro, 2026-11-12): start times are a list per category, edited in Re
 
 - [x] Also fixed in Part 3: a student could join a Ground class already open outside the student's availability (since Phase 4). None of the 41 approved schedules hit it.
 
-### Phase 8: Later (nice to have)
-- [ ] Track instructor and student qualifications and currency: last flight, medical/CMA expiry, student course phase. The engine then checks these instead of relying on manual levels.
+### Phases 8–15: the board's notes (2026-11-13)
+The ACPM board reviewed the app and left 17 notes. Decisions (Pedro, 2026-11-13):
+- **Gaps:** the operator switches what wins when closing idle gaps: the INVA's day (default), the aircraft's, or the biggest gap first. A second switch sets whether a flight may change time: within the student's availability (default), only between the 1st and 2nd preference, or never. The even split of hours holds in every mode.
+- **Hangar:** the order front to back is a list per day, carried to the next day and editable.
+- **Personal data** (CPF, CANAC, birth date, mobile, e-mail): Operadores, Administradores and the Secretaria see and edit it; it lives in a separate table protected on the server, never in the roster, links, exports or history.
+- **Legal limits:** the engine blocks. The defaults come from Lei 13.475/2017 and RBAC 117 Appendix A (which covers RBAC 141 schools): 9h30 of flight per duty, 11 h of duty, 100 h a month, 960 h a year, 12 h of rest. The Administrador can change them; the semester limit starts empty (the law has none).
+- **Reception TV:** its own "Painel" account, which reads only the day's board.
+- **Courses:** the syllabus (PP, PC, INVA) is kept in the app; the operator records aprovado or reprovado.
+- **CAVOK and Plane It:** neither has a public API. Discovery first; meanwhile, file import and export.
+
+One PR per phase, opened when Pedro says. Each phase starts from the upstream `main`.
+
+#### Phase 8: Escala do dia (branch `fase-8`)
+1. [x] **The map popup no longer disappears.** It was cut off by the map panel, which scrolls sideways, so on the first rows it vanished under the filters and the header. Now there is a single popup, fixed on the screen: a click (or Enter) on a flight opens it, always whole and on top; Esc returns to the flight and a click outside closes it. A cancelled flight's popup is no longer faded, and the Gestor can't change the status in it.
+2. [ ] **Flight status with details.** New status "Atrasado" with the new time; "Cancelado" asks for the reason. A delay that runs into the next flight of the same aircraft, instructor or student shows a warning. The CSV and the PDF show both.
+3. [ ] **"Painel" view:** the day as an airport board (Horário, Aeronave, Aluno, Instrutor, Missão, Status with a colour, Observações).
+
+#### Phase 9: Access, personal data and the reception TV
+Read rules by profile, the personal data of students and INVAs, and the TV page (flights from one hour before to one hour after now).
+
+#### Phase 10: Engine rules, fuel and hangar
+One shared feasibility check, a script that measures the schedules, fuel against the weight limit (full tanks by default; when needed, how much less fuel), the hangar order and aircraft packed in it.
+
+#### Phase 11: Legal limits
+
+#### Phase 12: The operating day
+Approving the schedule freezes it; for a broken aircraft or a sick instructor the app suggests who and what can fly, without redoing the day; new requests fit around the frozen flights.
+
+#### Phase 13: Compact days, with the operator's switches
+
+#### Phase 14: Courses and mission results
+
+#### Phase 15: CAVOK and Plane It
+
+### Phase 16: Later (nice to have)
+- [ ] Track instructor and student currency: last flight, medical/CMA expiry. The engine then checks these too (the course phase is Phase 14).
 - [ ] Integrate with the Google Calendar that students already use, publishing each student's missions.
 - [ ] Make the app installable (PWA) for use on the apron with poor connectivity.
 
@@ -209,6 +243,6 @@ Decisions (Pedro, 2026-11-12): start times are a list per category, edited in Re
 2. Is the school on Google Workspace? This decides Sheets versus Supabase.
 3. ~~Can the repo be made private, or the history rewritten, to remove instructor weights?~~ *Answered: not needed (Gabriel, PR #2).*
 4. Are the instructor levels in someone's browser the real ones, and whose?
-5. Should student and instructor data be linked to any existing school system?
+5. ~~Should student and instructor data be linked to any existing school system?~~ *Answered: yes, CAVOK (students, schedule, mission results) and Plane It (aircraft, logbook); see Phase 15 (board, 2026-11-13).*
 6. ~~Should a student keep the same aircraft and instructor across sessions on the same day?~~ *Answered: the student rotates instructors; the instructor keeps the aircraft (Phase 1).*
 7. ~~How many Ground School rooms are there?~~ *Answered: one (Phase 1).*

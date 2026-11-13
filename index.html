@@ -402,7 +402,7 @@
       <p>No alto, o resumo do dia (missões pedidas, escaladas e as horas de voo e aula), as missões que não entraram, cada uma com o motivo (caixa vermelha), e os avisos agrupados (caixa amarela). Depois, a escala em três vistas:</p>
       <ul>
         <li><b>Lista:</b> uma linha por voo, por horário. A turma de Ground ocupa uma linha só, com os alunos logo abaixo. A preferência aparece só quando o voo não ficou na 1ª (“2ª preferência” ou “horário livre”), e o peso fica em destaque quando chega perto do limite do avião.</li>
-        <li><b>Por recurso</b> e <b>Por instrutor:</b> o mapa do dia, com a ocupação de cada um.</li>
+        <li><b>Por recurso</b> e <b>Por instrutor:</b> o mapa do dia, com a ocupação de cada um. Um clique num voo abre os detalhes dele (aluno, instrutor, recurso, missão, peso e status); Esc ou um clique fora fecha.</li>
       </ul>
       <p>Filtre por categoria (C152, C172, Simulador, PA-34 ou Sala Ground) e, dentro dela, por recurso, ou busque um aluno ou instrutor. Na lista, um clique no horário recolhe ou abre os voos dele. Na lista, mude o status do voo ou use o ✕ do fim da linha (<i>Tirar da escala</i>, aparece ao passar o mouse) para tirar um voo; o Histórico permite restaurar. <i>CSV</i> gera o arquivo do lançamento no portal, agrupado por avião e com o peso; <i>PDF</i> gera a escala para impressão. No celular, a lista mostra um cartão por voo.</p>
 
@@ -544,6 +544,8 @@
 
 <!-- HABILITAÇÕES DE UM INSTRUTOR: painel lateral aberto pelo cadastro -->
 <aside class="gaveta" id="painel-instrutor" aria-labelledby="painel-instrutor-titulo" hidden></aside>
+<!-- Popup do voo no mapa da escala: fora do painel do mapa (que rola) para nunca ficar cortado -->
+<div class="tl-pop" id="tl-pop" role="dialog" aria-label="Detalhes do voo" hidden></div>
 
 <div id="toast-box" aria-live="polite"></div>
 
