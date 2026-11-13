@@ -108,6 +108,13 @@ describe('Atraso que invade o voo seguinte', () => {
       { '1000_0_1': { novoInicio: 640 }, '1001_0_1': { novoInicio: 700 } }), []);
   });
 
+  it('o atraso que invade uma turma de Ground conta uma vez (pelo primeiro aluno da turma)', () => {
+    const turma = ['1001_0_1', '1002_0_1', '1003_0_1'].map(k => voo(k, 500, { classKey: 'GND_Ground C152_1_2', r: 'SALA-GROUND', insId: 2, b: 590 }));
+    const atrasado = voo('1000_0_1', 390, { classKey: 'GND_Ground PA-34_0_3', r: 'SALA-GROUND', insId: 3, b: 480 });
+    assert.deepEqual(conflitosDeAtraso([atrasado, ...turma], { '1000_0_1': 'Atrasado' }, { '1000_0_1': { novoInicio: 450 } }),
+      [{ fKey: '1000_0_1', com: '1001_0_1', motivos: ['recurso'] }]);
+  });
+
   it('os alunos da mesma turma de Ground não conflitam entre si', () => {
     const turma = ['1000_0_1', '1001_0_1'].map(k => voo(k, 390, { classKey: 'GND_Ground C152_0_1', r: 'SALA-GROUND', b: 480 }));
     assert.deepEqual(conflitosDeAtraso(turma, { '1000_0_1': 'Atrasado' }, { '1000_0_1': { novoInicio: 400 } }), []);

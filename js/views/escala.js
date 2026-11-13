@@ -4,8 +4,10 @@ import { hm, WLB, fmtH, esc } from '../format.js';
 import { isGroundMission } from '../rules.js';
 import { categoriaDoTipo, nomeDoRecurso } from '../categorias.js';
 import { textoDoDetalhe } from '../status.js';
+import { linhasDoQuadro } from '../quadro.js';
+import { painelDaEscala } from './painel-aeroporto.js';
 import { sumUniqueOperationalHours, consolidateTimelineSlots } from '../engine.js';
-import { S, RES, AUDIT_LOG, TL_MODE, isGestor } from '../state.js';
+import { S, RES, AUDIT_LOG, TL_MODE, DATA, isGestor } from '../state.js';
 import { $ } from '../dom.js';
 
 export const HT = o => (o.isGround || isGroundMission(o.mis) ? '01h30 (1,5 h)' : o.h + ' h' + (o.ss !== '1/1' ? ` (sessão ${o.ss})` : ''));
@@ -361,10 +363,16 @@ function tabela(voos) {
   return h + '</tbody></table></div>';
 }
 
+// Painel: partidas e chegadas no estilo dos aeroportos, com os voos dos filtros (js/views/painel-aeroporto.js)
+function painelDoDia(voos) {
+  const fStatus = S.fStatus || {}, fObs = S.fObs || {}, data = DATA;
+  return `<div class="painel-dia">${painelDaEscala(() => ({ linhas: linhasDoQuadro(voos, fStatus, fObs), data }))}</div>`;
+}
+
 // A escala é refeita a cada alteração (save em actions.js): aqui ela só é desenhada, na visão escolhida na barra
 export function rOut() {
   document.querySelectorAll('#s-esc [data-tl]').forEach(b => b.classList.toggle('on', b.dataset.tl === TL_MODE));
-  $('#out').dataset.vista = TL_MODE === 'lista' ? 'lista' : 'mapa';
+  $('#out').dataset.vista = TL_MODE === 'lista' || TL_MODE === 'painel' ? TL_MODE : 'mapa';
   if (!RES || (!RES.out.length && !RES.al.length)) {
     $('#out').innerHTML = `<p class="h">Nenhum voo nesta data. Marque quem vai voar na aba Demanda: a escala é montada automaticamente.</p>`;
     return;
@@ -392,7 +400,7 @@ export function rOut() {
 
   let h = resumo(out, al, tot);
   if (!voos.length) h += `<p class="h">${tot ? 'Nenhum voo na escala com esses filtros.' : 'Nenhuma missão marcada na Demanda.'}</p>`;
-  else h += tabela(voos) + renderVisualTimeline(voos);
+  else h += tabela(voos) + renderVisualTimeline(voos) + (TL_MODE === 'painel' ? painelDoDia(voos) : '');
   $('#out').innerHTML = h;
   reancorarPopupDoMapa();
 }

@@ -294,6 +294,8 @@ input[type=number] { width: 88px; }
   font: 600 14px 'Barlow Semi Condensed', sans-serif; color: var(--mu); display: inline-flex; align-items: center; gap: 6px;
 }
 .seg button.on { background: var(--hd); color: #fff; }
+/* Até 1400 px, a barra da Escala fica numa linha só sem os ícones das visões */
+@media (max-width: 1400px) { #s-esc .seg .ico { display: none; } }
 
 /* Escala: resumo numa linha, erros e avisos agrupados, uma linha por voo e o mapa como outra visão */
 .resumo { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; margin: 0 0 12px; }
@@ -329,6 +331,56 @@ details.caixa.avisos summary { color: var(--wa); }
 .tabela-escala tr:hover .acao .x, .tabela-escala .acao .x:focus-visible { opacity: 1; }
 @media (hover: none) { .tabela-escala .acao .x { opacity: 1; } }
 #out[data-vista="lista"] .mapa, #out[data-vista="mapa"] .tabela-escala { display: none; }
+#out[data-vista="painel"] .mapa, #out[data-vista="painel"] .tabela-escala, #out:not([data-vista="painel"]) .painel-dia { display: none; }
+
+/* Painel no estilo dos aeroportos (como os painéis da INFRAERO): moldura escura, faixa azul com o título, o avião e o
+   relógio; cabeçalho azul; linhas azul-marinho alternadas; horário e missão em amarelo e o resto em branco; a observação
+   na cor do status. Em tela cheia, ocupa a tela toda e as letras crescem com ela */
+.painel-dia { display: flex; flex-direction: column; gap: 10px; }
+.fids-controles { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.fids {
+  --fids-fs: 17px; --fids-linha: 34px; --fids-amarelo: #FFD23F; --fids-branco: #F4F7FF;
+  overflow-x: auto; background: #07122B; border: 6px solid #0A0F1A; border-radius: 8px; box-shadow: 0 8px 22px rgba(0,0,0,.35);
+  font-family: 'Barlow Semi Condensed', sans-serif; color: var(--fids-branco);
+}
+.fids-topo {
+  display: flex; align-items: center; gap: 16px; min-width: 860px; padding: 8px 18px;
+  background: linear-gradient(#4A7FE0, #2453B6 45%, #173C8E); border-bottom: 2px solid #6E98F0;
+}
+.fids-logo { height: calc(var(--fids-fs) * 2.1); width: auto; }
+.fids-nome { flex: 1; display: flex; align-items: baseline; gap: 14px; min-width: 0; }
+.fids .fids-titulo {
+  margin: 0; color: #fff; font: italic 800 calc(var(--fids-fs) * 2.2) 'Barlow Semi Condensed', sans-serif; letter-spacing: .03em;
+  text-shadow: 0 2px 0 #0B2763, 1px 0 0 #0B2763, -1px 0 0 #0B2763;
+}
+.fids-data { font-weight: 600; font-size: calc(var(--fids-fs) * .9); color: #DCE7FF; }
+.fids-aviao { width: calc(var(--fids-fs) * 1.7); height: calc(var(--fids-fs) * 1.7); fill: none; stroke: #fff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.fids-relogio { display: flex; flex-direction: column; align-items: flex-end; line-height: 1; }
+.fids-relogio b { font-size: calc(var(--fids-fs) * 1.7); font-weight: 700; font-variant-numeric: tabular-nums; }
+.fids-relogio small { margin-top: 3px; font-size: calc(var(--fids-fs) * .65); color: #DCE7FF; }
+table.fids-tabela { width: 100%; min-width: 860px; border-collapse: collapse; font-size: var(--fids-fs); }
+.fids-tabela th {
+  position: static; padding: 4px 10px; border: 0; text-align: left; color: #fff; letter-spacing: .02em;
+  font: 700 calc(var(--fids-fs) * .78) 'Barlow Semi Condensed', sans-serif; background: linear-gradient(#3463C2, #23499B);
+}
+.fids-tabela td { height: var(--fids-linha); padding: 0 10px; border-bottom: 1px solid #1B2B55; font-weight: 700; white-space: nowrap; }
+.fids-tabela tbody tr:nth-child(odd) { background: #0B1A3D; }
+.fids-tabela tbody tr:nth-child(even) { background: #0F2148; }
+.fids .f-hora, .fids .f-missao { color: var(--fids-amarelo); }
+.fids .f-hora, .fids .f-prev { font-variant-numeric: tabular-nums; }
+.fids-cia { display: inline-block; min-width: 4.8em; padding: 2px 6px; border-radius: 3px; text-align: center; font-size: .8em; color: #fff; }
+.fids-cia-C152 { background: #1F5FA8; }
+.fids-cia-C172 { background: #0E7C6B; }
+.fids-cia-PA34 { background: #EF6A1C; }
+.fids-cia-SimMono, .fids-cia-SimMulti { background: #6B2FA0; }
+.fids-cia-Ground { background: #fff; color: #1A4FA0; }
+.fids-Confirmado .f-obs { color: #8BE59C; }
+.fids-Atrasado .f-obs, .fids-Atrasado .f-prev { color: #FFC233; }
+.fids-Cancelado .f-obs { color: #FF7B7B; }
+.fids-EmVoo .f-obs { color: #74D7FF; }
+.fids-nada td { color: #DCE7FF; font-weight: 600; }
+.fids:fullscreen { --fids-fs: 2.6vh; --fids-linha: 5.4vh; overflow: hidden; border: 0; border-radius: 0; }
+.fids:fullscreen .fids-topo, .fids:fullscreen table.fids-tabela { min-width: 0; }
 /* A hora da última atualização da escala: discreta, com um relógio, ao lado do título */
 .atualizada { display: inline-flex; align-items: center; gap: 4px; margin-left: 10px; vertical-align: middle; font: 400 13px 'Barlow', sans-serif; color: var(--mu); }
 .atualizada .ico { width: 14px; height: 14px; vertical-align: 0; }

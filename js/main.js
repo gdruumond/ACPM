@@ -26,6 +26,7 @@ import { show } from './views/tabs.js';
 import { rBI, alternarTodosDoBI } from './views/bi.js';
 import { renderAuditPanel, rOut, alternarTempo, abrirPopupDoMapa, fecharPopupDoMapa, popupDoMapaAberto, reposicionarPopupDoMapa } from './views/escala.js';
 import { pedirDetalheDoStatus, dialogoDeStatusAberto } from './views/dialogo-status.js';
+import { acaoDoPainel } from './views/painel-aeroporto.js';
 import { STATUS_COM_DETALHE, textoParaOHistorico } from './status.js';
 import { singleDemandRowHTML, cnt, rDem, applyDemandFilters } from './views/demanda.js';
 import { rIns, rAlu, applyInstructorFilters, preencherFiltroDeHabilitacoes, mostrarVistaDosInstrutores, abrirPainelDoInstrutor, fecharPainelDoInstrutor, atualizarLinhaDoCadastro, atualizarLinhaDoAluno } from './views/cadastros.js';
@@ -60,6 +61,12 @@ document.addEventListener('click', e => {
   if (tlBtn) {
     setTLMode(tlBtn.dataset.tl);
     rOut();
+    return;
+  }
+  // Painel: os dois quadros ou um só, pausar a troca e tela cheia
+  const fidsBtn = e.target.closest('[data-fids]');
+  if (fidsBtn) {
+    acaoDoPainel(fidsBtn.dataset.fids);
     return;
   }
   // Recolher e abrir: os horários da Lista (Escala) e as categorias da frota (Recursos)

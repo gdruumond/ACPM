@@ -35,7 +35,7 @@ test.describe('Acessibilidade', () => {
       expect(await semNome(page, '.topo, #nav, main section.on'), `aba ${aba}`).toEqual([]);
     }
     await irPara(page, 'esc');
-    for (const vista of ['eq', 'ins']) {
+    for (const vista of ['eq', 'ins', 'painel']) {
       await page.locator(`#s-esc [data-tl="${vista}"]`).click();
       expect(await semNome(page, 'main section.on'), `mapa ${vista}`).toEqual([]);
     }

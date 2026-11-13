@@ -3,10 +3,10 @@ import { test, expect, abrir, abrirComExemplo, abrirEscala, irPara, lerEscala } 
 import { aluno, cenario, instrutor, GROUND_C152 } from '../helpers/montar.js';
 
 test.describe('Tela da Escala', () => {
-  test('a barra troca entre Lista, Por recurso e Por instrutor', async ({ page }) => {
+  test('a barra troca entre Lista, Por recurso, Por instrutor e Painel', async ({ page }) => {
     await abrirComExemplo(page);
     await abrirEscala(page);
-    await expect(page.locator('#s-esc [data-tl]')).toHaveText(['Lista', 'Por recurso', 'Por instrutor']);
+    await expect(page.locator('#s-esc [data-tl]')).toHaveText(['Lista', 'Por recurso', 'Por instrutor', 'Painel']);
     await expect(page.locator('#s-esc [data-tl="lista"]')).toHaveClass(/\bon\b/);
     await expect(page.locator('#out table')).toBeVisible();
     await expect(page.locator('#out .mapa')).toBeHidden();
@@ -18,8 +18,13 @@ test.describe('Tela da Escala', () => {
 
     await page.locator('#s-esc [data-tl="ins"]').click();
     await expect(page.locator('#out .tl-row .tl-lbl').first()).toContainText('Instrutor');
+    await page.locator('#s-esc [data-tl="painel"]').click();
+    await expect(page.locator('#out .painel-dia')).toBeVisible();
+    await expect(page.locator('#out .mapa')).toBeHidden();
+    await expect(page.locator('#out .tabela-escala')).toBeHidden();
     await page.locator('#s-esc [data-tl="lista"]').click();
-    await expect(page.locator('#out table')).toBeVisible();
+    await expect(page.locator('#out .tabela-escala table')).toBeVisible();
+    await expect(page.locator('#out .painel-dia')).toBeHidden();
   });
 
   test('resumo: os números numa linha; o que não entrou numa caixa vermelha aberta; os avisos agrupados numa caixa fechada', async ({ page }) => {
@@ -220,5 +225,90 @@ test.describe('Mapa: o popup do voo', () => {
     await page.locator('#out .tl-bar').first().click();
     await expect(pop(page).locator('.st-sel')).toBeDisabled();
     await expect(pop(page).locator('[data-act="rm-fly"]')).toBeHidden();
+  });
+});
+
+// O Painel no estilo dos aeroportos (os painéis da INFRAERO): Partidas (todas as do dia) e Chegadas (as que ainda não
+// pousaram) se alternam página a página, com o relógio no canto. Ground aparece sem os nomes dos alunos
+test.describe('Painel: partidas e chegadas como no aeroporto', () => {
+  // 06:30 atrasado para 11:00; 10:10 confirmado; 11:30 cancelado; turma de Ground às 08:20
+  const dia = () => ({
+    ...cenario({
+      ins: [instrutor(1, 9), instrutor(2, 9)],
+      stu: [aluno(1000, { p1: 390, p2: -1 }), aluno(1001, { p1: 610, p2: -1 }), aluno(1002, { p1: 690, p2: -1, eq: 'C172' }),
+        aluno(1003, { ...GROUND_C152, p1: 500, p2: -1 }), aluno(1004, { ...GROUND_C152, p1: 500, p2: -1 })],
+      fStatus: { '1000_0_1': 'Atrasado', '1002_0_1': 'Cancelado' }
+    }),
+    fObs: { '1000_0_1': { novoInicio: 660 }, '1002_0_1': { motivo: 'Meteorologia' } }
+  });
+  const abrirPainel = async page => {
+    await abrirEscala(page);
+    await page.locator('#s-esc [data-tl="painel"]').click();
+    await expect(page.locator('#out .fids')).toBeVisible();
+  };
+  const titulo = page => page.locator('#out .fids .fids-titulo');
+  const linhas = page => page.locator('#out .fids tbody tr:not(.fids-vazia)');
+  const coluna = (page, classe) => linhas(page).locator(classe);
+
+  test('Partidas: o quadro do aeroporto com todas as partidas, pelo horário previsto; atraso, cancelamento e Ground sem nomes', async ({ page }) => {
+    await abrir(page, { estado: dia() });
+    await abrirPainel(page);
+    await page.locator('#out [data-fids="partidas"]').click();
+    await expect(titulo(page)).toHaveText('Partidas');
+    await expect(page.locator('#out .fids .fids-relogio b')).toHaveText('12:00');
+    await expect(page.locator('#out .fids thead th')).toHaveText(['Horário', 'Missão', 'Modelo', 'Aeronave', 'Aluno', 'Instrutor', 'Previsto', 'Observação']);
+    await expect(coluna(page, '.f-hora')).toHaveText(['08:20', '10:10', '06:30', '11:30']);
+    await expect(coluna(page, '.f-prev')).toHaveText(['', '', '11:00', '']);
+    await expect(coluna(page, '.f-missao')).toHaveText(['Ground C152', 'Voo Local', 'Voo Local', 'Voo Local']);
+    await expect(coluna(page, '.f-modelo')).toHaveText(['Ground', 'C152', 'C152', 'C172']);
+    await expect(coluna(page, '.f-aluno')).toHaveText(['2 alunos', 'Aluno 1001', 'Aluno 1000', 'Aluno 1002']);
+    await expect(coluna(page, '.f-obs')).toHaveText(['Confirmado', 'Confirmado', 'Atrasado', 'Cancelado · Meteorologia']);
+    await expect(coluna(page, '.f-aeronave').first()).toHaveText('Sala Ground');
+    await expect(linhas(page).nth(3)).toHaveClass(/\bfids-Cancelado\b/);
+    // O quadro tem sempre a mesma altura: linhas vazias completam a página
+    expect(await page.locator('#out .fids tbody tr').count()).toBeGreaterThan(4);
+  });
+
+  test('Chegadas: as pendentes, pelo pouso previsto; num dia que ainda não começou, todas', async ({ page }) => {
+    await abrir(page, { estado: dia() });
+    await abrirPainel(page);
+    await page.locator('#out [data-fids="chegadas"]').click();
+    await expect(titulo(page)).toHaveText('Chegadas');
+    await expect(coluna(page, '.f-hora')).toHaveText(['09:50', '11:10', '07:30', '12:30']);
+    await expect(coluna(page, '.f-prev')).toHaveText(['', '', '12:00', '']);
+    await expect(coluna(page, '.f-aluno')).toHaveText(['2 alunos', 'Aluno 1001', 'Aluno 1000', 'Aluno 1002']);
+  });
+
+  test('alterna entre Partidas e Chegadas como no aeroporto; "Pausar" para a troca', async ({ page }) => {
+    await page.clock.install({ time: new Date('2026-11-10T12:00:00-03:00') });
+    await abrir(page, { estado: dia() });
+    await abrirPainel(page);
+    await expect(page.locator('#out [data-fids="alternar"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(titulo(page)).toHaveText('Partidas');
+    await page.clock.runFor(10_000);
+    await expect(titulo(page)).toHaveText('Chegadas');
+    await page.clock.runFor(10_000);
+    await expect(titulo(page)).toHaveText('Partidas');
+    await page.locator('#out [data-fids="pausar"]').click();
+    await expect(page.locator('#out [data-fids="pausar"]')).toHaveAttribute('aria-pressed', 'true');
+    await page.clock.runFor(30_000);
+    await expect(titulo(page)).toHaveText('Partidas');
+  });
+
+  test('um quadro fixo continua só com ele; a página aparece junto do relógio', async ({ page }) => {
+    await page.clock.install({ time: new Date('2026-11-10T12:00:00-03:00') });
+    await abrir(page, { estado: dia() });
+    await abrirPainel(page);
+    await page.locator('#out [data-fids="chegadas"]').click();
+    await expect(page.locator('#out [data-fids="chegadas"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#out .fids .fids-relogio small')).toHaveText('página 1/1');
+    await page.clock.runFor(30_000);
+    await expect(titulo(page)).toHaveText('Chegadas');
+  });
+
+  test('no Gestor, o mesmo painel', async ({ page }) => {
+    await abrir(page, { estado: dia(), url: './?role=gestor' });
+    await abrirPainel(page);
+    await expect(linhas(page)).toHaveCount(4);
   });
 });

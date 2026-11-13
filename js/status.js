@@ -78,20 +78,26 @@ export function intervaloEfetivo(o, status, detalhe) {
 }
 
 // Atrasos que invadem outro voo do mesmo recurso, do mesmo instrutor ou do mesmo aluno (cada um no seu horário
-// efetivo). Voo cancelado não conta, e os alunos de uma mesma turma de Ground não conflitam entre si
+// efetivo). Voo cancelado não conta, os alunos de uma mesma turma de Ground não conflitam entre si e a turma
+// atingida conta uma vez (pelo primeiro aluno dela)
 export function conflitosDeAtraso(out, fStatus = {}, fObs = {}) {
   const statusDe = o => fStatus[o.fKey] || o.status || 'Confirmado';
   const ativos = out.filter(o => statusDe(o) !== 'Cancelado').map(o => ({ o, ...intervaloEfetivo(o, statusDe(o), fObs[o.fKey]) }));
   const conflitos = [];
   for (const x of ativos) {
     if (statusDe(x.o) !== 'Atrasado' || !fObs[x.o.fKey]) continue;
+    const atingidos = new Set();
     for (const y of ativos) {
       if (y === x || (x.o.classKey && x.o.classKey === y.o.classKey) || !(x.a < y.b && y.a < x.b)) continue;
+      const grupo = y.o.classKey || y.o.fKey;
+      if (atingidos.has(grupo)) continue;
       const motivos = [];
       if (x.o.r === y.o.r) motivos.push('recurso');
       if (x.o.insId !== undefined && x.o.insId === y.o.insId) motivos.push('instrutor');
       if (x.o.stuId !== undefined && x.o.stuId === y.o.stuId) motivos.push('aluno');
-      if (motivos.length) conflitos.push({ fKey: x.o.fKey, com: y.o.fKey, motivos });
+      if (!motivos.length) continue;
+      atingidos.add(grupo);
+      conflitos.push({ fKey: x.o.fKey, com: y.o.fKey, motivos });
     }
   }
   return conflitos;
