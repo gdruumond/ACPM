@@ -27,7 +27,7 @@ describe('Separar e juntar', () => {
     assert.deepEqual(Object.keys(cadastro).sort(), ['frota', 'horarios', 'ins', 'nid', 'stu']);
     assert.deepEqual(Object.keys(cadastro.ins[0]).sort(), ['hab', 'id', 'kg', 'lv', 'nm']);
     assert.deepEqual(Object.keys(cadastro.stu[0]).sort(), ['bl', 'id', 'kg', 'nm']);
-    assert.deepEqual(Object.keys(dia).sort(), ['av', 'fStatus', 'filas', 'horas', 'importadas', 'ins', 'pedidos', 'win']);
+    assert.deepEqual(Object.keys(dia).sort(), ['av', 'fObs', 'fStatus', 'filas', 'horas', 'importadas', 'ins', 'pedidos', 'win']);
     assert.deepEqual(Object.keys(dia.ins[estado.ins[0].id]).sort(), ['aw', 'on']);
     const pedido = dia.pedidos[estado.stu[0].id];
     assert.equal('nm' in pedido || 'kg' in pedido, false);
@@ -53,6 +53,17 @@ describe('Separar e juntar', () => {
     assert.deepEqual(junto.stu.map(s => s.id), [1000]);
   });
 
+  it('os detalhes do status (motivo do cancelamento, novo horário do atraso) vão e voltam com o dia', () => {
+    const estado = normalizado({ ...estadoSintetico(), stu: [aluno(1000), aluno(1001)] });
+    estado.fStatus = { '1000_0_1': 'Cancelado', '1001_0_1': 'Atrasado' };
+    estado.fObs = { '1000_0_1': { motivo: 'Outro', texto: 'Pista interditada' }, '1001_0_1': { novoInicio: 640 } };
+    const { cadastro, dia } = separar(estado);
+    assert.deepEqual(dia.fObs, estado.fObs);
+    assert.equal('fObs' in cadastro, false);
+    assert.deepEqual(juntar(cadastro, dia).fObs, estado.fObs);
+    assert.deepEqual(juntar(cadastro, { ...dia, fObs: undefined }).fObs, {}, 'dia sem detalhes (formato anterior)');
+  });
+
   it('juntar não compartilha objetos com o dia (editar o estado não altera o dia guardado)', () => {
     const estado = normalizado({ ...estadoSintetico(), stu: [aluno(1000, {}, { extra: [missaoExtra(1001)] })] });
     const { cadastro, dia } = separar(estado);
@@ -70,10 +81,11 @@ describe('Nova data', () => {
     const estado = normalizado({ ...estadoSintetico(), stu: [aluno(1000, {}, { extra: [missaoExtra(1001, { mis: 'IFR', eq: 'C172' })] })] });
     estado.av['PR-BTB'] = false;
     estado.fStatus = { '1000_0_1': 'Cancelado' };
+    estado.fObs = { '1000_0_1': { motivo: 'Meteorologia' } };
     const anterior = { ...separar(estado).dia, resultado: { out: [{ fKey: '1000_0_1' }], al: [], tot: 1 } };
     const novo = diaParaCopiar(anterior);
-    assert.deepEqual(Object.keys(novo).sort(), ['av', 'fStatus', 'filas', 'horas', 'importadas', 'ins', 'pedidos', 'win']);
-    assert.deepEqual(novo.fStatus, {});
+    assert.deepEqual(Object.keys(novo).sort(), ['av', 'fObs', 'fStatus', 'filas', 'horas', 'importadas', 'ins', 'pedidos', 'win']);
+    assert.deepEqual([novo.fStatus, novo.fObs], [{}, {}]);
     assert.equal(novo.av['PR-BTB'], false);
     assert.deepEqual(novo.pedidos[1000], anterior.pedidos[1000]);
     novo.pedidos[1000].extra[0].p1 = 7;

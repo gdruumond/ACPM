@@ -44,6 +44,14 @@ describe('CSV da escala por avião', () => {
     assert.equal(obs(voo('SALA-GROUND', 'Sala Ground', 390, { isGround: true, groupSize: 6, limKg: 0 })), 'Turma de Ground com 6 alunos');
   });
 
+  it('observações: o detalhe do status (novo horário do atraso, motivo do cancelamento)', () => {
+    const obs = (fStatus, fObs) => linhasDoCsv(escala([voo('PR-BTB', 'C152', 610, { fKey: 'k', stuKg: 0 })]), fStatus, fObs)[0][5];
+    assert.match(obs({ k: 'Atrasado' }, { k: { novoInicio: 640 } }), /^Status: Atrasado: nova decolagem 10:40 · /);
+    assert.match(obs({ k: 'Cancelado' }, { k: { motivo: 'Meteorologia' } }), /^Status: Cancelado: Meteorologia · /);
+    assert.match(obs({ k: 'Cancelado' }, { k: { motivo: 'Outro', texto: 'Pista interditada' } }), /^Status: Cancelado: Pista interditada · /);
+    assert.match(obs({ k: 'Cancelado' }, {}), /^Status: Cancelado · /);
+  });
+
   it('observações: avião que para para a revisão de 50 horas naquele dia', () => {
     const res = { ...escala([voo('PR-BTB', 'C152', 390), voo('PR-VOB', 'C152', 390)]), revisao: { 'PR-BTB': { inicio: 49, voadas: 1, fim: 50, paraAs: 450 }, 'PR-VOB': { inicio: 10, voadas: 1, fim: 11, paraAs: null } } };
     const [btb, vob] = linhasDoCsv(res);

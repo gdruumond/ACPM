@@ -3,6 +3,7 @@ import { FLIGHT_STATUSES, GROUND_REG } from '../config.js';
 import { hm, WLB, fmtH, esc } from '../format.js';
 import { isGroundMission } from '../rules.js';
 import { categoriaDoTipo, nomeDoRecurso } from '../categorias.js';
+import { textoDoDetalhe } from '../status.js';
 import { sumUniqueOperationalHours, consolidateTimelineSlots } from '../engine.js';
 import { S, RES, AUDIT_LOG, TL_MODE, isGestor } from '../state.js';
 import { $ } from '../dom.js';
@@ -41,6 +42,7 @@ function conteudoDoPopup(o) {
         <select class="st-sel st-${st.replace(/\s+/g, '')}" data-f="fstatus" data-fkey="${principal.fKey}" aria-label="Status do voo"${isGestor() ? ' disabled' : ''}>
           ${FLIGHT_STATUSES.map(v => `<option value="${v}"${v === st ? ' selected' : ''}>${v}</option>`).join('')}
         </select>
+        ${detalheDoStatus(principal)}
       </span>
     </div>
     ${!turma && o.stuId ? `<button type="button" class="tl-pop-btn edit-only" data-act="rm-fly" data-id="${o.stuId}" data-mid="${o.mid || 0}">✕ Excluir da escala</button>` : ''}`;
@@ -187,6 +189,7 @@ export function renderVisualTimeline(out) {
       <span><i class="tl-dot m-pc"></i>Navegação / Parafuso / IFR</span>
       <span><i class="tl-dot m-nt"></i>Noturno</span>
       <span><i class="tl-dot m-mu"></i>Multimotor</span>
+      <span><i class="tl-dot tl-dot-atrasado"></i>Atrasado</span>
       <span><i class="tl-dot tl-dot-emvoo"></i>Em voo</span>
       <span><i class="tl-dot tl-dot-pendente"></i>Pendente</span>
       <span><i class="tl-dot tl-dot-cancelado"></i>Cancelado</span>
@@ -248,7 +251,16 @@ function seletorDeStatus(o) {
   const st = statusDe(o);
   return `<select class="st-sel st-${st.replace(/\s+/g, '')}" data-f="fstatus" data-fkey="${o.fKey}" aria-label="Status de ${esc(o.s)}"${isGestor() ? ' disabled' : ''}>
     ${FLIGHT_STATUSES.map(v => `<option value="${v}"${v === st ? ' selected' : ''}>${v}</option>`).join('')}
-  </select>`;
+  </select>${detalheDoStatus(o)}`;
+}
+
+// O detalhe do status (o motivo do cancelamento ou a nova decolagem do atraso): um clique permite alterá-lo
+function detalheDoStatus(o) {
+  const texto = textoDoDetalhe(statusDe(o), S.fObs && S.fObs[o.fKey]);
+  if (!texto) return '';
+  return isGestor()
+    ? `<span class="st-detalhe">${esc(texto)}</span>`
+    : `<button type="button" class="st-detalhe" data-act="detalhe-status" data-fkey="${o.fKey}" title="Alterar o detalhe do status">${esc(texto)}</button>`;
 }
 
 const acao = o => (o.stuId
@@ -259,12 +271,15 @@ const acao = o => (o.stuId
 function resumoDosAvisos(avisos) {
   const ehPeso = a => a.m.startsWith('Peso do aluno não informado');
   const ehRevisao = a => a.m.startsWith('Aeronave parou');
+  const ehAtraso = a => a.m.startsWith('Atraso:');
   const semPeso = new Set(avisos.filter(ehPeso).map(a => a.s.replace(/ \(.*\)$/, ''))).size;
   const revisao = avisos.filter(ehRevisao).length;
-  const outros = avisos.filter(a => !ehPeso(a) && !ehRevisao(a)).length;
+  const atrasos = avisos.filter(ehAtraso).length;
+  const outros = avisos.filter(a => !ehPeso(a) && !ehRevisao(a) && !ehAtraso(a)).length;
   const partes = [
     semPeso && `${semPeso} ${semPeso === 1 ? 'aluno sem peso' : 'alunos sem peso'}`,
     revisao && `${revisao} ${revisao === 1 ? 'avião para' : 'aviões param'} para a revisão de 50 horas`,
+    atrasos && `${atrasos} ${atrasos === 1 ? 'atraso com conflito' : 'atrasos com conflito'}`,
     outros && `${outros} ${outros === 1 ? 'outro' : 'outros'}`
   ].filter(Boolean);
   return `${avisos.length} ${avisos.length === 1 ? 'aviso' : 'avisos'}: ${partes.join(' · ')}`;

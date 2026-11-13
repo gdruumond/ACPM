@@ -31,10 +31,13 @@ test.describe('Escala', () => {
     const antes = await lerEscala(page);
     const ultimo = page.locator('#out table .st-sel').last();
     await ultimo.selectOption('Cancelado');
+    // O cancelamento pede o motivo
+    await page.locator('#dlg-status').getByLabel('Meteorologia').check();
+    await page.locator('#dlg-status').getByRole('button', { name: 'Confirmar' }).click();
     await expect(page.locator('#out table tbody tr.st-Cancelado')).toHaveCount(1);
     const depois = await lerEscala(page);
     expect(json({ antes: antes.resumo, depois: depois.resumo, linha: depois.linhas.at(-1) })).toMatchSnapshot('cancelamento.json');
-    await expect(page.locator('#audit-log-list')).toContainText(': Cancelado');
+    await expect(page.locator('#audit-log-list')).toContainText(': Cancelado (Meteorologia)');
   });
 
   test('excluir da escala e restaurar pelo histórico', async ({ page }) => {

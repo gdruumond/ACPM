@@ -140,7 +140,8 @@ describe('Link compartilhável (perfil Gestor)', () => {
     estado.win[2] = false;
     estado.av['PR-BTB'] = false;
     estado.ins[0].on = false;
-    estado.fStatus = { '1000_0_1': 'Em Voo' };
+    estado.fStatus = { '1000_0_1': 'Em Voo', '1000_1003_1': 'Cancelado', '1002_1003_1': 'Atrasado' };
+    estado.fObs = { '1000_1003_1': { motivo: 'Outro', texto: 'Aluno com febre' }, '1002_1003_1': { novoInicio: 640 } };
     estado.horas = { 'PR-BTB': 42 };
     estado.filas = { cheque: [], mlte: [9], noturno: [8, 7], c172: [8, 7, 9] };
     estado.stu = [
@@ -159,6 +160,7 @@ describe('Link compartilhável (perfil Gestor)', () => {
     assert.equal(destino.av['PR-BTB'], false);
     assert.deepEqual(destino.ins, estado.ins.map(({ lv, ...x }) => x), 'o link leva as habilitações (o nível de antes não vai)');
     assert.deepEqual(destino.fStatus, estado.fStatus);
+    assert.deepEqual(destino.fObs, { '1000_1003_1': { motivo: 'Outro' }, '1002_1003_1': { novoInicio: 640 } }, 'o texto livre do motivo não vai no link');
     assert.deepEqual([destino.horas, destino.filas], [estado.horas, estado.filas], 'as horas até a revisão e as filas do rodízio vão no link');
     assert.equal(destino.stu[0].jan, 'manha', 'a disponibilidade vai no link');
     assert.deepEqual(destino.stu.map(s => [s.id, s.fly, s.kg, s.bl, s.extra.map(ex => [ex.mid, ex.mis])]), [
@@ -214,6 +216,14 @@ describe('Link compartilhável: validação do conteúdo (vem da URL, não é co
   it('status de voo: somente chaves aluno_missão_sessão e valores conhecidos', () => {
     const { estado } = abrir({ st: { '1000_0_1': ATAQUE, '1000_0_2': 'Em Voo', [ATAQUE]: 'Pendente' } });
     assert.deepEqual(estado.fStatus, { '1000_0_2': 'Em Voo' });
+  });
+
+  it('detalhes do status: motivo da lista e horário em minutos, só para o status do voo; texto livre nunca', () => {
+    const { estado } = abrir({
+      st: { '1000_0_1': 'Cancelado', '1001_0_1': 'Atrasado', '1002_0_1': 'Cancelado', '1003_0_1': 'Em Voo' },
+      ob: { '1000_0_1': { m: 'Meteorologia', t: ATAQUE }, '1001_0_1': { n: 640 }, '1002_0_1': { m: ATAQUE }, '1003_0_1': { m: 'Meteorologia' }, [ATAQUE]: { m: 'Outro' } }
+    });
+    assert.deepEqual(estado.fObs, { '1000_0_1': { motivo: 'Meteorologia' }, '1001_0_1': { novoInicio: 640 } });
   });
 
   it('instrutores: id inteiro, habilitações conhecidas (ou o nível dos links antigos), peso numérico e disponibilidade booleana', () => {

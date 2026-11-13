@@ -7,6 +7,7 @@ import { isGroundMission, doesGroundGateFlight, disponibilidadeDoAluno, rotuloDa
 import { HORARIOS_INICIAIS, horariosDaMissao, periodoDoMinuto, minutoDaPreferencia } from './horarios.js';
 import { podeFazer, descreverExigencias } from './habilitacoes.js';
 import { categoriaDoRodizio, ajustarFilas } from './rodizio.js';
+import { avisosDeAtraso } from './status.js';
 
 // Entre os instrutores possíveis, primeiro os que têm menos habilitações: os mais versáteis ficam livres
 const qtdHabilitacoes = x => (Array.isArray(x.hab) ? x.hab.length : 0);
@@ -586,6 +587,8 @@ export function runAllocationEngine(state) {
   });
 
   out.sort((a, b) => a.a - b.a || (b.isGround ? 1 : 0) - (a.isGround ? 1 : 0) || a.o - b.o);
+  // Atraso que invade o voo seguinte do mesmo recurso, instrutor ou aluno: aviso (os horários continuam os da escala)
+  al.push(...avisosDeAtraso(out, state.fStatus || {}, state.fObs || {}));
   return { out, al, tot: act.length, revisao };
 }
 

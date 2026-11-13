@@ -376,7 +376,7 @@
         <li><b>Instrutores:</b> em <i>Disponibilidade do dia</i>, desligue quem não vem e confira as janelas de cada um.</li>
         <li><b>Demanda:</b> clique em <i>Importar pedidos da agenda</i> (o botão diz quantos pedidos da secretaria ainda não estão na demanda) e ajuste o que precisar: missão, recurso, horários preferidos, disponibilidade, duração e prioridade. Para um aluno que não está na lista, use <i>Pôr um aluno na demanda</i>.</li>
         <li><b>Escala:</b> ela já está pronta. Confira as missões que não entraram (caixa vermelha, com o motivo) e os avisos (caixa amarela), ajuste o que for preciso e baixe o <i>CSV</i> (para o lançamento no portal) e o <i>PDF</i>.</li>
-        <li><b>Durante o dia:</b> atualize o status de cada voo (Confirmado, Em Voo, Pendente ou Cancelado). Voo cancelado não conta nas horas do avião, no rodízio nem no BI.</li>
+        <li><b>Durante o dia:</b> atualize o status de cada voo (Pendente, Confirmado, Atrasado, Em Voo ou Cancelado). <i>Atrasado</i> pede a nova decolagem e <i>Cancelado</i>, o motivo; o detalhe aparece embaixo do status, e um clique nele permite alterar. Se o atraso invadir outro voo do mesmo avião, instrutor ou aluno, a escala avisa. Voo cancelado não conta nas horas do avião, no rodízio nem no BI.</li>
       </ol>
       <p class="manual-destaque"><b>Não existe botão de gerar nem de salvar.</b> Toda alteração, em qualquer aba, refaz a escala na hora e fica gravada. Ao lado do título da Escala aparece a hora da última atualização (por exemplo, “Atualizada às 10:42”).</p>
       <p class="manual-destaque">Uma data que você só abriu para consultar não é gravada. Ela passa a contar (no BI, nas horas dos aviões e no rodízio da data seguinte) quando você altera alguma coisa nela ou baixa o CSV ou o PDF.</p>
@@ -404,7 +404,7 @@
         <li><b>Lista:</b> uma linha por voo, por horário. A turma de Ground ocupa uma linha só, com os alunos logo abaixo. A preferência aparece só quando o voo não ficou na 1ª (“2ª preferência” ou “horário livre”), e o peso fica em destaque quando chega perto do limite do avião.</li>
         <li><b>Por recurso</b> e <b>Por instrutor:</b> o mapa do dia, com a ocupação de cada um. Um clique num voo abre os detalhes dele (aluno, instrutor, recurso, missão, peso e status); Esc ou um clique fora fecha.</li>
       </ul>
-      <p>Filtre por categoria (C152, C172, Simulador, PA-34 ou Sala Ground) e, dentro dela, por recurso, ou busque um aluno ou instrutor. Na lista, um clique no horário recolhe ou abre os voos dele. Na lista, mude o status do voo ou use o ✕ do fim da linha (<i>Tirar da escala</i>, aparece ao passar o mouse) para tirar um voo; o Histórico permite restaurar. <i>CSV</i> gera o arquivo do lançamento no portal, agrupado por avião e com o peso; <i>PDF</i> gera a escala para impressão. No celular, a lista mostra um cartão por voo.</p>
+      <p>Filtre por categoria (C152, C172, Simulador, PA-34 ou Sala Ground) e, dentro dela, por recurso, ou busque um aluno ou instrutor. Na lista, um clique no horário recolhe ou abre os voos dele. Na lista, mude o status do voo ou use o ✕ do fim da linha (<i>Tirar da escala</i>, aparece ao passar o mouse) para tirar um voo; o Histórico permite restaurar. O histórico registra o motivo do cancelamento só pela categoria: a descrição de “Outro” fica no voo, não no histórico. <i>CSV</i> gera o arquivo do lançamento no portal, agrupado por avião e com o peso e o status (com o motivo ou a nova decolagem); <i>PDF</i> gera a escala para impressão, com o status de cada voo. No celular, a lista mostra um cartão por voo.</p>
 
       <h4>Demanda</h4>
       <p>Uma linha por aluno. Ligue <i>Voa</i> para quem voa na data e preencha:</p>
@@ -544,6 +544,19 @@
 
 <!-- HABILITAÇÕES DE UM INSTRUTOR: painel lateral aberto pelo cadastro -->
 <aside class="gaveta" id="painel-instrutor" aria-labelledby="painel-instrutor-titulo" hidden></aside>
+<!-- Detalhe do status do voo: o motivo do cancelamento ou a nova decolagem do atraso (js/views/dialogo-status.js) -->
+<dialog class="dlg" id="dlg-status" aria-labelledby="dlg-status-titulo">
+  <form id="form-status" novalidate>
+    <h2 id="dlg-status-titulo"></h2>
+    <p class="h" id="dlg-status-voo"></p>
+    <div id="dlg-status-campos"></div>
+    <p class="erro-campo" id="st-erro" role="alert"></p>
+    <div class="dlg-acoes">
+      <button type="button" class="btn sec" id="st-voltar">Voltar</button>
+      <button type="submit" class="btn" id="st-confirmar">Confirmar</button>
+    </div>
+  </form>
+</dialog>
 <!-- Popup do voo no mapa da escala: fora do painel do mapa (que rola) para nunca ficar cortado -->
 <div class="tl-pop" id="tl-pop" role="dialog" aria-label="Detalhes do voo" hidden></div>
 

@@ -5,6 +5,7 @@ import { S, RES, DATA } from './state.js';
 import { $, showToast } from './dom.js';
 import { HT } from './views/escala.js';
 import { montarCsv, nomeDoCsv } from './csv.js';
+import { textoDoStatus } from './status.js';
 
 export async function sv(fn, data) {
   let dl = null;
@@ -26,7 +27,7 @@ export async function sv(fn, data) {
 // CSV para o portal de agendamento: agrupado por avião, em ordem de horário (js/csv.js)
 export async function exp() {
   if (!RES) { showToast('Não há escala para exportar nesta data.'); return; }
-  const c = montarCsv(RES, S.fStatus || {});
+  const c = montarCsv(RES, S.fStatus || {}, S.fObs || {});
   if (await sv(nomeDoCsv(DATA), c)) { showToast('CSV exportado.', 'ok'); return; }
   $('#csv').value = c;
   $('#csvbox').hidden = false;
@@ -56,12 +57,14 @@ export async function pdf() {
   out.forEach(o => {
     if (o.w !== cw) {
       cw = o.w;
-      body.push([{ content: `${WLB(o.w)}  -  ${out.filter(x => x.w === o.w).length} lançamento(s) iniciando`, colSpan: 8, styles: { fillColor: [222, 230, 238], fontStyle: 'bold' } }]);
+      body.push([{ content: `${WLB(o.w)}  -  ${out.filter(x => x.w === o.w).length} lançamento(s) iniciando`, colSpan: 9, styles: { fillColor: [222, 230, 238], fontStyle: 'bold' } }]);
     }
-    body.push([`${hm(o.a)}-${hm(o.b)}`, o.s, o.mis, o.r, o.ins, HT(o), o.kg ? o.kg + ' kg' : '-', o.tag]);
+    // Status com o detalhe (o novo horário do atraso ou o motivo do cancelamento)
+    const status = textoDoStatus((S.fStatus && S.fStatus[o.fKey]) || o.status || 'Confirmado', S.fObs && S.fObs[o.fKey]);
+    body.push([`${hm(o.a)}-${hm(o.b)}`, o.s, o.mis, o.r, o.ins, HT(o), o.kg ? o.kg + ' kg' : '-', o.tag, status]);
   });
 
-  doc.autoTable({ startY: 33, head: [['Horário','Aluno','Missão','Equipamento','Instrutor','Duração','Peso tripulação','Encaixe']], body, styles: { fontSize: 9 }, headStyles: H });
+  doc.autoTable({ startY: 33, head: [['Horário','Aluno','Missão','Equipamento','Instrutor','Duração','Peso tripulação','Encaixe','Status']], body, styles: { fontSize: 9 }, headStyles: H });
 
   const grp = k => {
     const g = {};

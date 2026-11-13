@@ -3,6 +3,7 @@
 // separador ";", UTF-8 com BOM e quebras de linha do Windows.
 import { GROUND_EQ_TYPE } from './config.js';
 import { hm } from './format.js';
+import { textoDoStatus } from './status.js';
 
 // Ordem dos grupos: aviões (C152, C172, PA-34), simuladores e a sala de Ground; em cada tipo, pela matrícula
 const ORDEM_DOS_TIPOS = ['C152', 'C172', 'PA-34', 'Sim. Mono', 'Sim. Multi', GROUND_EQ_TYPE];
@@ -12,11 +13,12 @@ export const CABECALHO = ['Avião / Equipamento', 'Horário', 'Aluno', 'Fase / M
 
 export const nomeDoCsv = data => `escala-acpm-${data}.csv`;
 
-// Observações pertinentes ao lançamento: status diferente de confirmado, turma de Ground, o peso da tripulação
-// (aluno + instrutor) contra o limite do avião e o avião que para para a revisão de 50 horas naquele dia
-function observacoes(o, status, revisao) {
+// Observações pertinentes ao lançamento: status diferente de confirmado (com o novo horário do atraso ou o motivo do
+// cancelamento), turma de Ground, o peso da tripulação (aluno + instrutor) contra o limite do avião e o avião que para
+// para a revisão de 50 horas naquele dia
+function observacoes(o, status, detalhe, revisao) {
   const notas = [];
-  if (status !== 'Confirmado') notas.push(`Status: ${status}`);
+  if (status !== 'Confirmado') notas.push(`Status: ${textoDoStatus(status, detalhe)}`);
   if (o.isGround && o.groupSize > 1) notas.push(`Turma de Ground com ${o.groupSize} alunos`);
   if (o.limKg) {
     if (!o.stuKg) notas.push(`Peso do aluno não informado: limite de ${o.limKg} kg do ${o.eqType} não verificado`);
@@ -31,19 +33,19 @@ function observacoes(o, status, revisao) {
   return notas.join(' · ');
 }
 
-export function linhasDoCsv(res, fStatus = {}) {
+export function linhasDoCsv(res, fStatus = {}, fObs = {}) {
   return [...res.out]
     .sort((a, b) => ordemDoTipo(a) - ordemDoTipo(b) || a.r.localeCompare(b.r) || a.a - b.a || a.o - b.o)
     .map(o => {
       const status = fStatus[o.fKey] || o.status || 'Confirmado';
       const missao = o.ss && o.ss !== '1/1' ? `${o.mis} (sessão ${o.ss})` : o.mis;
-      return [o.r, `${hm(o.a)}–${hm(o.b)}`, o.s, missao, o.ins, observacoes(o, status, res.revisao)];
+      return [o.r, `${hm(o.a)}–${hm(o.b)}`, o.s, missao, o.ins, observacoes(o, status, fObs[o.fKey], res.revisao)];
     });
 }
 
-export function montarCsv(res, fStatus = {}) {
+export function montarCsv(res, fStatus = {}, fObs = {}) {
   const q = v => '"' + String(v).replace(/"/g, '""') + '"';
-  const linhas = [CABECALHO, ...linhasDoCsv(res, fStatus)].map(l => l.map(q).join(';'));
+  const linhas = [CABECALHO, ...linhasDoCsv(res, fStatus, fObs)].map(l => l.map(q).join(';'));
   if (res.al.length) {
     linhas.push('');
     linhas.push(['Alertas', 'Aluno', 'Mensagem'].map(q).join(';'));

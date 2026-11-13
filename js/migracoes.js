@@ -8,7 +8,7 @@ import { FROTA_INICIAL } from './frota.js';
 import { HORARIOS_INICIAIS, minutoDaPreferencia, ajustarPreferencias } from './horarios.js';
 import { disponibilidadeAtual } from './rules.js';
 
-export const ESQUEMA = 12;
+export const ESQUEMA = 13;
 
 // Um pedido do dia com as preferências em minutos e a disponibilidade no formato atual (formato 12)
 function pedidoEmMinutos(pedido) {
@@ -96,6 +96,13 @@ const PASSOS = {
     dia: dia => (dia.pedidos && typeof dia.pedidos === 'object'
       ? { ...dia, pedidos: Object.fromEntries(Object.entries(dia.pedidos).map(([id, pedido]) => [id, pedidoEmMinutos(pedido)])) }
       : dia)
+  },
+  // Versão 13 (fase 8): os dias guardam o detalhe do status de cada voo (campo "fObs": o motivo do cancelamento e o
+  // novo horário do atraso). O passo não muda nada; a versão nova impede que uma aba com a versão anterior do app
+  // grave os dias sem esse campo
+  13: {
+    cadastro: cadastro => cadastro,
+    dia: dia => dia
   }
 };
 
