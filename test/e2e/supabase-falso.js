@@ -6,6 +6,7 @@ import { separar } from '../../js/dias.js';
 import { migrarCadastro, migrarDia } from '../../js/migracoes.js';
 import { prazoDaAgendaPermite } from '../../js/agenda.js';
 import { gravarDadosPessoais } from '../../js/dados-pessoais.js';
+import { quadroDoDia } from '../../js/quadro.js';
 
 export const URL_TESTE = 'https://acpm-teste.supabase.invalid';
 
@@ -14,7 +15,8 @@ export const CONTAS = {
   gestor: { email: 'gestor@teste.acpm', senha: 'senha-do-gestor', id: '00000000-0000-4000-a000-000000000002', perfil: 'gestor', nome: 'Gestor de Teste' },
   semPerfil: { email: 'sem-perfil@teste.acpm', senha: 'senha-sem-perfil', id: '00000000-0000-4000-a000-000000000003', perfil: null, nome: '' },
   secretaria: { email: 'secretaria@teste.acpm', senha: 'senha-da-secretaria', id: '00000000-0000-4000-a000-000000000004', perfil: 'secretaria', nome: 'Secretaria de Teste' },
-  administrador: { email: 'admin@teste.acpm', senha: 'senha-do-administrador', id: '00000000-0000-4000-a000-000000000005', perfil: 'administrador', nome: 'Admin de Teste' }
+  administrador: { email: 'admin@teste.acpm', senha: 'senha-do-administrador', id: '00000000-0000-4000-a000-000000000005', perfil: 'administrador', nome: 'Admin de Teste' },
+  painel: { email: 'tv@teste.acpm', senha: 'senha-da-tv', id: '00000000-0000-4000-a000-000000000006', perfil: 'painel', nome: 'TV da recepção' }
 };
 
 // Documentos no formato por data da fase 3 (sem a versão do formato) a partir de um estado da aplicação
@@ -109,6 +111,8 @@ export function criarSupabaseFalso({ documentos = {}, dias = {}, agora = new Dat
     const comPerfil = conta && conta.perfil;
     const operador = conta && ['operador', 'administrador'].includes(conta.perfil);
     const veDados = conta && ['operador', 'administrador', 'secretaria'].includes(conta.perfil);
+    // Os perfis da escala leem os documentos, os dias, o histórico e a agenda (a TV, perfil "painel", não)
+    const leEscala = conta && ['operador', 'administrador', 'gestor', 'secretaria'].includes(conta.perfil);
 
     if (url.pathname === '/auth/v1/token' && url.searchParams.get('grant_type') === 'password') {
       const { email, password } = req.postDataJSON();
@@ -138,6 +142,7 @@ export function criarSupabaseFalso({ documentos = {}, dias = {}, agora = new Dat
     if (req.method() === 'GET') {
       if (url.pathname === '/rest/v1/perfis') return responder(200, comPerfil ? [{ perfil: conta.perfil, nome: conta.nome }] : []);
       if (!comPerfil) return responder(200, []);
+      if (!leEscala && ['/rest/v1/documentos', '/rest/v1/dias', '/rest/v1/historico', '/rest/v1/solicitacoes'].includes(url.pathname)) return responder(200, []);
       if (url.pathname === '/rest/v1/documentos') {
         return responder(200, consultar([...banco].map(([chave, d]) => ({ chave, ...d })), url).map(({ conteudo, versao }) => ({ conteudo, versao })));
       }
@@ -204,6 +209,13 @@ export function criarSupabaseFalso({ documentos = {}, dias = {}, agora = new Dat
           registrado_em: agora.toISOString(), usuario: conta.id, conta: conta.nome, excecao: !noPrazo, cancelada_em: null, cancelada_por: null
         });
         return responder(200, id);
+      }
+      // O quadro de hoje (São Paulo) para a TV da recepção: qualquer perfil vê
+      if (funcao === 'painel_do_dia') {
+        if (!comPerfil) return responder(403, { code: '42501', message: 'sem acesso ao painel' });
+        const hoje = new Date(agora.getTime() - 3 * 3600e3).toISOString().slice(0, 10);
+        const dia = tabelaDias.get(hoje);
+        return responder(200, { data: hoje, ...quadroDoDia(dia ? dia.conteudo : null) });
       }
       if (funcao === 'salvar_dados_pessoais') {
         if (!veDados) return responder(403, { code: '42501', message: 'somente operadores e a secretaria alteram dados pessoais' });

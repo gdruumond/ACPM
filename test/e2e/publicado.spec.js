@@ -1,7 +1,7 @@
 // Verificação do site publicado com login real. Não altera os dados, exceto pela conversão única dos documentos da
 // fase 2 no primeiro acesso de um operador (rode com --workers=1: o operador entra antes do gestor).
 // Roda só quando as senhas das contas estão no ambiente; os demais testes E2E usam o modo local.
-//   BASE_URL=https://thephfernandes.github.io/ACPM/ ACPM_SENHA_OPERADOR=... ACPM_SENHA_GESTOR=... ACPM_SENHA_SECRETARIA=... ACPM_SENHA_ADMIN=... \
+//   BASE_URL=https://thephfernandes.github.io/ACPM/ ACPM_SENHA_OPERADOR=... ACPM_SENHA_GESTOR=... ACPM_SENHA_SECRETARIA=... ACPM_SENHA_ADMIN=... ACPM_SENHA_PAINEL=... \
 //     npx playwright test test/e2e/publicado.spec.js --workers=1
 import { test, expect, abrirMenuDaConta, AMANHA } from './fixtures.js';
 
@@ -57,6 +57,28 @@ test.describe('Site publicado (login real)', () => {
     await expect(page.locator('#lista-contas tbody tr')).not.toHaveCount(0);
     await abrirMenuDaConta(page);
     await page.locator('#btn-sair').click();
+  });
+
+  test('a conta da TV da recepção vai do app para o painel de hoje e não lê nenhuma tabela da escala', async ({ page }) => {
+    test.skip(!process.env.ACPM_SENHA_PAINEL, 'defina ACPM_SENHA_PAINEL');
+    await page.goto('./');
+    await page.locator('#login-email').fill(process.env.ACPM_EMAIL_PAINEL || 'tv.previa@example.com');
+    await page.locator('#login-senha').fill(process.env.ACPM_SENHA_PAINEL);
+    await page.locator('#btn-entrar').click();
+    await expect(page).toHaveURL(/painel\.html/, { timeout: 20000 });
+    await expect(page.locator('.fids .fids-titulo')).toHaveText(/^(Partidas|Chegadas)$/, { timeout: 20000 });
+    const linhasLidas = await page.evaluate(async () => {
+      const { projetoSupabase } = await import('./js/config-supabase.js');
+      const projeto = projetoSupabase();
+      const cliente = window.supabase.createClient(projeto.url, projeto.chave, { auth: { storageKey: `acpm-${projeto.nome}` } });
+      const lidas = {};
+      for (const tabela of ['documentos', 'dias', 'historico', 'solicitacoes', 'dados_pessoais']) {
+        const { data } = await cliente.from(tabela).select('*').limit(1);
+        lidas[tabela] = (data || []).length;
+      }
+      return lidas;
+    });
+    expect(linhasLidas).toEqual({ documentos: 0, dias: 0, historico: 0, solicitacoes: 0, dados_pessoais: 0 });
   });
 
   test('gestor abre uma data sem escala: vê a cópia do dia anterior, sem gravar', async ({ page }) => {
