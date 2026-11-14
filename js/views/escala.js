@@ -39,6 +39,7 @@ function conteudoDoPopup(o) {
       <span>Recurso:</span><span>${esc(nomeDoRecurso(o.r))}</span>
       <span>Missão:</span><span>${esc(o.mis)}</span>
       <span>Peso Trip.:</span><span>${o.kg ? `${o.kg} kg` : '—'}</span>
+      ${o.comb ? `<span>Combustível:</span><span>${textoDoCombustivel(o.comb)}</span>` : ''}
       <span>Status:</span>
       <span>
         <select class="st-sel st-${st.replace(/\s+/g, '')}" data-f="fstatus" data-fkey="${principal.fKey}" aria-label="Status do voo"${isGestor() ? ' disabled' : ''}>
@@ -246,8 +247,13 @@ function preferencia(o) {
 function peso(o) {
   if (!o.limKg) return '';
   if (!o.kg) return '<span class="tag fb">sem peso</span>';
-  return `<span class="${o.kg > o.limKg - PERTO_DO_LIMITE_KG ? 'perto' : ''}">${o.kg}</span> <span class="sm">/ ${o.limKg} kg</span>`;
+  return `<span class="${o.kg > o.limKg - PERTO_DO_LIMITE_KG ? 'perto' : ''}">${o.kg}</span> <span class="sm">/ ${o.limKg} kg</span>${seloDoCombustivel(o)}`;
 }
+
+// Acima do limite com os tanques cheios, o voo sai com menos combustível: quanto reduzir (e, na dica, quanto abastecer)
+const autonomia = min => `${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')}`;
+const textoDoCombustivel = c => `Abastecer até ${c.abastecerGal} gal (${c.reduzirGal} a menos que o tanque cheio); o voo, o táxi e a reserva pedem ${c.minimoGal} gal; autonomia de ${autonomia(c.autonomiaMin)}.`;
+const seloDoCombustivel = o => (o.comb ? ` <span class="tag comb" title="${textoDoCombustivel(o.comb)}">reduzir ${o.comb.reduzirGal} gal</span>` : '');
 
 function seletorDeStatus(o) {
   const st = statusDe(o);
@@ -274,14 +280,17 @@ function resumoDosAvisos(avisos) {
   const ehPeso = a => a.m.startsWith('Peso do aluno não informado');
   const ehRevisao = a => a.m.startsWith('Aeronave parou');
   const ehAtraso = a => a.m.startsWith('Atraso:');
+  const ehLimite = a => a.m.startsWith('Limite da lei:');
   const semPeso = new Set(avisos.filter(ehPeso).map(a => a.s.replace(/ \(.*\)$/, ''))).size;
   const revisao = avisos.filter(ehRevisao).length;
   const atrasos = avisos.filter(ehAtraso).length;
-  const outros = avisos.filter(a => !ehPeso(a) && !ehRevisao(a) && !ehAtraso(a)).length;
+  const limites = new Set(avisos.filter(ehLimite).map(a => a.s)).size;
+  const outros = avisos.filter(a => !ehPeso(a) && !ehRevisao(a) && !ehAtraso(a) && !ehLimite(a)).length;
   const partes = [
     semPeso && `${semPeso} ${semPeso === 1 ? 'aluno sem peso' : 'alunos sem peso'}`,
     revisao && `${revisao} ${revisao === 1 ? 'avião para' : 'aviões param'} para a revisão de 50 horas`,
     atrasos && `${atrasos} ${atrasos === 1 ? 'atraso com conflito' : 'atrasos com conflito'}`,
+    limites && `${limites} ${limites === 1 ? 'instrutor perto' : 'instrutores perto'} do limite da lei`,
     outros && `${outros} ${outros === 1 ? 'outro' : 'outros'}`
   ].filter(Boolean);
   return `${avisos.length} ${avisos.length === 1 ? 'aviso' : 'avisos'}: ${partes.join(' · ')}`;

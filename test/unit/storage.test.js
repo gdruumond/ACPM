@@ -143,6 +143,9 @@ describe('Link compartilhável (perfil Gestor)', () => {
     estado.fStatus = { '1000_0_1': 'Em Voo', '1000_1003_1': 'Cancelado', '1002_1003_1': 'Atrasado' };
     estado.fObs = { '1000_1003_1': { motivo: 'Outro', texto: 'Aluno com febre' }, '1002_1003_1': { novoInicio: 640 } };
     estado.horas = { 'PR-BTB': 42 };
+    estado.hangar = ['PR-VOB', ...estado.hangar.filter(r => r !== 'PR-VOB')];
+    estado.limites = { ...estado.limites, vooMesH: 90 };
+    estado.horasDosInstrutores = { [estado.ins[0].id]: { mes: 80, semestre: 400, ano: 700, fimAnterior: 1110 } };
     estado.filas = { cheque: [], mlte: [9], noturno: [8, 7], c172: [8, 7, 9] };
     estado.stu = [
       aluno(1000, { jan: 'manha' }, { kg: 81, bl: [3] }),
@@ -162,6 +165,8 @@ describe('Link compartilhável (perfil Gestor)', () => {
     assert.deepEqual(destino.fStatus, estado.fStatus);
     assert.deepEqual(destino.fObs, { '1000_1003_1': { motivo: 'Outro' }, '1002_1003_1': { novoInicio: 640 } }, 'o texto livre do motivo não vai no link');
     assert.deepEqual([destino.horas, destino.filas], [estado.horas, estado.filas], 'as horas até a revisão e as filas do rodízio vão no link');
+    assert.deepEqual(destino.hangar, estado.hangar, 'a ordem do hangar vai no link');
+    assert.deepEqual([destino.limites, destino.horasDosInstrutores], [estado.limites, estado.horasDosInstrutores], 'os limites e as horas passadas vão no link (quem abre gera a mesma escala)');
     assert.equal(destino.stu[0].jan, 'manha', 'a disponibilidade vai no link');
     assert.deepEqual(destino.stu.map(s => [s.id, s.fly, s.kg, s.bl, s.extra.map(ex => [ex.mid, ex.mis])]), [
       [1000, true, 81, [3], []],
@@ -211,6 +216,19 @@ describe('Link compartilhável: validação do conteúdo (vem da URL, não é co
   it('link antigo com simulador em manutenção vale para o nome novo do simulador', () => {
     const { estado } = abrir({ d: '2026-11-11', avOff: ['SIM-MONO-1', 'SIM-MULTI-2'] });
     assert.deepEqual([estado.av['SIM-MONO-A'], estado.av['SIM-MONO-C'], estado.av['SIM-MLTE-E'], estado.av['SIM-MLTE-D']], [false, true, true, false]);
+  });
+
+  it('limites e horas passadas: só números (o resto volta ao padrão ou sai)', () => {
+    const { estado } = abrir({ li: { vooMesH: ATAQUE, vooAnoH: 900 }, hi: { 7: { mes: 3, semestre: ATAQUE, ano: 5, fimAnterior: 1000 }, [ATAQUE]: { mes: 1 } } });
+    assert.equal(estado.limites.vooMesH, 100);
+    assert.equal(estado.limites.vooAnoH, 900);
+    assert.deepEqual(estado.horasDosInstrutores, { 7: { mes: 3, semestre: 0, ano: 5, fimAnterior: 1000 } });
+  });
+
+  it('ordem do hangar: só os aviões da frota, sem repetir (o resto entra no fundo)', () => {
+    const { estado } = abrir({ hg: [ATAQUE, 'PR-VOB', 'SIM-MONO-A', 'PR-VOB', 7] });
+    assert.equal(estado.hangar[0], 'PR-VOB');
+    assert.ok(!estado.hangar.includes(ATAQUE) && !estado.hangar.includes('SIM-MONO-A'));
   });
 
   it('status de voo: somente chaves aluno_missão_sessão e valores conhecidos', () => {

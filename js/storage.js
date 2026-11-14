@@ -11,6 +11,8 @@ import { ESQUEMA, migrarCadastro, migrarDia, precisaMigrar, renomearSimulador } 
 import { habilitacoesDoNivel, normalizarHabilitacoes } from './habilitacoes.js';
 import { ajustarFilas, CATEGORIAS_DO_RODIZIO } from './rodizio.js';
 import { normalizarDetalhes } from './status.js';
+import { normalizarHangar } from './hangar.js';
+import { LIMITES_DA_LEI, normalizarLimites, comHorasExternas } from './limites.js';
 
 // Validação do link compartilhado: o conteúdo vem da URL, então só entram os tipos e as faixas que a interface produz
 const LIMITE = { instrutores: 200, alunos: 500, extras: 10, bloqueios: 50, matriculas: 100, nome: 80 };
@@ -59,7 +61,9 @@ export const ApiClient = {
       horas: {},
       importadas: [],
       frota: FROTA_INICIAL.map(f => ({ ...f })),
-      horarios: normalizarHorarios(HORARIOS_INICIAIS)
+      horarios: normalizarHorarios(HORARIOS_INICIAIS),
+      hangar: normalizarHangar(null, FROTA_INICIAL),
+      limites: { ...LIMITES_DA_LEI }
     };
     state.frota.forEach(f => { state.av[f.reg] = true; });
     return state;
@@ -79,6 +83,16 @@ export const ApiClient = {
     x.frota = normalizarFrota(x.frota);
     // Horários de decolagem de cada categoria (fase 7)
     x.horarios = normalizarHorarios(x.horarios);
+    // Ordem dos aviões no hangar (fase 10): só os da frota; quem falta entra no fundo
+    x.hangar = normalizarHangar(x.hangar, x.frota);
+    // Limites da Lei do Aeronauta (fase 11) e as horas de voo fora do app de cada instrutor ('AAAA-MM' ou 'AAAA-00')
+    x.limites = normalizarLimites(x.limites);
+    x.ins.forEach(i => {
+      const externas = i.horasExternas && typeof i.horasExternas === 'object' ? i.horasExternas : {};
+      const validas = Object.entries(externas).filter(([quando, horas]) => /^\d{4}-(0\d|1[0-2])$/.test(quando) && typeof horas === 'number' && horas > 0 && horas <= 2000);
+      if (validas.length) i.horasExternas = Object.fromEntries(validas);
+      else delete i.horasExternas;
+    });
     const naFrota = r => x.frota.some(f => f.reg === r);
     const av = Object.fromEntries(Object.entries(x.av && typeof x.av === 'object' ? x.av : {}).map(([r, v]) => [renomearSimulador(r), v]));
     x.av = Object.fromEntries(x.frota.map(f => [f.reg, typeof av[f.reg] === 'boolean' ? av[f.reg] : true]));
@@ -138,8 +152,21 @@ export const ApiClient = {
     const instrutores = (cadastro && cadastro.ins) || [];
     const base = dia || diaParaCopiar(migrarDia((await this.backend.diaAnterior(data) || {}).conteudo), instrutores);
     const estado = this.normalizeAndMigrateState(juntar(cadastro || { nid: 1000, ins: [], stu: [] }, base || diaPadrao()));
+    // As horas de voo de cada instrutor antes da data e o fim de ontem (limites da lei), mais as de fora do app. Não são
+    // gravadas (vão à parte, para o estado da tela): saem das escalas guardadas a cada abertura. Sem resposta, o motor
+    // confere só os limites do dia
+    const horasBase = await this.horasDosInstrutores(data);
+    const horasDosInstrutores = comHorasExternas(horasBase, estado.ins, data);
     const escala = dia && dia.resultado && Array.isArray(dia.resultado.out) ? dia.resultado : null;
-    return { estado, escala, novo: !dia };
+    return { estado, escala, novo: !dia, horasBase, horasDosInstrutores };
+  },
+
+  async horasDosInstrutores(data) {
+    try {
+      return (await this.backend.horasDosInstrutores(data)) || {};
+    } catch (e) {
+      return {};
+    }
   },
 
   async salvarDia(data, estado, escala) {
@@ -202,6 +229,16 @@ export const ApiClient = {
     return this.backend.cancelarSolicitacao(id, por);
   },
 
+  // Dados pessoais (fase 9): fora do estado e do cadastro. No modo compartilhado o servidor decide quem lê e grava
+  // (operadores, administradores e a secretaria, que entra no modo só leitura da escala)
+  listarDadosPessoais(tipo) {
+    return this.backend.listarDadosPessoais(tipo);
+  },
+
+  salvarDadosPessoais(tipo, id, dados) {
+    return this.backend.salvarDadosPessoais(tipo, id, dados, { autor: this.autorAtual || null });
+  },
+
   async biDoPeriodo(de, ate) {
     return biDosDias((await this.backend.listarDias(de, ate)).map(d => ({ ...d, conteudo: migrarDia(d.conteudo) })));
   },
@@ -262,6 +299,10 @@ export const ApiClient = {
       // Revisão de 50 horas e filas do rodízio: quem abre o link gera a mesma escala
       h: state.horas || {},
       f: state.filas || {},
+      hg: state.hangar || [],
+      // Limites da lei e as horas passadas de cada instrutor (quem abre o link gera a mesma escala)
+      li: state.limites || null,
+      hi: state.horasDosInstrutores || {},
       fly: state.stu
         .filter(s => s.fly || (s.extra && s.extra.some(ex => ex.fly)))
         .map(s => [
@@ -304,6 +345,16 @@ export const ApiClient = {
           .filter(([, d]) => d && typeof d === 'object')
           .map(([fKey, d]) => [fKey, { motivo: d.m, novoInicio: d.n }])), state.fStatus);
       }
+      if (decoded.li && typeof decoded.li === 'object') state.limites = normalizarLimites(decoded.li);
+      if (decoded.hi && typeof decoded.hi === 'object') {
+        const numero = v => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : 0);
+        state.horasDosInstrutores = Object.fromEntries(Object.entries(decoded.hi)
+          .filter(([id, h]) => /^\d+$/.test(id) && h && typeof h === 'object')
+          .map(([id, h]) => [id, { mes: numero(h.mes), semestre: numero(h.semestre), ano: numero(h.ano),
+            fimAnterior: Number.isInteger(h.fimAnterior) && h.fimAnterior >= 0 && h.fimAnterior <= 1440 ? h.fimAnterior : null }]));
+      }
+      // A ordem do hangar de quem compartilhou (links anteriores à fase 10: a ordem da frota)
+      if (Array.isArray(decoded.hg)) state.hangar = normalizarHangar(decoded.hg.filter(r => typeof r === 'string'), normalizarFrota(state.frota));
       if (decoded.h && typeof decoded.h === 'object') {
         const avioes = normalizarFrota(state.frota).filter(f => AIRCRAFT_EQ_TYPES.includes(f.tipo)).map(f => f.reg);
         state.horas = Object.fromEntries(Object.entries(decoded.h)

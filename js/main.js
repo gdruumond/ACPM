@@ -27,10 +27,13 @@ import { rBI, alternarTodosDoBI } from './views/bi.js';
 import { renderAuditPanel, rOut, alternarTempo, abrirPopupDoMapa, fecharPopupDoMapa, popupDoMapaAberto, reposicionarPopupDoMapa } from './views/escala.js';
 import { pedirDetalheDoStatus, dialogoDeStatusAberto } from './views/dialogo-status.js';
 import { acaoDoPainel } from './views/painel-aeroporto.js';
+import { abrirPainelDeDados, fecharPainelDeDados, salvarPainelDeDados, carregarDadosPessoais } from './views/dados-pessoais.js';
 import { STATUS_COM_DETALHE, textoParaOHistorico } from './status.js';
 import { singleDemandRowHTML, cnt, rDem, applyDemandFilters } from './views/demanda.js';
-import { rIns, rAlu, applyInstructorFilters, preencherFiltroDeHabilitacoes, mostrarVistaDosInstrutores, abrirPainelDoInstrutor, fecharPainelDoInstrutor, atualizarLinhaDoCadastro, atualizarLinhaDoAluno } from './views/cadastros.js';
-import { rRec, rRevisao, alternarGrupoDaFrota, NOMES_DAS_CATEGORIAS } from './views/recursos.js';
+import { rIns, rAlu, applyInstructorFilters, preencherFiltroDeHabilitacoes, mostrarVistaDosInstrutores, abrirPainelDoInstrutor, fecharPainelDoInstrutor, atualizarLinhaDoCadastro, atualizarLinhaDoAluno, rPainelDoInstrutor, rLimites, podeEditarLimites } from './views/cadastros.js';
+import { LIMITES_DA_LEI, normalizarLimites, comHorasExternas } from './limites.js';
+import { rRec, rRevisao, rHangar, alternarGrupoDaFrota, NOMES_DAS_CATEGORIAS } from './views/recursos.js';
+import { normalizarHangar, moverNoHangar } from './hangar.js';
 import { opcoesDeCategoria, categoriaDoTipo } from './categorias.js';
 import { setRole, save, logChange, refazerEscala, escalaCalculada, marcarEscalaSoCalculada, gravarEscalaCalculada, abrirData, historicoParaPainel, carregarData, carregarBI } from './actions.js';
 import { exp, pdf } from './export.js';
@@ -103,6 +106,30 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('scroll', reposicionarPopupDoMapa, { capture: true, passive: true });
 window.addEventListener('resize', reposicionarPopupDoMapa);
+
+// Dados pessoais de um aluno ou instrutor: o botão da linha abre o painel; Cancelar, ✕ e Esc fecham (o foco volta para
+// o botão). Salvar valida e grava; o histórico registra só os nomes dos campos que mudaram
+document.addEventListener('click', e => {
+  const botao = e.target.closest('[data-dados]');
+  if (botao) {
+    const [tipo, id] = botao.dataset.dados.split(':');
+    abrirPainelDeDados(tipo, +id, botao);
+    return;
+  }
+  if (e.target.closest('#btn-fechar-dados, #btn-cancelar-dados')) fecharPainelDeDados(true);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !$('#painel-dados').hidden && !dialogoDeStatusAberto()) fecharPainelDeDados(true);
+});
+document.addEventListener('submit', async e => {
+  if (e.target.id !== 'form-dados') return;
+  e.preventDefault();
+  const salvo = await salvarPainelDeDados();
+  if (!salvo) return;
+  fecharPainelDeDados(true);
+  showToast(`Dados pessoais de ${salvo.nome} salvos.`, 'ok');
+  if (salvo.alterados.length) logChange('mod', `Dados pessoais de ${salvo.nome} atualizados: ${salvo.alterados.join(', ')}`);
+});
 
 // Painel das habilitações de um instrutor: ✕ e Esc fecham (o foco volta para o botão que abriu)
 document.addEventListener('click', e => {
@@ -713,6 +740,16 @@ document.addEventListener('click', e => {
     return;
   }
 
+  // Hangar: sobe, desce ou põe na frente um avião (na data aberta; a data seguinte começa com esta ordem)
+  if (a === 'hangar-subir' || a === 'hangar-descer' || a === 'hangar-frente') {
+    const r = b.dataset.id;
+    S.hangar = moverNoHangar(normalizarHangar(S.hangar, S.frota), r, a.slice('hangar-'.length));
+    logChange('mod', `Hangar: ${r} passou para ${S.hangar.indexOf(r) + 1}º`);
+    save();
+    rHangar();
+    return;
+  }
+
   // Rodízio: ajusta a posição de um instrutor na fila da categoria (na data aberta)
   if (a === 'fila-subir' || a === 'fila-descer' || a === 'fila-inicio') {
     const cat = b.dataset.cat, insId = +b.dataset.id;
@@ -805,6 +842,30 @@ function mudarStatus(fKey, status) {
   pedirDetalheDoStatus({ voo, status, aoConfirmar: detalhe => aplicarStatus(fKey, status, detalhe), aoDesistir: () => rOut() });
 }
 
+// Limites da lei (fase 11), no cadastro dos instrutores: só o Administrador muda (neste navegador, o Operador). Vazio é
+// sem limite; os campos em horas viram minutos onde o limite é guardado em minutos
+const ROTULOS_DOS_LIMITES = { vooPorJornadaMin: 'voo por jornada', jornadaMin: 'jornada', vooMesH: 'voo no mês', vooSemestreH: 'voo no semestre', vooAnoH: 'voo no ano', repousoMin: 'repouso' };
+const emHoras = (chave, valor) => (valor === null ? 'sem limite' : `${String(chave.endsWith('Min') ? valor / 60 : valor).replace('.', ',')} h`);
+document.addEventListener('change', e => {
+  const campo = e.target.closest('[data-limite]');
+  if (!campo || !podeEditarLimites()) return;
+  const chave = campo.dataset.limite, divisor = +campo.dataset.divisor;
+  const antes = normalizarLimites(S.limites);
+  const valor = campo.value.trim() === '' ? null : Math.max(0, +campo.value) * divisor;
+  if (valor !== null && !Number.isFinite(valor)) { rLimites(); return; }
+  S.limites = normalizarLimites({ ...antes, [chave]: valor });
+  logChange('mod', `Limites da lei: ${ROTULOS_DOS_LIMITES[chave]} ${emHoras(chave, antes[chave])} → ${emHoras(chave, S.limites[chave])}`);
+  save();
+  rLimites();
+});
+document.addEventListener('click', e => {
+  if (!e.target.closest('[data-limites-padrao]') || !podeEditarLimites()) return;
+  S.limites = { ...LIMITES_DA_LEI };
+  logChange('mod', 'Limites da lei: de volta aos valores da lei');
+  save();
+  rLimites();
+});
+
 // Sincronização em tempo real de alterações (com trava estrita para Perfil Gestor e Links Compartilhados)
 document.addEventListener('change', e => {
   const t = e.target, f = t.dataset.f, a = t.dataset.a;
@@ -869,6 +930,19 @@ document.addEventListener('change', e => {
       const h = t.dataset.h;
       x.hab = normalizarHabilitacoes(t.checked ? [...x.hab, h] : x.hab.filter(k => k !== h));
       logChange('mod', `Habilitação ${t.checked ? 'incluída' : 'retirada'}: ${x.nm} · ${nomeDaHabilitacao(h)}`);
+    } else if (f === 'ext-mes' || f === 'ext-ano') {
+      // Horas de voo fora do app (limites da lei): neste mês ou, no ano, antes deste mês
+      const chave = f === 'ext-mes' ? DATA.slice(0, 7) : `${DATA.slice(0, 4)}-00`;
+      const horas = Math.round(Math.min(2000, Math.max(0, +t.value || 0)) * 10) / 10;
+      x.horasExternas = { ...(x.horasExternas || {}) };
+      if (horas > 0) x.horasExternas[chave] = horas;
+      else delete x.horasExternas[chave];
+      if (!Object.keys(x.horasExternas).length) delete x.horasExternas;
+      S.horasDosInstrutores = comHorasExternas(S.horasBase || {}, S.ins, DATA);
+      logChange('mod', `Horas de voo fora do app de ${x.nm} (${f === 'ext-mes' ? 'neste mês' : 'no ano, antes deste mês'}): ${String(horas).replace('.', ',')} h`);
+      save();
+      rPainelDoInstrutor();
+      return;
     } else if (f === 'aw') {
       x.aw[+t.dataset.w] = t.checked;
     } else if (f === 'pre') {
@@ -965,8 +1039,8 @@ document.addEventListener('change', e => {
     await ApiClient.atualizarFormatoGravado();
 
     abrirData(data);
-    const { estado, escala } = await ApiClient.carregarDia(data);
-    setS(estado);
+    const { estado, escala, horasBase, horasDosInstrutores } = await ApiClient.carregarDia(data);
+    setS({ ...estado, horasBase, horasDosInstrutores });
     // Data sem escala gravada: a escala calculada aparece na hora (é gravada junto com a primeira alteração)
     setRES(escala || escalaCalculada());
     marcarEscalaSoCalculada(!escala);
@@ -991,6 +1065,8 @@ document.addEventListener('change', e => {
 
   rRec(); rIns(); rAlu(); rDem(); renderAuditPanel();
   document.body.dataset.agenda = podeEditarAgenda() ? 'edita' : 'consulta';
+  // Dados pessoais (para a coluna CANAC das tabelas), para quem pode vê-los
+  carregarDadosPessoais();
 
   // A Secretaria trabalha na agenda: o app abre nela
   if (ApiClient.perfil === 'secretaria') {
