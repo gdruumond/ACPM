@@ -25,6 +25,7 @@
   --hdT: #EAF0F5;
   --pop-bg: #12263A;
   --pop-txt: #F8FAFB;
+  --at: #D9711C;
   box-sizing: border-box;
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -36,7 +37,7 @@
     --ln: #2B3B4A; --ln2: #3A4E60; --ac: #6AA8F0; --acT: #0F1822; --er: #FF8A80; --er-bg: rgba(255,138,128,.14);
     --wa: #F2C94C; --wa-bg: rgba(242,201,76,.14); --ok: #5FD39A; --ok-bg: rgba(95,211,154,.14);
     --info-bg: rgba(106,168,240,.14); --neutro-bg: rgba(147,163,178,.14); --fly: #4FC3F7; --hd: #0A1119; --hdT: #E6EDF3;
-    --pop-bg: #223446; --pop-txt: #E6EDF3;
+    --pop-bg: #223446; --pop-txt: #E6EDF3; --at: #F0954A;
   }
 }
 
@@ -45,7 +46,7 @@
   --ln: #2B3B4A; --ln2: #3A4E60; --ac: #6AA8F0; --acT: #0F1822; --er: #FF8A80; --er-bg: rgba(255,138,128,.14);
   --wa: #F2C94C; --wa-bg: rgba(242,201,76,.14); --ok: #5FD39A; --ok-bg: rgba(95,211,154,.14);
   --info-bg: rgba(106,168,240,.14); --neutro-bg: rgba(147,163,178,.14); --fly: #4FC3F7; --hd: #0A1119; --hdT: #E6EDF3;
-  --pop-bg: #223446; --pop-txt: #E6EDF3;
+  --pop-bg: #223446; --pop-txt: #E6EDF3; --at: #F0954A;
 }
 
 /* ==========================================================================
@@ -293,6 +294,8 @@ input[type=number] { width: 88px; }
   font: 600 14px 'Barlow Semi Condensed', sans-serif; color: var(--mu); display: inline-flex; align-items: center; gap: 6px;
 }
 .seg button.on { background: var(--hd); color: #fff; }
+/* Até 1400 px, a barra da Escala fica numa linha só sem os ícones das visões */
+@media (max-width: 1400px) { #s-esc .seg .ico { display: none; } }
 
 /* Escala: resumo numa linha, erros e avisos agrupados, uma linha por voo e o mapa como outra visão */
 .resumo { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; margin: 0 0 12px; }
@@ -320,13 +323,64 @@ details.caixa.avisos summary { color: var(--wa); }
 .tabela-escala .st-sel.st-Confirmado { border-color: transparent; color: var(--mu); background: transparent; }
 .tabela-escala tr:hover .st-sel.st-Confirmado, .tabela-escala .st-sel.st-Confirmado:focus { border-color: var(--ln2); }
 .tabela-escala .st-sel.st-EmVoo { background: var(--info-bg); }
-.tabela-escala .st-sel.st-Pendente { background: var(--wa-bg); }
+.tabela-escala .st-sel.st-Pendente { background: var(--neutro-bg); }
+.tabela-escala .st-sel.st-Atrasado { background: var(--wa-bg); }
 .tabela-escala .st-sel.st-Cancelado { background: var(--er-bg); }
 /* Tirar da escala: aparece ao passar o mouse ou com o foco (em tela de toque, sempre) */
 .tabela-escala .acao .x { opacity: 0; transition: opacity .1s; }
 .tabela-escala tr:hover .acao .x, .tabela-escala .acao .x:focus-visible { opacity: 1; }
 @media (hover: none) { .tabela-escala .acao .x { opacity: 1; } }
 #out[data-vista="lista"] .mapa, #out[data-vista="mapa"] .tabela-escala { display: none; }
+#out[data-vista="painel"] .mapa, #out[data-vista="painel"] .tabela-escala, #out:not([data-vista="painel"]) .painel-dia { display: none; }
+
+/* Painel no estilo dos aeroportos (como os painéis da INFRAERO): moldura escura, faixa azul com o título, o avião e o
+   relógio; cabeçalho azul; linhas azul-marinho alternadas; horário e missão em amarelo e o resto em branco; a observação
+   na cor do status. Em tela cheia, ocupa a tela toda e as letras crescem com ela */
+.painel-dia { display: flex; flex-direction: column; gap: 10px; }
+.fids-controles { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.fids {
+  --fids-fs: 17px; --fids-linha: 34px; --fids-amarelo: #FFD23F; --fids-branco: #F4F7FF;
+  overflow-x: auto; background: #07122B; border: 6px solid #0A0F1A; border-radius: 8px; box-shadow: 0 8px 22px rgba(0,0,0,.35);
+  font-family: 'Barlow Semi Condensed', sans-serif; color: var(--fids-branco);
+}
+.fids-topo {
+  display: flex; align-items: center; gap: 16px; min-width: 860px; padding: 8px 18px;
+  background: linear-gradient(#4A7FE0, #2453B6 45%, #173C8E); border-bottom: 2px solid #6E98F0;
+}
+.fids-logo { height: calc(var(--fids-fs) * 2.1); width: auto; }
+.fids-nome { flex: 1; display: flex; align-items: baseline; gap: 14px; min-width: 0; }
+.fids .fids-titulo {
+  margin: 0; color: #fff; font: italic 800 calc(var(--fids-fs) * 2.2) 'Barlow Semi Condensed', sans-serif; letter-spacing: .03em;
+  text-shadow: 0 2px 0 #0B2763, 1px 0 0 #0B2763, -1px 0 0 #0B2763;
+}
+.fids-data { font-weight: 600; font-size: calc(var(--fids-fs) * .9); color: #DCE7FF; }
+.fids-aviao { width: calc(var(--fids-fs) * 1.7); height: calc(var(--fids-fs) * 1.7); fill: none; stroke: #fff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.fids-relogio { display: flex; flex-direction: column; align-items: flex-end; line-height: 1; }
+.fids-relogio b { font-size: calc(var(--fids-fs) * 1.7); font-weight: 700; font-variant-numeric: tabular-nums; }
+.fids-relogio small { margin-top: 3px; font-size: calc(var(--fids-fs) * .65); color: #DCE7FF; }
+table.fids-tabela { width: 100%; min-width: 860px; border-collapse: collapse; font-size: var(--fids-fs); }
+.fids-tabela th {
+  position: static; padding: 4px 10px; border: 0; text-align: left; color: #fff; letter-spacing: .02em;
+  font: 700 calc(var(--fids-fs) * .78) 'Barlow Semi Condensed', sans-serif; background: linear-gradient(#3463C2, #23499B);
+}
+.fids-tabela td { height: var(--fids-linha); padding: 0 10px; border-bottom: 1px solid #1B2B55; font-weight: 700; white-space: nowrap; }
+.fids-tabela tbody tr:nth-child(odd) { background: #0B1A3D; }
+.fids-tabela tbody tr:nth-child(even) { background: #0F2148; }
+.fids .f-hora, .fids .f-missao { color: var(--fids-amarelo); }
+.fids .f-hora, .fids .f-prev { font-variant-numeric: tabular-nums; }
+.fids-cia { display: inline-block; min-width: 4.8em; padding: 2px 6px; border-radius: 3px; text-align: center; font-size: .8em; color: #fff; }
+.fids-cia-C152 { background: #1F5FA8; }
+.fids-cia-C172 { background: #0E7C6B; }
+.fids-cia-PA34 { background: #EF6A1C; }
+.fids-cia-SimMono, .fids-cia-SimMulti { background: #6B2FA0; }
+.fids-cia-Ground { background: #fff; color: #1A4FA0; }
+.fids-Confirmado .f-obs { color: #8BE59C; }
+.fids-Atrasado .f-obs, .fids-Atrasado .f-prev { color: #FFC233; }
+.fids-Cancelado .f-obs { color: #FF7B7B; }
+.fids-EmVoo .f-obs { color: #74D7FF; }
+.fids-nada td { color: #DCE7FF; font-weight: 600; }
+.fids:fullscreen { --fids-fs: 2.6vh; --fids-linha: 5.4vh; overflow: hidden; border: 0; border-radius: 0; }
+.fids:fullscreen .fids-topo, .fids:fullscreen table.fids-tabela { min-width: 0; }
 /* A hora da última atualização da escala: discreta, com um relógio, ao lado do título */
 .atualizada { display: inline-flex; align-items: center; gap: 4px; margin-left: 10px; vertical-align: middle; font: 400 13px 'Barlow', sans-serif; color: var(--mu); }
 .atualizada .ico { width: 14px; height: 14px; vertical-align: 0; }
@@ -440,7 +494,30 @@ tr.on td:first-child { font-weight: 600; }
 .chk { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; cursor: pointer; }
 .menu-mais { position: relative; }
 .menu-mais .menu-itens { right: 0; }
-tr.st-Cancelado td { opacity: 0.45; text-decoration: line-through; }
+/* Voo cancelado: riscado e apagado, menos o status (com o motivo), que continua legível */
+tr.st-Cancelado td:not(.c-status) { opacity: 0.45; text-decoration: line-through; }
+/* Detalhe do status (motivo do cancelamento, nova decolagem do atraso): um clique altera */
+.st-detalhe {
+  display: block; max-width: 22ch; margin-top: 2px; padding: 0; border: 0; background: none; text-align: left;
+  font: 500 12px 'Barlow', sans-serif; color: var(--mu); overflow-wrap: anywhere;
+}
+button.st-detalhe { cursor: pointer; text-decoration: underline dotted; }
+button.st-detalhe:hover { color: var(--ink); }
+.tl-pop .st-detalhe { color: var(--pop-txt); opacity: .85; }
+
+/* Diálogos (status do voo): por cima de tudo, centrados */
+dialog.dlg {
+  width: min(440px, calc(100vw - 32px)); padding: 18px 20px; border: 1px solid var(--ln); border-radius: 10px;
+  background: var(--pn); color: var(--ink); box-shadow: 0 16px 40px rgba(0,0,0,.3);
+}
+dialog.dlg::backdrop { background: rgba(10, 20, 30, .45); }
+dialog.dlg h2 { margin: 0 0 4px; }
+dialog.dlg .motivos { display: grid; gap: 6px; margin: 10px 0; padding: 10px 12px; border: 1px solid var(--ln); border-radius: 8px; }
+dialog.dlg .motivos legend { padding: 0 4px; font-weight: 600; }
+dialog.dlg .campo { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; font-weight: 600; }
+dialog.dlg .campo[hidden] { display: none; }
+dialog.dlg .campo small { font-weight: 400; }
+dialog.dlg .dlg-acoes { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 
 .stu-cell {
   display: flex;
@@ -731,6 +808,7 @@ a { color: var(--ac); }
 .tl-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--mu); align-items: center; margin-bottom: 8px; }
 .tl-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 4px; vertical-align: middle; }
 .tl-dot-emvoo { border: 2px solid var(--ye); }
+.tl-dot-atrasado { border: 2px solid var(--at); }
 .tl-dot-pendente { border: 1.5px dashed var(--ye); }
 .tl-dot-cancelado { background: var(--mu); opacity: .42; }
 
@@ -798,21 +876,26 @@ a { color: var(--ac); }
   display: flex;
   flex-direction: column;
   justify-content: center;
+  overflow: hidden;
+  font: inherit;
+  text-align: left;
   box-shadow: 0 1px 3px rgba(0,0,0,0.2);
   border: 1px solid rgba(255,255,255,0.25);
   transition: transform .12s, z-index .12s, box-shadow .12s, opacity .15s;
   z-index: 2;
 }
-.tl-bar:hover, .tl-bar:focus-within {
+.tl-bar:hover, .tl-bar:focus-visible, .tl-bar[aria-expanded="true"] {
   transform: translateY(-1px);
   z-index: 30;
   box-shadow: 0 4px 12px rgba(0,0,0,0.35);
 }
+.tl-bar[aria-expanded="true"] { outline: 2px solid var(--ac); outline-offset: 1px; }
 
 .tl-bar.tl-st-EmVoo {
   border: 2px solid var(--ye);
   box-shadow: 0 0 8px rgba(242, 183, 5, 0.55);
 }
+.tl-bar.tl-st-Atrasado { border: 2px solid var(--at); }
 .tl-bar.tl-st-Pendente {
   border: 1.5px dashed var(--ye);
   opacity: 0.85;
@@ -840,14 +923,12 @@ a { color: var(--ac); }
   line-height: 1.15;
 }
 
+/* Popup do voo: um só, fixo na tela (fora do painel do mapa, que rola e o cortava); posicionado pelo script */
 .tl-pop {
-  visibility: hidden;
-  opacity: 0;
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%) translateY(4px);
-  width: 280px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: min(280px, calc(100vw - 16px));
   background: var(--pop-bg);
   color: var(--pop-txt);
   border: 1px solid var(--ln);
@@ -856,27 +937,20 @@ a { color: var(--ac); }
   font-size: 12px;
   line-height: 1.4;
   box-shadow: 0 8px 24px rgba(0,0,0,0.45);
-  pointer-events: none;
-  transition: opacity .15s ease, transform .15s ease;
-  z-index: 50;
-  text-decoration: none !important;
+  z-index: 150;
 }
+.tl-pop[hidden] { display: none; }
 .tl-pop::after {
   content: "";
   position: absolute;
   top: 100%;
-  left: 50%;
+  left: var(--seta, 50%);
   margin-left: -6px;
   border-width: 6px;
   border-style: solid;
   border-color: var(--pop-bg) transparent transparent transparent;
 }
-.tl-bar:hover .tl-pop, .tl-bar:focus-within .tl-pop {
-  visibility: visible;
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-  pointer-events: auto;
-}
+.tl-pop.abaixo::after { top: auto; bottom: 100%; border-color: transparent transparent var(--pop-bg) transparent; }
 .tl-pop-hd {
   font: 700 13px 'Barlow Semi Condensed', sans-serif;
   border-bottom: 1px solid rgba(255,255,255,0.18);
@@ -1038,6 +1112,7 @@ body[data-backend="supabase"] #btn-bi-clr { display: none !important; }
   .hd-sel, .topo-data-campo, .seg button, .menu-itens button, .cal .dia { min-height: 44px; }
   nav#nav button { min-width: 44px; min-height: 44px; justify-content: center; flex: none; }
   .btn, .x, .btn-add-mis, .tg button, .hr-chip button { min-width: 44px; min-height: 44px; flex-shrink: 0; }
+  button.st-detalhe { min-height: 44px; }
   select, input:not([type="checkbox"]):not([type="radio"]) { min-height: 44px; }
   details.caixa summary { padding: 12px 0; }
   label.alvo, label.chk, .janela, .habs-painel label.hab { min-width: 44px; min-height: 44px; }

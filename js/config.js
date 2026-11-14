@@ -83,4 +83,5 @@ export const PRE = {
   'Dia + noturno': [0,1,2,3,4,5,6,7,8]
 };
 
-export const FLIGHT_STATUSES = ['Confirmado', 'Em Voo', 'Pendente', 'Cancelado'];
+// Status do voo, na ordem do dia; Atrasado leva o novo horário e Cancelado, o motivo (js/status.js)
+export const FLIGHT_STATUSES = ['Pendente', 'Confirmado', 'Atrasado', 'Em Voo', 'Cancelado'];

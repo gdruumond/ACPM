@@ -28,6 +28,9 @@
   <symbol id="i-aviao" viewBox="0 0 24 24"><path d="M12 2.5c.8 0 1.5.7 1.5 1.5v5.5l7 4v2l-7-2v4.2l2 1.6V21L12 20l-3.5 1v-1.7l2-1.6v-4.2l-7 2v-2l7-4V4c0-.8.7-1.5 1.5-1.5z"/></symbol>
   <symbol id="i-instrutor" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
   <symbol id="i-lista" viewBox="0 0 24 24"><path d="M9 6h12M9 12h12M9 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+  <symbol id="i-decolagem" viewBox="0 0 24 24"><path d="M2 22h20"/><path d="M6.36 17.4 4 17l-2-4 1.1-.55a2 2 0 0 1 1.8 0l.17.1a2 2 0 0 0 1.8 0L8 12 5 6l.9-.45a2 2 0 0 1 2.09.2l4.02 3a2 2 0 0 0 2.1.2l4.19-2.06a2.41 2.41 0 0 1 1.73-.17L21 7a1.4 1.4 0 0 1 .87 1.99l-.38.76c-.23.46-.6.84-1.07 1.08L7.58 17.2a2 2 0 0 1-1.22.18Z"/></symbol>
+  <symbol id="i-pouso" viewBox="0 0 24 24"><path d="M2 22h20"/><path d="M3.77 10.77 2 9l2-4.5 1.1.55c.55.28.9.84.9 1.45s.35 1.17.9 1.45L8 8.5l3-6 1.05.53a2 2 0 0 1 1.09 1.52l.72 5.4a2 2 0 0 0 1.09 1.52l4.4 2.2c.42.22.78.55 1.01.96l.6 1.03c.49.88-.06 1.98-1.06 2.1l-1.18.15c-.47.06-.95-.02-1.37-.24L4.29 11.15a2 2 0 0 1-.52-.38Z"/></symbol>
+  <symbol id="i-painel" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h5M15 9h2M7 13h5M15 13h2M7 17h5M15 17h2"/></symbol>
   <symbol id="i-sair" viewBox="0 0 24 24"><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></symbol>
   <symbol id="i-conta" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3"/><path d="M6.5 18.5a6.5 6.5 0 0 1 11 0"/></symbol>
   <symbol id="i-esquerda" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
@@ -285,6 +288,7 @@
         <button type="button" data-tl="lista" class="on"><svg class="ico"><use href="#i-lista"/></svg>Lista</button>
         <button type="button" data-tl="eq"><svg class="ico"><use href="#i-aviao"/></svg>Por recurso</button>
         <button type="button" data-tl="ins"><svg class="ico"><use href="#i-instrutor"/></svg>Por instrutor</button>
+        <button type="button" data-tl="painel"><svg class="ico"><use href="#i-painel"/></svg>Painel</button>
       </div>
       <span class="cresce"></span>
       <label class="flt-rotulo"><span>Categoria</span> <select id="flt-esc-cat" class="flt-ctrl"></select></label>
@@ -376,7 +380,7 @@
         <li><b>Instrutores:</b> em <i>Disponibilidade do dia</i>, desligue quem não vem e confira as janelas de cada um.</li>
         <li><b>Demanda:</b> clique em <i>Importar pedidos da agenda</i> (o botão diz quantos pedidos da secretaria ainda não estão na demanda) e ajuste o que precisar: missão, recurso, horários preferidos, disponibilidade, duração e prioridade. Para um aluno que não está na lista, use <i>Pôr um aluno na demanda</i>.</li>
         <li><b>Escala:</b> ela já está pronta. Confira as missões que não entraram (caixa vermelha, com o motivo) e os avisos (caixa amarela), ajuste o que for preciso e baixe o <i>CSV</i> (para o lançamento no portal) e o <i>PDF</i>.</li>
-        <li><b>Durante o dia:</b> atualize o status de cada voo (Confirmado, Em Voo, Pendente ou Cancelado). Voo cancelado não conta nas horas do avião, no rodízio nem no BI.</li>
+        <li><b>Durante o dia:</b> atualize o status de cada voo (Pendente, Confirmado, Atrasado, Em Voo ou Cancelado). <i>Atrasado</i> pede a nova decolagem e <i>Cancelado</i>, o motivo; o detalhe aparece embaixo do status, e um clique nele permite alterar. Se o atraso invadir outro voo do mesmo avião, instrutor ou aluno, a escala avisa. Voo cancelado não conta nas horas do avião, no rodízio nem no BI.</li>
       </ol>
       <p class="manual-destaque"><b>Não existe botão de gerar nem de salvar.</b> Toda alteração, em qualquer aba, refaz a escala na hora e fica gravada. Ao lado do título da Escala aparece a hora da última atualização (por exemplo, “Atualizada às 10:42”).</p>
       <p class="manual-destaque">Uma data que você só abriu para consultar não é gravada. Ela passa a contar (no BI, nas horas dos aviões e no rodízio da data seguinte) quando você altera alguma coisa nela ou baixa o CSV ou o PDF.</p>
@@ -402,9 +406,10 @@
       <p>No alto, o resumo do dia (missões pedidas, escaladas e as horas de voo e aula), as missões que não entraram, cada uma com o motivo (caixa vermelha), e os avisos agrupados (caixa amarela). Depois, a escala em três vistas:</p>
       <ul>
         <li><b>Lista:</b> uma linha por voo, por horário. A turma de Ground ocupa uma linha só, com os alunos logo abaixo. A preferência aparece só quando o voo não ficou na 1ª (“2ª preferência” ou “horário livre”), e o peso fica em destaque quando chega perto do limite do avião.</li>
-        <li><b>Por recurso</b> e <b>Por instrutor:</b> o mapa do dia, com a ocupação de cada um.</li>
+        <li><b>Por recurso</b> e <b>Por instrutor:</b> o mapa do dia, com a ocupação de cada um. Um clique num voo abre os detalhes dele (aluno, instrutor, recurso, missão, peso e status); Esc ou um clique fora fecha.</li>
+        <li><b>Painel:</b> partidas e chegadas como nos painéis dos aeroportos. <i>Partidas</i> mostra todas as decolagens (e o início das aulas) do dia e <i>Chegadas</i>, o que ainda não pousou ou terminou, cada um pelo horário previsto: o horário programado, a missão, o modelo, a aeronave, o aluno (no Ground, só quantos alunos), o instrutor, o previsto (no atraso, o novo horário) e a observação na cor do status (no cancelamento, com o motivo). Os quadros se alternam página a página a cada 10 segundos; escolha <i>Partidas</i> ou <i>Chegadas</i> para ver um só, <i>Pausar</i> para parar a troca e <i>Tela cheia</i> para um monitor ou TV. O painel só mostra: o status muda na Lista e no mapa.</li>
       </ul>
-      <p>Filtre por categoria (C152, C172, Simulador, PA-34 ou Sala Ground) e, dentro dela, por recurso, ou busque um aluno ou instrutor. Na lista, um clique no horário recolhe ou abre os voos dele. Na lista, mude o status do voo ou use o ✕ do fim da linha (<i>Tirar da escala</i>, aparece ao passar o mouse) para tirar um voo; o Histórico permite restaurar. <i>CSV</i> gera o arquivo do lançamento no portal, agrupado por avião e com o peso; <i>PDF</i> gera a escala para impressão. No celular, a lista mostra um cartão por voo.</p>
+      <p>Filtre por categoria (C152, C172, Simulador, PA-34 ou Sala Ground) e, dentro dela, por recurso, ou busque um aluno ou instrutor. Na lista, um clique no horário recolhe ou abre os voos dele. Na lista, mude o status do voo ou use o ✕ do fim da linha (<i>Tirar da escala</i>, aparece ao passar o mouse) para tirar um voo; o Histórico permite restaurar. O histórico registra o motivo do cancelamento só pela categoria: a descrição de “Outro” fica no voo, não no histórico. <i>CSV</i> gera o arquivo do lançamento no portal, agrupado por avião e com o peso e o status (com o motivo ou a nova decolagem); <i>PDF</i> gera a escala para impressão, com o status de cada voo. No celular, a lista mostra um cartão por voo.</p>
 
       <h4>Demanda</h4>
       <p>Uma linha por aluno. Ligue <i>Voa</i> para quem voa na data e preencha:</p>
@@ -544,6 +549,21 @@
 
 <!-- HABILITAÇÕES DE UM INSTRUTOR: painel lateral aberto pelo cadastro -->
 <aside class="gaveta" id="painel-instrutor" aria-labelledby="painel-instrutor-titulo" hidden></aside>
+<!-- Detalhe do status do voo: o motivo do cancelamento ou a nova decolagem do atraso (js/views/dialogo-status.js) -->
+<dialog class="dlg" id="dlg-status" aria-labelledby="dlg-status-titulo">
+  <form id="form-status" novalidate>
+    <h2 id="dlg-status-titulo"></h2>
+    <p class="h" id="dlg-status-voo"></p>
+    <div id="dlg-status-campos"></div>
+    <p class="erro-campo" id="st-erro" role="alert"></p>
+    <div class="dlg-acoes">
+      <button type="button" class="btn sec" id="st-voltar">Voltar</button>
+      <button type="submit" class="btn" id="st-confirmar">Confirmar</button>
+    </div>
+  </form>
+</dialog>
+<!-- Popup do voo no mapa da escala: fora do painel do mapa (que rola) para nunca ficar cortado -->
+<div class="tl-pop" id="tl-pop" role="dialog" aria-label="Detalhes do voo" hidden></div>
 
 <div id="toast-box" aria-live="polite"></div>
 

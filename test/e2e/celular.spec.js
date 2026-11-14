@@ -36,6 +36,9 @@ test.describe('Celular', () => {
       await expect(page.locator('#out .mapa')).toBeVisible();
       expect(await larguraDaPagina(page), `mapa ${vista}`).toBeLessThanOrEqual(390);
     }
+    await page.locator('#s-esc [data-tl="painel"]').click();
+    await expect(page.locator('#out .painel-dia')).toBeVisible();
+    expect(await larguraDaPagina(page), 'painel').toBeLessThanOrEqual(390);
   });
 
   test('botões e campos com pelo menos 44 px para o dedo, em todas as abas', async ({ page }) => {

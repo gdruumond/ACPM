@@ -24,7 +24,10 @@ import { S, RES, AUDIT_LOG, DATA, setS, setRES, setAuditLog, setTLMode, isGestor
 import { $, showToast, focusLast, mostrarAviso, avisoAberto } from './dom.js';
 import { show } from './views/tabs.js';
 import { rBI, alternarTodosDoBI } from './views/bi.js';
-import { renderAuditPanel, rOut, alternarTempo } from './views/escala.js';
+import { renderAuditPanel, rOut, alternarTempo, abrirPopupDoMapa, fecharPopupDoMapa, popupDoMapaAberto, reposicionarPopupDoMapa } from './views/escala.js';
+import { pedirDetalheDoStatus, dialogoDeStatusAberto } from './views/dialogo-status.js';
+import { acaoDoPainel } from './views/painel-aeroporto.js';
+import { STATUS_COM_DETALHE, textoParaOHistorico } from './status.js';
 import { singleDemandRowHTML, cnt, rDem, applyDemandFilters } from './views/demanda.js';
 import { rIns, rAlu, applyInstructorFilters, preencherFiltroDeHabilitacoes, mostrarVistaDosInstrutores, abrirPainelDoInstrutor, fecharPainelDoInstrutor, atualizarLinhaDoCadastro, atualizarLinhaDoAluno } from './views/cadastros.js';
 import { rRec, rRevisao, alternarGrupoDaFrota, NOMES_DAS_CATEGORIAS } from './views/recursos.js';
@@ -60,6 +63,12 @@ document.addEventListener('click', e => {
     rOut();
     return;
   }
+  // Painel: os dois quadros ou um só, pausar a troca e tela cheia
+  const fidsBtn = e.target.closest('[data-fids]');
+  if (fidsBtn) {
+    acaoDoPainel(fidsBtn.dataset.fids);
+    return;
+  }
   // Recolher e abrir: os horários da Lista (Escala) e as categorias da frota (Recursos)
   const tempo = e.target.closest('[data-recolher-tempo]');
   if (tempo) { alternarTempo(+tempo.dataset.recolherTempo); return; }
@@ -77,6 +86,23 @@ document.addEventListener('click', e => {
     $('#' + manual.dataset.manual).scrollIntoView({ block: 'start' });
   }
 });
+
+// Popup do voo no mapa da escala: a barra abre e fecha; Esc (o foco volta para a barra) e um clique fora fecham, e ele
+// acompanha a barra quando a página ou o mapa rolam
+document.addEventListener('click', e => {
+  const barra = e.target.closest('#out .tl-bar');
+  if (barra) {
+    if (barra.getAttribute('aria-expanded') === 'true') fecharPopupDoMapa();
+    else abrirPopupDoMapa(barra);
+    return;
+  }
+  if (popupDoMapaAberto() && !e.target.closest('#tl-pop, #dlg-status')) fecharPopupDoMapa();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && popupDoMapaAberto() && !dialogoDeStatusAberto()) fecharPopupDoMapa({ devolverFoco: true });
+});
+document.addEventListener('scroll', reposicionarPopupDoMapa, { capture: true, passive: true });
+window.addEventListener('resize', reposicionarPopupDoMapa);
 
 // Painel das habilitações de um instrutor: ✕ e Esc fecham (o foco volta para o botão que abriu)
 document.addEventListener('click', e => {
@@ -574,6 +600,14 @@ document.addEventListener('click', e => {
     return;
   }
 
+  // Um clique no detalhe do status (motivo ou nova decolagem) permite alterá-lo; o status continua o mesmo
+  if (a === 'detalhe-status') {
+    const fKey = b.dataset.fkey, status = S.fStatus && S.fStatus[fKey], voo = vooDaChave(fKey);
+    if (!voo || !STATUS_COM_DETALHE.includes(status)) return;
+    pedirDetalheDoStatus({ voo, status, detalhe: S.fObs && S.fObs[fKey], aoConfirmar: detalhe => aplicarStatus(fKey, status, detalhe) });
+    return;
+  }
+
   if (a === 'del-mis') {
     const s = stuBy(id);
     if (!s || !Array.isArray(s.extra)) return;
@@ -751,6 +785,26 @@ document.addEventListener('click', e => {
   }
 });
 
+// Status do voo: Atrasado e Cancelado pedem o detalhe (a nova decolagem ou o motivo) antes de valer; desistir deixa o
+// status anterior. O histórico registra só a categoria do motivo
+const vooDaChave = fKey => (RES && Array.isArray(RES.out) ? RES.out.find(o => o.fKey === fKey) : null);
+function aplicarStatus(fKey, status, detalhe) {
+  if (!S.fStatus) S.fStatus = {};
+  if (!S.fObs) S.fObs = {};
+  S.fStatus[fKey] = status;
+  if (detalhe) S.fObs[fKey] = detalhe;
+  else delete S.fObs[fKey];
+  const voo = vooDaChave(fKey);
+  if (voo) voo.status = status;
+  save();
+  logChange('mod', `Status de ${voo ? `${voo.s} (${hm(voo.a)}–${hm(voo.b)})` : fKey}: ${textoParaOHistorico(status, detalhe)}`);
+}
+function mudarStatus(fKey, status) {
+  const voo = vooDaChave(fKey);
+  if (!voo || !STATUS_COM_DETALHE.includes(status)) { aplicarStatus(fKey, status, null); return; }
+  pedirDetalheDoStatus({ voo, status, aoConfirmar: detalhe => aplicarStatus(fKey, status, detalhe), aoDesistir: () => rOut() });
+}
+
 // Sincronização em tempo real de alterações (com trava estrita para Perfil Gestor e Links Compartilhados)
 document.addEventListener('change', e => {
   const t = e.target, f = t.dataset.f, a = t.dataset.a;
@@ -765,19 +819,7 @@ document.addEventListener('change', e => {
   }
 
   if (f === 'fstatus') {
-    const fkey = t.dataset.fkey;
-    if (!S.fStatus) S.fStatus = {};
-    S.fStatus[fkey] = t.value;
-    let flightDesc = fkey;
-    if (RES && Array.isArray(RES.out)) {
-      const targetFlight = RES.out.find(o => o.fKey === fkey);
-      if (targetFlight) {
-        targetFlight.status = t.value;
-        flightDesc = `${targetFlight.s} (${hm(targetFlight.a)}–${hm(targetFlight.b)})`;
-      }
-    }
-    save();
-    logChange('mod', `Status de ${flightDesc}: ${t.value}`);
+    mudarStatus(t.dataset.fkey, t.value);
     return;
   }
 

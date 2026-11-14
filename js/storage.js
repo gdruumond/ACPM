@@ -10,6 +10,7 @@ import { separar, juntar, diaPadrao, diaParaCopiar, converterLegado, biDosDias }
 import { ESQUEMA, migrarCadastro, migrarDia, precisaMigrar, renomearSimulador } from './migracoes.js';
 import { habilitacoesDoNivel, normalizarHabilitacoes } from './habilitacoes.js';
 import { ajustarFilas, CATEGORIAS_DO_RODIZIO } from './rodizio.js';
+import { normalizarDetalhes } from './status.js';
 
 // Validação do link compartilhado: o conteúdo vem da URL, então só entram os tipos e as faixas que a interface produz
 const LIMITE = { instrutores: 200, alunos: 500, extras: 10, bloqueios: 50, matriculas: 100, nome: 80 };
@@ -54,6 +55,7 @@ export const ApiClient = {
       ins: [],
       stu: [],
       fStatus: {},
+      fObs: {},
       horas: {},
       importadas: [],
       frota: FROTA_INICIAL.map(f => ({ ...f })),
@@ -67,6 +69,8 @@ export const ApiClient = {
     if (!x || !Array.isArray(x.stu) || !Array.isArray(x.ins)) return this.createFreshState();
     x.lim = { ...DEFAULT_LIM };
     if (!x.fStatus) x.fStatus = {};
+    // Detalhes do status (fase 8): só os que valem para o status atual de cada voo
+    x.fObs = normalizarDetalhes(x.fObs, x.fStatus);
     if (!x.horas || typeof x.horas !== 'object' || Array.isArray(x.horas)) x.horas = {};
     if (!Array.isArray(x.importadas)) x.importadas = [];
     if (!x.nid || x.nid < 1000) x.nid = 1000;
@@ -253,6 +257,8 @@ export const ApiClient = {
       avOff: Object.keys(state.av).filter(k => !state.av[k]),
       ins: state.ins.map(x => [x.id, x.nm, x.on ? 1 : 0, x.hab, x.kg, x.aw.map(a => a ? 1 : 0)]),
       st: state.fStatus || {},
+      // Detalhes do status: a categoria do motivo e o novo horário (o texto livre do motivo não vai no link)
+      ob: Object.fromEntries(Object.entries(state.fObs || {}).map(([fKey, d]) => [fKey, d.motivo ? { m: d.motivo } : { n: d.novoInicio }])),
       // Revisão de 50 horas e filas do rodízio: quem abre o link gera a mesma escala
       h: state.horas || {},
       f: state.filas || {},
@@ -292,6 +298,11 @@ export const ApiClient = {
       if (decoded.st && typeof decoded.st === 'object') {
         state.fStatus = Object.fromEntries(Object.entries(decoded.st)
           .filter(([fKey, st]) => /^\d+_\d+_\d+$/.test(fKey) && FLIGHT_STATUSES.includes(st)));
+      }
+      if (decoded.ob && typeof decoded.ob === 'object') {
+        state.fObs = normalizarDetalhes(Object.fromEntries(Object.entries(decoded.ob)
+          .filter(([, d]) => d && typeof d === 'object')
+          .map(([fKey, d]) => [fKey, { motivo: d.m, novoInicio: d.n }])), state.fStatus);
       }
       if (decoded.h && typeof decoded.h === 'object') {
         const avioes = normalizarFrota(state.frota).filter(f => AIRCRAFT_EQ_TYPES.includes(f.tipo)).map(f => f.reg);

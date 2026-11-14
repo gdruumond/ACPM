@@ -90,6 +90,13 @@ describe('Migrações do formato dos dados', () => {
     assert.ok(ESQUEMA >= 10);
   });
 
+  it('versão 13: os dias passam a guardar os detalhes do status (motivo do cancelamento e novo horário do atraso)', () => {
+    const dia = { fStatus: { '1000_0_1': 'Cancelado' }, esquema: 12 };
+    assert.deepEqual(migrarDia(dia), { ...dia, esquema: ESQUEMA });
+    assert.deepEqual(migrarCadastro({ nid: 1000, ins: [], stu: [], esquema: 12 }).ins, []);
+    assert.ok(ESQUEMA >= 13);
+  });
+
   it('os nomes novos são os da frota cadastrada, na mesma ordem', () => {
     assert.deepEqual(EQ['Sim. Mono'], ['SIM-MONO-A', 'SIM-MONO-C']);
     assert.deepEqual(EQ['Sim. Multi'], ['SIM-MLTE-E', 'SIM-MLTE-D']);
