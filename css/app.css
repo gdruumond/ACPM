@@ -168,7 +168,7 @@ nav#nav button.on { color: #fff; border-bottom-color: var(--ye); }
 .aba-selo.erro { background: #E5484D; color: #fff; }
 
 /* A Secretaria trabalha na agenda: só a Agenda e a Escala (que ela consulta) */
-body[data-perfil="secretaria"] #nav button:not([data-t="age"]):not([data-t="esc"]),
+body[data-perfil="secretaria"] #nav button:not([data-t="age"]):not([data-t="esc"]):not([data-t="ins"]):not([data-t="alu"]),
 body[data-perfil="secretaria"] .aba-sep,
 body[data-perfil="secretaria"] #btn-open-log,
 body[data-perfil="secretaria"] #btn-share-link { display: none !important; }
@@ -200,6 +200,8 @@ h3 { font: 600 15px 'Barlow Semi Condensed', sans-serif; margin: 10px 0 6px; col
 
 /* Regras de Somente Visualização Estrita para o Perfil Gestor e Links Compartilhados */
 body[data-role="gestor"] .edit-only { display: none !important; }
+/* Dados pessoais: só operadores, administradores e a secretaria (que no resto entra como consulta) */
+body[data-role="gestor"]:not([data-perfil="secretaria"]) .so-dados { display: none !important; }
 body[data-role="gestor"] #s-rec .janela,
 body[data-role="gestor"] #s-ins .cel,
 body[data-role="gestor"] main label.alvo,
@@ -517,7 +519,14 @@ dialog.dlg .motivos legend { padding: 0 4px; font-weight: 600; }
 dialog.dlg .campo { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; font-weight: 600; }
 dialog.dlg .campo[hidden] { display: none; }
 dialog.dlg .campo small { font-weight: 400; }
-dialog.dlg .dlg-acoes { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+dialog.dlg .dlg-acoes, .form-dados .dlg-acoes { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+/* Painel dos dados pessoais */
+.form-dados { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+.campo-dado { display: flex; flex-direction: column; gap: 4px; }
+.campo-dado label { font-weight: 600; }
+.campo-dado input[aria-invalid="true"] { border-color: var(--er); }
+.campo-dado .erro-campo:empty { display: none; }
+td.c-canac { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--mu); }
 
 .stu-cell {
   display: flex;

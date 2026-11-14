@@ -6,3 +6,5 @@ export const PERFIS = Object.keys(ROTULOS);
 export const operaEscala = perfil => perfil === 'operador' || perfil === 'administrador';
 export const registraNaAgenda = perfil => operaEscala(perfil) || perfil === 'secretaria';
 export const gerenciaContas = perfil => perfil === 'administrador';
+// Dados pessoais de alunos e instrutores (CPF, CANAC, nascimento, celular e e-mail): operadores, administradores e a secretaria
+export const veDadosPessoais = perfil => operaEscala(perfil) || perfil === 'secretaria';

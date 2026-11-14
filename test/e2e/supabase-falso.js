@@ -5,6 +5,7 @@
 import { separar } from '../../js/dias.js';
 import { migrarCadastro, migrarDia } from '../../js/migracoes.js';
 import { prazoDaAgendaPermite } from '../../js/agenda.js';
+import { gravarDadosPessoais } from '../../js/dados-pessoais.js';
 
 export const URL_TESTE = 'https://acpm-teste.supabase.invalid';
 
@@ -63,6 +64,8 @@ export function criarSupabaseFalso({ documentos = {}, dias = {}, agora = new Dat
   const tabelaDias = new Map(Object.entries(dias).map(([data, conteudo]) => [data, { conteudo, versao: 1 }]));
   const historico = [];
   const solicitacoes = [];
+  // Dados pessoais ('aluno:1000' → campos, atualizado_em e atualizado_por): operadores e secretaria leem e gravam
+  const dadosPessoais = new Map();
   const sessoes = new Map();
   // Contas criadas pelo administrador, senhas e e-mails trocados e pedidos de troca de e-mail (só neste servidor)
   const contasCriadas = [];
@@ -105,6 +108,7 @@ export function criarSupabaseFalso({ documentos = {}, dias = {}, agora = new Dat
     const conta = sessoes.get((req.headers().authorization || '').replace(/^Bearer /, ''));
     const comPerfil = conta && conta.perfil;
     const operador = conta && ['operador', 'administrador'].includes(conta.perfil);
+    const veDados = conta && ['operador', 'administrador', 'secretaria'].includes(conta.perfil);
 
     if (url.pathname === '/auth/v1/token' && url.searchParams.get('grant_type') === 'password') {
       const { email, password } = req.postDataJSON();
@@ -143,6 +147,11 @@ export function criarSupabaseFalso({ documentos = {}, dias = {}, agora = new Dat
       }
       if (url.pathname === '/rest/v1/historico') return responder(200, consultar(historico, url));
       if (url.pathname === '/rest/v1/solicitacoes') return responder(200, consultar(solicitacoes, url));
+      if (url.pathname === '/rest/v1/dados_pessoais') {
+        if (!veDados) return responder(200, []);
+        const linhas = [...dadosPessoais].map(([chave, d]) => ({ tipo: chave.split(':')[0], id_cadastro: Number(chave.split(':')[1]), cpf: null, canac: null, nascimento: null, celular: null, email: null, ...d }));
+        return responder(200, consultar(linhas, url).map(({ tipo, ...linha }) => linha));
+      }
     }
 
     if (req.method() === 'POST' && url.pathname.startsWith('/rest/v1/rpc/')) {
@@ -196,6 +205,18 @@ export function criarSupabaseFalso({ documentos = {}, dias = {}, agora = new Dat
         });
         return responder(200, id);
       }
+      if (funcao === 'salvar_dados_pessoais') {
+        if (!veDados) return responder(403, { code: '42501', message: 'somente operadores e a secretaria alteram dados pessoais' });
+        try {
+          const tabela = gravarDadosPessoais(Object.fromEntries(dadosPessoais), args.p_tipo, args.p_id, args.p_dados,
+            { hoje: agora.toISOString().slice(0, 10), autor: conta.nome, agora: agora.toISOString() });
+          dadosPessoais.clear();
+          Object.entries(tabela).forEach(([chave, d]) => dadosPessoais.set(chave, d));
+          return responder(204);
+        } catch (e) {
+          return responder(e.code === '23505' ? 409 : 400, { code: e.code, message: e.message.replace(/\.$/, ''), hint: e.campo });
+        }
+      }
       if (!operador) return responder(403, { code: '42501', message: 'somente operadores podem alterar a escala' });
       if (funcao === 'salvar_documento') {
         // Depois da conversão (o cadastro existe), os documentos da fase 2 ficam só como cópia
@@ -226,6 +247,7 @@ export function criarSupabaseFalso({ documentos = {}, dias = {}, agora = new Dat
     dias: tabelaDias,
     historico,
     solicitacoes,
+    dadosPessoais,
     contasCriadas,
     trocasDeEmail,
     senhaDe,

@@ -1,10 +1,12 @@
 // Abas Instrutores e Alunos. Os instrutores têm duas visões: a disponibilidade do dia (uma grade com as janelas e os
-// voos de cada um na escala) e o cadastro (nome, peso e habilitações, editadas num painel lateral).
+// voos de cada um na escala) e o cadastro (nome, CANAC, peso e habilitações, editadas num painel lateral). Os dados
+// pessoais (CPF, CANAC, nascimento, celular e e-mail) abrem noutro painel, só para quem pode vê-los (.so-dados).
 import { WIN, PRE, T } from '../config.js';
 import { HABILITACOES, nomeDaHabilitacao } from '../habilitacoes.js';
 import { esc } from '../format.js';
 import { S, RES, insBy } from '../state.js';
 import { $ } from '../dom.js';
+import { canacDe } from './dados-pessoais.js';
 
 const ROTULO = new Map(HABILITACOES.map(h => [h.id, h.curto]));
 // No cadastro, todas na ordem do painel; na grade do dia, só as que mais distinguem o instrutor
@@ -66,9 +68,10 @@ function linhaDoDia(x, ocupacao) {
 export function linhaDoCadastro(x) {
   return `<tr class="cd" ${atributos(x)}>
     <td><input class="nm" data-f="nm" value="${esc(x.nm)}" aria-label="Nome do instrutor"></td>
+    <td class="c-canac so-dados">${esc(canacDe('instrutor', x.id))}</td>
     <td><input type="number" min="0" max="200" data-f="kg" value="${x.kg || ''}" placeholder="sem peso" aria-label="Peso de ${esc(x.nm)} em kg"${x.kg ? '' : ' class="falta"'}></td>
     <td><span class="habs-resumo">${esc(resumoDasHabilitacoes(x)) || 'Nenhuma'}</span></td>
-    <td class="acoes"><button class="btn quiet edit-only" data-act="editar-habs" data-id="${x.id}">Editar habilitações</button><button class="x edit-only" data-act="deli" aria-label="Excluir ${esc(x.nm)}">✕</button></td>
+    <td class="acoes"><button type="button" class="btn quiet so-dados" data-dados="instrutor:${x.id}" aria-label="Dados pessoais de ${esc(x.nm)}">Dados pessoais</button><button class="btn quiet edit-only" data-act="editar-habs" data-id="${x.id}">Editar habilitações</button><button class="x edit-only" data-act="deli" aria-label="Excluir ${esc(x.nm)}">✕</button></td>
   </tr>`;
 }
 
@@ -105,6 +108,7 @@ export function atualizarLinhaDoCadastro(x) {
   kg.classList.toggle('falta', !x.kg);
   kg.setAttribute('aria-label', `Peso de ${x.nm} em kg`);
   linha.querySelector('[data-act="deli"]').setAttribute('aria-label', `Excluir ${x.nm}`);
+  linha.querySelector('[data-dados]').setAttribute('aria-label', `Dados pessoais de ${x.nm}`);
   linha.querySelector('.habs-resumo').textContent = resumoDasHabilitacoes(x) || 'Nenhuma';
   const titulo = $('#painel-instrutor-titulo');
   if (titulo && !$('#painel-instrutor').hidden && +$('#painel-instrutor').dataset.id === x.id) titulo.querySelector('small').textContent = x.nm;
@@ -113,7 +117,7 @@ export function atualizarLinhaDoCadastro(x) {
 
 export function rIns() {
   mostrarVistaDosInstrutores(vistaDosInstrutores);
-  $('#inst').innerHTML = S.ins.length ? S.ins.map(linhaDoCadastro).join('') : `<tr><td colspan="4" class="h">${SEM_INSTRUTORES}</td></tr>`;
+  $('#inst').innerHTML = S.ins.length ? S.ins.map(linhaDoCadastro).join('') : `<tr><td colspan="5" class="h">${SEM_INSTRUTORES}</td></tr>`;
   rInsDia();
   rPainelDoInstrutor();
 }
@@ -158,14 +162,15 @@ function naoEscalarCom(s) {
 
 const linhaDoAluno = s => `<tr class="cd" data-k="s" data-id="${s.id}" data-nm="${esc(s.nm.toLowerCase())}">
   <td><input class="nm" data-f="nm" value="${esc(s.nm)}" aria-label="Nome do aluno"></td>
+  <td class="c-canac so-dados">${esc(canacDe('aluno', s.id))}</td>
   <td><input type="number" min="0" max="200" data-f="kg" value="${s.kg || ''}" placeholder="sem peso" aria-label="Peso de ${esc(s.nm)} em kg"${s.kg ? '' : ' class="falta"'}></td>
   <td><div class="bl">${naoEscalarCom(s)}</div></td>
-  <td class="acoes"><button class="x edit-only" data-act="dels" aria-label="Excluir ${esc(s.nm)}">✕</button></td>
+  <td class="acoes"><button type="button" class="btn quiet so-dados" data-dados="aluno:${s.id}" aria-label="Dados pessoais de ${esc(s.nm)}">Dados pessoais</button><button class="x edit-only" data-act="dels" aria-label="Excluir ${esc(s.nm)}">✕</button></td>
 </tr>`;
 
 export const rAlu = () => {
   $('#alu').innerHTML = S.stu.length ? S.stu.map(linhaDoAluno).join('')
-    : '<tr><td colspan="4" class="h">Nenhum aluno cadastrado. Clique em “+ Novo aluno” acima para cadastrar.</td></tr>';
+    : '<tr><td colspan="5" class="h">Nenhum aluno cadastrado. Clique em “+ Novo aluno” acima para cadastrar.</td></tr>';
 };
 
 // Atualiza a linha do aluno no lugar. "Não escalar com" é refeito só quando muda, e o foco volta para o seletor
@@ -179,6 +184,7 @@ export function atualizarLinhaDoAluno(s, { naoEscalar = false } = {}) {
   kg.classList.toggle('falta', !s.kg);
   kg.setAttribute('aria-label', `Peso de ${s.nm} em kg`);
   linha.querySelector('[data-act="dels"]').setAttribute('aria-label', `Excluir ${s.nm}`);
+  linha.querySelector('[data-dados]').setAttribute('aria-label', `Dados pessoais de ${s.nm}`);
   if (!naoEscalar) return;
   linha.querySelector('.bl').innerHTML = naoEscalarCom(s);
   linha.querySelector('[data-f="bl"]').focus();
