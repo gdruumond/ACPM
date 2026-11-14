@@ -235,7 +235,7 @@ One PR per phase, opened when Pedro says. Each phase starts from the upstream `m
 #### Phase 12: The operating day (branch `fase-12`, on top of `fase-11`)
 1. [x] **Pinned flights in the engine** (board item 5): the engine takes the pinned flights (time, aircraft and instructor of each) first, as they are, and fits the rest of the demand around them. A pinned flight that became impossible (the instructor no longer comes, the aircraft went into maintenance, the room or the aircraft already taken) stays where it is, marked as a conflict with the reason; a cancelled pinned flight frees its aircraft and instructor. The even split and the tail pass leave pinned flights alone, and a pinned Ground class stays open for a new student of the same Ground. Over 100 generated days, with the schedule pinned, new top-priority requests never move a pinned flight; without pins nothing changes.
 2. [x] **Approving the schedule** (data format 16): "Aprovar escala" (with confirmation) pins every flight of the date; the badge next to the title says when and who approved; "Reabrir" (with confirmation) unpins and the schedule is rebuilt again on every change. Pinned flights show a padlock; conflicts get a red box and a red edge on the row. Em Voo and Atrasado also pin the flight, even without approval. The approval is kept per date (a new date starts without it) and travels in the Gestor link.
-3. [ ] **Suggestions for a conflict**: another aircraft, another instructor, both, a later time today, or cancel.
+3. [x] **Suggestions for a conflict** (`js/reparo.js`): each conflict gets a "Sugestões" button that opens a drawer with what can fly instead, without moving any other flight. At the same time: another aircraft of the same type (one already out, with the smallest gap, then the front of the hangar), another instructor (qualified, available, free, not blocked by the student, within the weight and the legal limits; full tank first, then fewest hours today and fewest qualifications) or both. With nothing at the same time: the first later time today (on today's schedule, only times still ahead) within the student's availability, before the next session of the same request, and for a Ground class before the flights that depend on it. Last, cancel: the status dialog opens with the reason the conflict suggests. "Aplicar" changes the pinned flight (a Ground class as a whole), and the history reverts it. Over 100 generated days with an instructor and an aircraft taken out after approval, every suggestion applied clears its conflict, creates no other and keeps the instructor within the law.
 
 #### Phase 13: Compact days, with the operator's switches
 
@@ -247,6 +247,7 @@ One PR per phase, opened when Pedro says. Each phase starts from the upstream `m
 - [ ] Track instructor and student currency: last flight, medical/CMA expiry. The engine then checks these too (the course phase is Phase 14).
 - [ ] Integrate with the Google Calendar that students already use, publishing each student's missions.
 - [ ] Make the app installable (PWA) for use on the apron with poor connectivity.
+- [ ] After approval, when a new request doesn't fit around the pinned flights, suggest one change to a pinned flight that makes room (Phase 12 follow-up).
 
 ## 5. Open questions for the repo owner
 1. Who uses the app daily, and how many operators edit at the same time?

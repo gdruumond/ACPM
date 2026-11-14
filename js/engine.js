@@ -375,7 +375,7 @@ export function runAllocationEngine(state) {
         baseTag, tag: baseTag, status, fixo: true,
         ...(conflito.length ? { conflito } : {})
       });
-      if (conflito.length) al.push({ t: 'conf', s: mid ? `${stu.nm} (${d.mis})` : stu.nm, m: `Conflito na escala aprovada: ${conflito.join('; ')}.` });
+      if (conflito.length) al.push({ t: 'conf', s: mid ? `${stu.nm} (${d.mis})` : stu.nm, fKey, m: `Conflito na escala aprovada: ${conflito.join('; ')}.` });
     }
   }
 

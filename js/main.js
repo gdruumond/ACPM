@@ -28,8 +28,10 @@ import { renderAuditPanel, rOut, alternarTempo, abrirPopupDoMapa, fecharPopupDoM
 import { pedirDetalheDoStatus, dialogoDeStatusAberto } from './views/dialogo-status.js';
 import { acaoDoPainel } from './views/painel-aeroporto.js';
 import { abrirPainelDeDados, fecharPainelDeDados, salvarPainelDeDados, carregarDadosPessoais } from './views/dados-pessoais.js';
+import { abrirPainelDeReparo, fecharPainelDeReparo, opcaoDoPainel, painelDeReparoAberto } from './views/reparo.js';
+import { aplicarReparo } from './reparo.js';
 import { STATUS_COM_DETALHE, textoParaOHistorico } from './status.js';
-import { pinoDoVoo } from './fixos.js';
+import { pinoDoVoo, normalizarFixos } from './fixos.js';
 import { singleDemandRowHTML, cnt, rDem, applyDemandFilters } from './views/demanda.js';
 import { rIns, rAlu, applyInstructorFilters, preencherFiltroDeHabilitacoes, mostrarVistaDosInstrutores, abrirPainelDoInstrutor, fecharPainelDoInstrutor, atualizarLinhaDoCadastro, atualizarLinhaDoAluno, rPainelDoInstrutor, rLimites, podeEditarLimites } from './views/cadastros.js';
 import { LIMITES_DA_LEI, normalizarLimites, comHorasExternas } from './limites.js';
@@ -686,6 +688,11 @@ document.addEventListener('click', e => {
         logChange(rev.val ? 'inc' : 'exc', `Revertido: ${ins.nm} ${rev.val ? 'disponível' : 'indisponível'}`, null, entry.id);
         save(); rIns();
       }
+    } else if (rev.kind === 'restaurarFixos' && rev.fixos && typeof rev.fixos === 'object') {
+      // Um reparo desfeito: os voos voltam a ser fixos como antes dele
+      S.fixos = normalizarFixos({ ...(S.fixos || {}), ...rev.fixos });
+      logChange('mod', `Revertido: ${entry.desc}`, null, entry.id);
+      save();
     } else if (rev.kind === 'readicionarRecurso' && rev.recurso && !S.frota.some(f => f.reg === rev.recurso.reg)) {
       // Um recurso retirado volta para a frota, como estava
       S.frota.push({ ...rev.recurso });
@@ -843,6 +850,36 @@ document.addEventListener('click', e => {
     logChange('mod', 'Escala reaberta: volta a ser refeita a cada alteração');
     showToast('Escala reaberta.', 'ok');
   }
+});
+
+// Sugestões para um conflito (fase 12): a gaveta abre pelo botão do conflito. "Aplicar" muda o voo fixo (na turma de
+// Ground, a turma inteira) e o histórico guarda os fixos de antes, para reverter; cancelar abre o diálogo do status, já
+// com o motivo do conflito marcado
+document.addEventListener('click', e => {
+  const abrirSugestoes = e.target.closest('[data-reparo]');
+  if (abrirSugestoes) { if (!isGestor()) abrirPainelDeReparo(abrirSugestoes.dataset.reparo); return; }
+  if (e.target.closest('#btn-fechar-reparo')) { fecharPainelDeReparo(true); return; }
+  const botao = e.target.closest('[data-reparo-aplicar]');
+  if (!botao || isGestor()) return;
+  const escolha = opcaoDoPainel(+botao.dataset.reparoAplicar);
+  if (!escolha) return;
+  const { fKey, voo, opcao } = escolha;
+  fecharPainelDeReparo();
+  if (!opcao.mudancas) {
+    pedirDetalheDoStatus({ voo, status: 'Cancelado', detalhe: opcao.motivo ? { motivo: opcao.motivo } : null, aoConfirmar: detalhe => aplicarStatus(fKey, 'Cancelado', detalhe) });
+    return;
+  }
+  const antes = S.fixos || {};
+  S.fixos = aplicarReparo(antes, RES, fKey, opcao);
+  const mudados = Object.keys(S.fixos).filter(k => S.fixos[k] !== antes[k]);
+  save();
+  logChange('mod', `Reparo: ${voo.s} (${hm(voo.a)}–${hm(voo.b)}): ${opcao.texto}`, {
+    kind: 'restaurarFixos', fixos: Object.fromEntries(mudados.map(k => [k, antes[k]])), label: '↶ Reverter'
+  });
+  showToast('Sugestão aplicada: o voo continua fixo.', 'ok');
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && painelDeReparoAberto() && !dialogoDeStatusAberto()) fecharPainelDeReparo(true);
 });
 
 // Status do voo: Atrasado e Cancelado pedem o detalhe (a nova decolagem ou o motivo) antes de valer; desistir deixa o

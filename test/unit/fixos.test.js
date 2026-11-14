@@ -28,7 +28,7 @@ describe('Voos fixos', () => {
     const { out, al } = runAllocationEngine({ ...base, ins: [{ ...base.ins[0], on: false }], fixos: fixarTudo(antes.out) });
     assert.deepEqual(pino(out[0]), pino(antes.out[0]));
     assert.deepEqual(out[0].conflito, ['o instrutor não está disponível']);
-    assert.deepEqual(al.filter(a => a.t === 'conf'), [{ t: 'conf', s: 'Aluno 1000', m: 'Conflito na escala aprovada: o instrutor não está disponível.' }]);
+    assert.deepEqual(al.filter(a => a.t === 'conf'), [{ t: 'conf', s: 'Aluno 1000', fKey: '1000_0_1', m: 'Conflito na escala aprovada: o instrutor não está disponível.' }]);
   });
 
   it('avião em manutenção: o voo fixo nele fica em conflito', () => {

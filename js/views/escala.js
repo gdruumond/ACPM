@@ -6,6 +6,7 @@ import { categoriaDoTipo, nomeDoRecurso } from '../categorias.js';
 import { textoDoDetalhe } from '../status.js';
 import { linhasDoQuadro } from '../quadro.js';
 import { painelDaEscala } from './painel-aeroporto.js';
+import { atualizarPainelDeReparo } from './reparo.js';
 import { sumUniqueOperationalHours, consolidateTimelineSlots } from '../engine.js';
 import { S, RES, AUDIT_LOG, TL_MODE, DATA, isGestor } from '../state.js';
 import { $ } from '../dom.js';
@@ -330,7 +331,8 @@ function resumo(out, al, tot) {
       <ul>${erros.map(item).join('')}</ul></details>`;
   }
   // Voos fixos que ficaram impossíveis (escala aprovada): continuam no lugar até o operador resolver
-  if (conflitos.length) h += `<details class="caixa conflitos" open><summary>${conflitos.length} ${conflitos.length === 1 ? 'voo em conflito' : 'voos em conflito'} na escala aprovada</summary><ul>${conflitos.map(item).join('')}</ul></details>`;
+  const conflito = a => `<li class="al ${a.t}"><b>${esc(a.s)}</b> ${esc(a.m)}${a.fKey ? ` <button type="button" class="btn quiet edit-only" data-reparo="${esc(a.fKey)}" title="O que pode voar no lugar deste voo">Sugestões</button>` : ''}</li>`;
+  if (conflitos.length) h += `<details class="caixa conflitos" open><summary>${conflitos.length} ${conflitos.length === 1 ? 'voo em conflito' : 'voos em conflito'} na escala aprovada</summary><ul>${conflitos.map(conflito).join('')}</ul></details>`;
   if (avisos.length) h += `<details class="caixa avisos"><summary>${resumoDosAvisos(avisos)}</summary><ul>${avisos.map(item).join('')}</ul></details>`;
   return h + '</div>';
 }
@@ -407,6 +409,7 @@ export function rOut() {
   $('#out').dataset.vista = TL_MODE === 'lista' || TL_MODE === 'painel' ? TL_MODE : 'mapa';
   if (!RES || (!RES.out.length && !RES.al.length)) {
     $('#out').innerHTML = `<p class="h">Nenhum voo nesta data. Marque quem vai voar na aba Demanda: a escala é montada automaticamente.</p>`;
+    atualizarPainelDeReparo();
     return;
   }
   const { out, al, tot } = RES;
@@ -436,4 +439,5 @@ export function rOut() {
   else h += tabela(voos) + renderVisualTimeline(voos) + (TL_MODE === 'painel' ? painelDoDia(voos) : '');
   $('#out').innerHTML = h;
   reancorarPopupDoMapa();
+  atualizarPainelDeReparo();
 }

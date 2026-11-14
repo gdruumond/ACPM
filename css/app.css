@@ -540,6 +540,13 @@ td.c-canac { font-variant-numeric: tabular-nums; white-space: nowrap; color: var
 details.caixa.conflitos { background: var(--er-bg); border: 1px solid var(--er); }
 details.caixa.conflitos summary { color: var(--er); }
 .tabela-escala tr.em-conflito td:first-child { box-shadow: inset 3px 0 0 var(--er); }
+details.caixa.conflitos .btn.quiet { padding: 1px 8px; margin-left: 4px; font-size: 13.5px; }
+/* Sugestões para um conflito (fase 12): a gaveta com as opções, a melhor primeiro */
+.motivo-conflito { margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--er-bg); color: var(--er); }
+.opcoes-reparo { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+.opcoes-reparo li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--ln); border-radius: 8px; background: var(--pn2); }
+.opcoes-reparo li.cancelar { background: transparent; border-style: dashed; }
+.opcoes-reparo .btn { flex: none; }
 /* Limites da lei (fase 11) */
 td.mes { white-space: nowrap; font-variant-numeric: tabular-nums; }
 td.mes.perto { color: var(--wa); font-weight: 700; }
