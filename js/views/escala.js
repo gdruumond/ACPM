@@ -280,14 +280,17 @@ function resumoDosAvisos(avisos) {
   const ehPeso = a => a.m.startsWith('Peso do aluno não informado');
   const ehRevisao = a => a.m.startsWith('Aeronave parou');
   const ehAtraso = a => a.m.startsWith('Atraso:');
+  const ehLimite = a => a.m.startsWith('Limite da lei:');
   const semPeso = new Set(avisos.filter(ehPeso).map(a => a.s.replace(/ \(.*\)$/, ''))).size;
   const revisao = avisos.filter(ehRevisao).length;
   const atrasos = avisos.filter(ehAtraso).length;
-  const outros = avisos.filter(a => !ehPeso(a) && !ehRevisao(a) && !ehAtraso(a)).length;
+  const limites = new Set(avisos.filter(ehLimite).map(a => a.s)).size;
+  const outros = avisos.filter(a => !ehPeso(a) && !ehRevisao(a) && !ehAtraso(a) && !ehLimite(a)).length;
   const partes = [
     semPeso && `${semPeso} ${semPeso === 1 ? 'aluno sem peso' : 'alunos sem peso'}`,
     revisao && `${revisao} ${revisao === 1 ? 'avião para' : 'aviões param'} para a revisão de 50 horas`,
     atrasos && `${atrasos} ${atrasos === 1 ? 'atraso com conflito' : 'atrasos com conflito'}`,
+    limites && `${limites} ${limites === 1 ? 'instrutor perto' : 'instrutores perto'} do limite da lei`,
     outros && `${outros} ${outros === 1 ? 'outro' : 'outros'}`
   ].filter(Boolean);
   return `${avisos.length} ${avisos.length === 1 ? 'aviso' : 'avisos'}: ${partes.join(' · ')}`;

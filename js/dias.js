@@ -7,6 +7,7 @@ import { filasDoDiaSeguinte } from './rodizio.js';
 import { FROTA_INICIAL, normalizarFrota } from './frota.js';
 import { normalizarHorarios } from './horarios.js';
 import { normalizarHangar } from './hangar.js';
+import { normalizarLimites } from './limites.js';
 
 // jan: disponibilidade do aluno (só quando o pedido tem uma)
 const CAMPOS_DO_PEDIDO = ['fly', 'mis', 'eq', 'p1', 'p2', 'nb', 'ss', 'pr', 'jan'];
@@ -27,10 +28,15 @@ export function separar(estado) {
     cadastro: {
       nid: estado.nid,
       // O nível A01–A09 de antes da fase 4 fica só como cópia, em quem já o tinha
-      ins: estado.ins.map(({ id, nm, lv, kg, hab }) => ({ id, nm, ...(lv === undefined ? {} : { lv }), kg, hab: [...(hab || [])] })),
+      ins: estado.ins.map(({ id, nm, lv, kg, hab, horasExternas }) => ({
+        id, nm, ...(lv === undefined ? {} : { lv }), kg, hab: [...(hab || [])],
+        // Horas de voo fora do app (fase 11), por mês ('AAAA-MM'; 'AAAA-00': antes deste mês, no ano)
+        ...(horasExternas && Object.keys(horasExternas).length ? { horasExternas: { ...horasExternas } } : {})
+      })),
       stu: estado.stu.map(({ id, nm, kg, bl }) => ({ id, nm, kg, bl: [...(bl || [])] })),
       ...(Array.isArray(estado.frota) ? { frota: estado.frota.map(f => ({ ...f })) } : {}),
-      ...(estado.horarios ? { horarios: structuredClone(estado.horarios) } : {})
+      ...(estado.horarios ? { horarios: structuredClone(estado.horarios) } : {}),
+      ...(estado.limites ? { limites: { ...estado.limites } } : {})
     },
     dia: {
       win: [...estado.win],
@@ -60,6 +66,7 @@ export function juntar(cadastro, dia = diaPadrao()) {
     schemaVer: 4,
     ...(Array.isArray(cadastro.frota) ? { frota } : {}),
     ...(cadastro.horarios ? { horarios: normalizarHorarios(cadastro.horarios) } : {}),
+    ...(cadastro.limites ? { limites: normalizarLimites(cadastro.limites) } : {}),
     win: Array.isArray(dia.win) ? [...dia.win] : WIN.map(() => true),
     av: { ...avDaFrota(frota), ...(dia.av || {}) },
     lim: { ...DEFAULT_LIM },

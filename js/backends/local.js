@@ -2,6 +2,7 @@
 // cadastro e dia:AAAA-MM-DD são o formato por data (fase 3); estado, escala, historico e bi, o da fase 2.
 import { prazoDaAgendaPermite } from '../agenda.js';
 import { gravarDadosPessoais } from '../dados-pessoais.js';
+import { acumularHoras } from '../limites.js';
 import { hojeISO } from '../format.js';
 
 export const CHAVES_LOCAIS = { cadastro: 'acpm4_cadastro', estado: 'acpm3', escala: 'acpm3_res', historico: 'acpm3_audit', bi: 'acpm3_bi' };
@@ -144,6 +145,13 @@ export const backendLocal = {
     if (!textoObrigatorio(por, 80)) throw erroDaAgenda('23514', 'informe quem cancelou');
     Object.assign(solicitacao, { cancelada_em: agora.toISOString(), cancelada_por: por.trim() });
     localStorage.setItem(CHAVE_AGENDA, JSON.stringify(lista));
+  },
+
+  // As horas de voo de cada instrutor antes da data (limites da lei), com a mesma conta do servidor
+  async horasDosInstrutores(data) {
+    const dias = datasGuardadas().filter(d => d < data && d >= `${String(+data.slice(0, 4) - 1)}-12-31`)
+      .map(d => ({ data: d, conteudo: lerJson(PREFIXO_DIA + d) })).filter(d => d.conteudo);
+    return acumularHoras(dias, data);
   },
 
   // Dados pessoais neste navegador (fora do cadastro), com a mesma regra do servidor

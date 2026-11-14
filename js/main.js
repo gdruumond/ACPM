@@ -1001,8 +1001,8 @@ document.addEventListener('change', e => {
     await ApiClient.atualizarFormatoGravado();
 
     abrirData(data);
-    const { estado, escala } = await ApiClient.carregarDia(data);
-    setS(estado);
+    const { estado, escala, horasDosInstrutores } = await ApiClient.carregarDia(data);
+    setS({ ...estado, horasDosInstrutores });
     // Data sem escala gravada: a escala calculada aparece na hora (é gravada junto com a primeira alteração)
     setRES(escala || escalaCalculada());
     marcarEscalaSoCalculada(!escala);

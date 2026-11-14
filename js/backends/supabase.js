@@ -160,6 +160,13 @@ export function criarBackendSupabase(cliente, { aoConflito = () => {}, aoErro = 
       if (error) throw Object.assign(new Error(error.message), { code: error.code });
     },
 
+    // As horas de voo de cada instrutor antes da data (limites da lei): o servidor soma as escalas guardadas
+    async horasDosInstrutores(data) {
+      const { data: horas, error } = await cliente.rpc('horas_dos_instrutores', { p_data: data });
+      if (error) throw erroComCodigo(error);
+      return horas || {};
+    },
+
     // Dados pessoais: o servidor decide quem lê e grava (operadores e secretaria) e valida tudo; o campo do erro vem na
     // dica (hint)
     async listarDadosPessoais(tipo) {

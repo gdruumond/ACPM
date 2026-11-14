@@ -7,6 +7,7 @@ import { migrarCadastro, migrarDia } from '../../js/migracoes.js';
 import { prazoDaAgendaPermite } from '../../js/agenda.js';
 import { gravarDadosPessoais } from '../../js/dados-pessoais.js';
 import { quadroDoDia } from '../../js/quadro.js';
+import { acumularHoras } from '../../js/limites.js';
 
 export const URL_TESTE = 'https://acpm-teste.supabase.invalid';
 
@@ -209,6 +210,11 @@ export function criarSupabaseFalso({ documentos = {}, dias = {}, agora = new Dat
           registrado_em: agora.toISOString(), usuario: conta.id, conta: conta.nome, excecao: !noPrazo, cancelada_em: null, cancelada_por: null
         });
         return responder(200, id);
+      }
+      // As horas de voo de cada instrutor antes da data (limites da lei); quem não lê as escalas recebe vazio
+      if (funcao === 'horas_dos_instrutores') {
+        if (!leEscala) return responder(200, {});
+        return responder(200, acumularHoras([...tabelaDias].map(([data, d]) => ({ data, conteudo: d.conteudo })), args.p_data));
       }
       // O quadro de hoje (São Paulo) para a TV da recepção: qualquer perfil vê
       if (funcao === 'painel_do_dia') {
