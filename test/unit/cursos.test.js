@@ -45,3 +45,28 @@ describe('Programa dos cursos', () => {
     assert.equal(normalizarCursoDoAluno(undefined), undefined);
   });
 });
+
+describe('A missão do curso no pedido e na escala', async () => {
+  const { normalizeMissionFields } = await import('../../js/rules.js');
+  const { runAllocationEngine } = await import('../../js/engine.js');
+  const { aluno, cenario, instrutor, missaoExtra, GROUND_C152 } = await import('../helpers/montar.js');
+
+  it('o pedido guarda o código da missão do curso; um código fora do formato sai', () => {
+    const certo = { mis: 'Navegação', eq: 'C152', p1: 500, p2: -1, nb: 2, etapa: 'PP-07' };
+    normalizeMissionFields(certo);
+    assert.equal(certo.etapa, 'PP-07');
+    const errado = { mis: 'Navegação', eq: 'C152', p1: 500, p2: -1, nb: 2, etapa: 'PP 07' };
+    normalizeMissionFields(errado);
+    assert.equal(Object.hasOwn(errado, 'etapa'), false);
+  });
+
+  it('o voo, a missão extra e o Ground levam o código para a escala', () => {
+    const { out } = runAllocationEngine(cenario({
+      ins: [instrutor(1, 9), instrutor(2, 9)],
+      stu: [aluno(1000, { p1: 390, p2: -1, etapa: 'PP-07' }, { extra: [missaoExtra(1001, { p1: 610, p2: -1, etapa: 'PP-08' })] }),
+        aluno(1002, { ...GROUND_C152, p1: 500, p2: -1, etapa: 'PP-G1' }), aluno(1003, { p1: 870, p2: -1 })]
+    }));
+    const porPedido = Object.fromEntries(out.map(o => [`${o.stuId}_${o.mid}`, o.etapa]));
+    assert.deepEqual(porPedido, { '1000_0': 'PP-07', '1000_1001': 'PP-08', '1002_0': 'PP-G1', '1003_0': undefined });
+  });
+});

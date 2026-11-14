@@ -17,7 +17,7 @@ import { WIN, NI, T, GROUND_EQ_TYPE, GROUND_REG, GROUND_DURATION_MIN, GROUND_DUR
 import { novoRecurso, matriculasDoTipo } from './frota.js';
 import { HORARIOS_PADRAO, DE_30_EM_30, horariosDaMissao, ajustarPreferencias, paraMinuto } from './horarios.js';
 import { hm, fmtH, fmtDurLabel, pad, amanhaISO, isoMenosDias } from './format.js';
-import { isGroundMission, blank, rotuloDaDisponibilidade } from './rules.js';
+import { isGroundMission, blank, rotuloDaDisponibilidade, normalizeMissionFields } from './rules.js';
 import { habilitacoesDoNivel, normalizarHabilitacoes, nomeDaHabilitacao, podeFazer } from './habilitacoes.js';
 import { ApiClient } from './storage.js';
 import { S, RES, AUDIT_LOG, DATA, setS, setRES, setAuditLog, setTLMode, isGestor, insBy, stuBy, getMissionTarget } from './state.js';
@@ -33,6 +33,7 @@ import { aplicarReparo } from './reparo.js';
 import { OPCOES_DE_BURACOS, OPCOES_DE_HORARIOS, normalizarCriterios } from './criterios.js';
 import { normalizarCursos, normalizarCursoDoAluno, novaMissaoDoCurso, codigoValido } from './cursos.js';
 import { rCursos, mostrarVistaDosAlunos, podeEditarCursos, atualizarLinhaDoPrograma } from './views/cursos.js';
+import { proximaDoPedido } from './views/etapas.js';
 import { STATUS_COM_DETALHE, textoParaOHistorico } from './status.js';
 import { pinoDoVoo, normalizarFixos } from './fixos.js';
 import { singleDemandRowHTML, cnt, rDem, applyDemandFilters } from './views/demanda.js';
@@ -539,7 +540,7 @@ async function importarDaAgenda() {
     showToast(`Nenhum pedido novo na agenda para ${DATA.slice(8, 10)}/${DATA.slice(5, 7)}.`);
     return;
   }
-  const resumo = importarSolicitacoes(S, pendentes);
+  const resumo = importarSolicitacoes(S, pendentes, { situacao: (S.resultados && S.resultados.situacao) || [] });
   pendentes.filter(s => S.stu.some(x => x.id === s.aluno)).forEach(s => {
     logChange('inc', `Agenda: ${s.aluno_nome} incluído (${s.missao} · ${rotuloDaDisponibilidade(disponibilidadeDaSolicitacao(s))})`);
   });
@@ -611,6 +612,19 @@ document.addEventListener('click', e => {
   if (isGestor()) { e.preventDefault(); return; }
   const a = b.dataset.act, c = b.closest('[data-k]'), id = c ? +c.dataset.id : +b.dataset.id || 0;
   const mid = b.dataset.mid !== undefined ? +b.dataset.mid : (c && c.dataset.mid !== undefined ? +c.dataset.mid : 0);
+
+  // A próxima missão do curso (fase 14): o pedido vira a missão do programa (tipo, recurso e horas) e o aluno voa
+  if (a === 'usar-proxima') {
+    const s = stuBy(id), target = getMissionTarget(id, mid);
+    const m = s && target ? proximaDoPedido(s, mid) : null;
+    if (!m) return;
+    Object.assign(target, { fly: true, mis: m.mis, eq: m.eq, nb: m.nb, etapa: m.id });
+    ajustarPreferencias(target, horariosDaMissao(S.horarios, target.mis, target.eq));
+    normalizeMissionFields(target);
+    logChange('inc', `${s.nm}: ${m.id} na demanda (${m.mis} · ${m.eq} · ${fmtDurLabel(m.nb)})`);
+    save(); rDem();
+    return;
+  }
 
   if (a === 'add-mis') {
     const s = stuBy(id);
@@ -929,6 +943,28 @@ document.addEventListener('click', e => {
   logChange('mod', `Compactação: ${campo === 'buracos' ? 'buracos' : 'horários'} ${nome(antes[campo])} → ${nome(S.criterios[campo])}`);
 });
 
+// O resultado da missão do curso (fase 14), na linha do voo: vai para o servidor (só acréscimo) e entra na situação do
+// aluno (o progresso e a próxima missão mudam). Sem conexão, o seletor volta ao que estava
+document.addEventListener('change', async e => {
+  const sel = e.target.closest('[data-resultado]');
+  if (!sel || isGestor()) return;
+  const o = vooDaChave(sel.dataset.resultado), stu = o ? stuBy(o.stuId) : null;
+  if (!o || !o.etapa || !stu || !stu.curso) return;
+  const registro = { aluno: o.stuId, curso: stu.curso, missao: o.etapa, resultado: sel.value, data: DATA, voo: o.fKey };
+  sel.disabled = true;
+  try {
+    const id = await ApiClient.registrarResultado(registro);
+    const novo = { id, ...registro, registrado_em: new Date().toISOString(), registrado_por: ApiClient.autorAtual || null };
+    const atual = S.resultados || { situacao: [], doDia: [] };
+    const mesmaMissao = r => r.aluno === novo.aluno && r.curso === novo.curso && r.missao === novo.missao;
+    S.resultados = { situacao: [...atual.situacao.filter(r => !mesmaMissao(r)), novo], doDia: [...atual.doDia, novo] };
+    logChange('mod', `Resultado de ${o.s} em ${o.etapa}: ${sel.value}`);
+  } catch (err) {
+    showToast('Não foi possível registrar o resultado. Verifique a conexão e tente de novo.');
+  }
+  rOut(); rAlu(); rDem();
+});
+
 // Sugestões para um conflito (fase 12): a gaveta abre pelo botão do conflito. "Aplicar" muda o voo fixo (na turma de
 // Ground, a turma inteira) e o histórico guarda os fixos de antes, para reverter; cancelar abre o diálogo do status, já
 // com o motivo do conflito marcado
@@ -1132,6 +1168,8 @@ document.addEventListener('change', e => {
         logChange('mod', `Pedido ${s.nm}: disponibilidade ${rotuloDaDisponibilidade(target.jan)} (${target.mis})`);
       } else {
         target[f] = (f === 'mis' || f === 'eq') ? t.value : +t.value;
+        // Missão, recurso ou horas mudados à mão: o pedido deixa de ser a missão do curso (fase 14)
+        if (['mis', 'eq', 'nb'].includes(f)) delete target.etapa;
         if (f === 'mis') {
           const mRule = MIS[target.mis] || MIS['Voo Local'];
           if (!mRule.eq.includes(target.eq)) {
@@ -1184,8 +1222,8 @@ document.addEventListener('change', e => {
     await ApiClient.atualizarFormatoGravado();
 
     abrirData(data);
-    const { estado, escala, horasBase, horasDosInstrutores } = await ApiClient.carregarDia(data);
-    setS({ ...estado, horasBase, horasDosInstrutores });
+    const { estado, escala, horasBase, horasDosInstrutores, resultados } = await ApiClient.carregarDia(data);
+    setS({ ...estado, horasBase, horasDosInstrutores, resultados });
     // Data sem escala gravada: a escala calculada aparece na hora (é gravada junto com a primeira alteração)
     setRES(escala || escalaCalculada());
     marcarEscalaSoCalculada(!escala);

@@ -12,8 +12,8 @@ import { normalizarFixos, normalizarAprovacao } from './fixos.js';
 import { CRITERIOS_PADRAO, normalizarCriterios } from './criterios.js';
 import { normalizarCursos } from './cursos.js';
 
-// jan: disponibilidade do aluno (só quando o pedido tem uma)
-const CAMPOS_DO_PEDIDO = ['fly', 'mis', 'eq', 'p1', 'p2', 'nb', 'ss', 'pr', 'jan'];
+// jan: disponibilidade do aluno (só quando o pedido tem uma); etapa: o código da missão do curso (fase 14)
+const CAMPOS_DO_PEDIDO = ['fly', 'mis', 'eq', 'p1', 'p2', 'nb', 'ss', 'pr', 'jan', 'etapa'];
 const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 // Cada recurso da frota começa disponível; o dia guarda só o que muda

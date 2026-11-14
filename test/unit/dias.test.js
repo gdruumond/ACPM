@@ -74,6 +74,14 @@ describe('Separar e juntar', () => {
     assert.deepEqual([juntar(cadastro, dia).fixos, juntar(cadastro, dia).aprovacao], [estado.fixos, estado.aprovacao]);
   });
 
+  it('o código da missão do curso vai e volta com o pedido do dia', () => {
+    const estado = normalizado({ ...estadoSintetico(), stu: [aluno(1000, { etapa: 'PP-07' }, { extra: [missaoExtra(1001, { etapa: 'PP-08' })] })] });
+    const { cadastro, dia } = separar(estado);
+    assert.deepEqual([dia.pedidos[1000].etapa, dia.pedidos[1000].extra[0].etapa], ['PP-07', 'PP-08']);
+    const junto = juntar(cadastro, dia);
+    assert.deepEqual([junto.stu[0].etapa, junto.stu[0].extra[0].etapa], ['PP-07', 'PP-08']);
+  });
+
   it('o programa dos cursos e o curso de cada aluno ficam no cadastro', () => {
     const estado = normalizado({ ...estadoSintetico(), stu: [aluno(1000, {}, { curso: 'PP' }), aluno(1001)] });
     estado.cursos = { PP: [{ id: 'PP-01', nome: 'Familiarização', mis: 'Voo Local', eq: 'C152', nb: 1 }], PC: [], INVA: [] };

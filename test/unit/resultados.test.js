@@ -26,6 +26,8 @@ describe('Resultados das missões', () => {
     assert.equal(proximaMissao(PROGRAMA, mapa, 1001, 'PP').id, 'PP-01');
     const tudo = situacaoPorMissao(['PP-01', 'PP-02', 'PP-03'].map((m, i) => reg(i + 1, 1000, 'PP', m, 'aprovado')));
     assert.equal(proximaMissao(PROGRAMA, tudo, 1000, 'PP'), null);
+    assert.equal(proximaMissao(PROGRAMA, mapa, 1000, 'PP', { exceto: ['PP-02'] }), null, 'pula as missões que o aluno já tem no dia');
+    assert.equal(proximaMissao(PROGRAMA, mapa, 1001, 'PP', { exceto: ['PP-01'] }).id, 'PP-02');
     assert.equal(proximaMissao(PROGRAMA, mapa, 1000, 'PC'), null);
     assert.equal(proximaMissao(PROGRAMA, mapa, 1000, undefined), null);
   });

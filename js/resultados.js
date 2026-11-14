@@ -20,9 +20,10 @@ export const situacaoDa = (mapa, aluno, curso, missao) => {
   return r ? r.resultado : 'pendente';
 };
 
-export function proximaMissao(programa, mapa, aluno, curso) {
+// exceto: as missões que o aluno já tem no dia (a missão extra recebe a seguinte)
+export function proximaMissao(programa, mapa, aluno, curso, { exceto = [] } = {}) {
   const missoes = (programa && curso && programa[curso]) || [];
-  return missoes.find(m => situacaoDa(mapa, aluno, curso, m.id) !== 'aprovado') || null;
+  return missoes.find(m => situacaoDa(mapa, aluno, curso, m.id) !== 'aprovado' && !exceto.includes(m.id)) || null;
 }
 
 export function progresso(programa, mapa, aluno, curso) {

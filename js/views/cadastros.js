@@ -11,6 +11,7 @@ import { normalizarLimites, LIMITES_DA_LEI, comHorasExternas } from '../limites.
 import { ApiClient } from '../storage.js';
 import { gerenciaContas } from '../perfis.js';
 import { CURSOS } from '../cursos.js';
+import { progressoDoAluno } from './etapas.js';
 
 const ROTULO = new Map(HABILITACOES.map(h => [h.id, h.curto]));
 // No cadastro, todas na ordem do painel; na grade do dia, só as que mais distinguem o instrutor
@@ -227,7 +228,7 @@ function naoEscalarCom(s) {
 const linhaDoAluno = s => `<tr class="cd" data-k="s" data-id="${s.id}" data-nm="${esc(s.nm.toLowerCase())}">
   <td><input class="nm" data-f="nm" value="${esc(s.nm)}" aria-label="Nome do aluno"></td>
   <td class="c-canac so-dados">${esc(canacDe('aluno', s.id))}</td>
-  <td><select data-f="curso" aria-label="Curso de ${esc(s.nm)}"${isGestor() ? ' disabled' : ''}>${opts([['', '—'], ...CURSOS.map(([id, nome]) => [id, `${id} · ${nome}`])], s.curso || '')}</select></td>
+  <td class="c-curso"><select data-f="curso" aria-label="Curso de ${esc(s.nm)}"${isGestor() ? ' disabled' : ''}>${opts([['', '—'], ...CURSOS.map(([id, nome]) => [id, `${id} · ${nome}`])], s.curso || '')}</select>${progressoDoAluno(s)}</td>
   <td><input type="number" min="0" max="200" data-f="kg" value="${s.kg || ''}" placeholder="sem peso" aria-label="Peso de ${esc(s.nm)} em kg"${s.kg ? '' : ' class="falta"'}></td>
   <td><div class="bl">${naoEscalarCom(s)}</div></td>
   <td class="acoes"><button type="button" class="btn quiet so-dados" data-dados="aluno:${s.id}" aria-label="Dados pessoais de ${esc(s.nm)}">Dados pessoais</button><button class="x edit-only" data-act="dels" aria-label="Excluir ${esc(s.nm)}">✕</button></td>
@@ -251,6 +252,9 @@ export function atualizarLinhaDoAluno(s, { naoEscalar = false } = {}) {
   const curso = linha.querySelector('[data-f="curso"]');
   curso.value = s.curso || '';
   curso.setAttribute('aria-label', `Curso de ${s.nm}`);
+  const progresso = linha.querySelector('.progresso');
+  if (progresso) progresso.remove();
+  curso.insertAdjacentHTML('afterend', progressoDoAluno(s));
   linha.querySelector('[data-act="dels"]').setAttribute('aria-label', `Excluir ${s.nm}`);
   linha.querySelector('[data-dados]').setAttribute('aria-label', `Dados pessoais de ${s.nm}`);
   if (!naoEscalar) return;
