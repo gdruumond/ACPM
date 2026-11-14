@@ -36,7 +36,8 @@ export function linhasDoQuadro(out, fStatus = {}, fObs = {}) {
       modelo: principal.eqType === GROUND_EQ_TYPE ? '' : principal.eqType || '',
       alunos: itens.map(o => o.s),
       instrutor: principal.ins,
-      missao: principal.mis,
+      // A missão do curso (fase 14) antes do tipo; a turma de Ground fica só com o tipo
+      missao: principal.etapa && itens.length === 1 && !principal.isGround ? `${principal.etapa} · ${principal.mis}` : principal.mis,
       status,
       motivo: status === 'Cancelado' ? textoDoDetalhe(status, detalhe) : '',
       ordem
@@ -94,4 +95,31 @@ export function telasDoPainel(partidas, chegadas, porPagina) {
     const paginas = paginar(lista, porPagina);
     return paginas.map((linhas, i) => ({ quadro, pagina: i + 1, paginas: paginas.length, linhas }));
   });
+}
+
+// O aluno na TV da recepção: o primeiro nome e a inicial do último ("Maria Silva Santos" vira "Maria S."), como faz o
+// servidor (public.nome_curto). Um número no fim fica inteiro ("Aluno 12"); um nome só, também
+export function nomeCurto(nome) {
+  const partes = String(nome ?? '').trim().split(/\s+/).filter(Boolean);
+  if (partes.length < 2) return partes[0] || '';
+  const ultimo = partes.at(-1);
+  return `${partes[0]} ${/\d/.test(ultimo) ? ultimo : `${ultimo[0]}.`}`;
+}
+
+// O quadro de um dia gravado, como a função painel_do_dia do servidor entrega (o modo local e o servidor dos testes
+// usam esta): só o que o quadro mostra, com o aluno abreviado e, do detalhe do status, o novo horário e a categoria do
+// motivo. Sem escala gravada, voos é null
+export function quadroDoDia(dia) {
+  const out = dia && dia.resultado && Array.isArray(dia.resultado.out) ? dia.resultado.out : null;
+  if (!out) return { voos: null, fStatus: {}, fObs: {} };
+  const voos = out.filter(o => o && Number.isInteger(o.a) && Number.isInteger(o.b))
+    .map(o => ({ fKey: o.fKey, classKey: o.classKey, isGround: Boolean(o.isGround), a: o.a, b: o.b, r: o.r, eqType: o.eqType, s: nomeCurto(o.s), ins: o.ins, mis: o.mis, etapa: o.etapa || null, status: o.status }))
+    .sort((x, y) => x.a - y.a || String(x.fKey).localeCompare(String(y.fKey)));
+  const fObs = Object.fromEntries(Object.entries(dia.fObs && typeof dia.fObs === 'object' ? dia.fObs : {})
+    .filter(([, d]) => d && typeof d === 'object')
+    .map(([fKey, d]) => [fKey, {
+      ...(d.motivo ? { motivo: d.motivo } : {}),
+      ...(Number.isInteger(d.novoInicio) ? { novoInicio: d.novoInicio } : {})
+    }]));
+  return { voos, fStatus: dia.fStatus && typeof dia.fStatus === 'object' ? { ...dia.fStatus } : {}, fObs };
 }

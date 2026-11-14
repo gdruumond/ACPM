@@ -24,6 +24,11 @@ describe('Linhas do painel', () => {
     ]);
   });
 
+  it('a missão do curso vem antes do tipo de missão (a turma de Ground fica só com o tipo)', () => {
+    const linhas = linhasDoQuadro([voo('1000_0_1', 390, { mis: 'Navegação', etapa: 'PP-07' }), ...turma([1001, 1002], 500).map(o => ({ ...o, etapa: 'PP-G1' }))]);
+    assert.deepEqual(linhas.map(l => l.missao), ['PP-07 · Navegação', 'Ground C152']);
+  });
+
   it('o atrasado vai para o novo horário, com o original guardado; o cancelado leva o motivo', () => {
     const out = [voo('1000_0_1', 390), voo('1001_0_1', 610), voo('1002_0_1', 690)];
     const linhas = linhasDoQuadro(out, { '1000_0_1': 'Atrasado', '1002_0_1': 'Cancelado' },
@@ -110,5 +115,32 @@ describe('Páginas e alternância', () => {
       ['partidas', 1, 2, [1, 2]], ['partidas', 2, 2, [3]], ['chegadas', 1, 1, [4]]
     ]);
     assert.deepEqual(telasDoPainel([], [], 16).map(t => [t.quadro, t.linhas]), [['partidas', []], ['chegadas', []]]);
+  });
+});
+
+describe('O quadro da TV da recepção (o mesmo que o servidor entrega)', async () => {
+  const { nomeCurto, quadroDoDia } = await import('../../js/quadro.js');
+
+  it('o aluno abreviado: o primeiro nome e a inicial do último; um nome só fica inteiro', () => {
+    assert.deepEqual(['Maria Silva Santos', 'João', '  Ana   Paula  ', '', 'Aluno 12'].map(nomeCurto), ['Maria S.', 'João', 'Ana P.', '', 'Aluno 12']);
+  });
+
+  it('do dia gravado: os voos em ordem, só com o que o quadro mostra; do detalhe, o novo horário e a categoria do motivo', () => {
+    const dia = {
+      fStatus: { '1000_0_1': 'Atrasado', '1001_0_1': 'Cancelado' },
+      fObs: { '1000_0_1': { novoInicio: 640 }, '1001_0_1': { motivo: 'Outro', texto: 'Aluno com febre' } },
+      resultado: { out: [
+        voo('1000_0_1', 610, { s: 'Maria Silva Santos', kg: 140, stuId: 1000, etapa: 'PP-07' }),
+        voo('1001_0_1', 390, { s: 'João', r: 'PP-ABP', eqType: 'C172', mis: 'IFR' })
+      ] }
+    };
+    const quadro = quadroDoDia(dia);
+    assert.deepEqual(quadro.voos.map(v => [v.fKey, v.a, v.s]), [['1001_0_1', 390, 'João'], ['1000_0_1', 610, 'Maria S.']]);
+    assert.deepEqual(Object.keys(quadro.voos[0]).sort(), ['a', 'b', 'classKey', 'eqType', 'etapa', 'fKey', 'ins', 'isGround', 'mis', 'r', 's', 'status']);
+    assert.deepEqual(quadro.voos.map(v => v.etapa), [null, 'PP-07'], 'a missão do curso (fase 14)');
+    assert.deepEqual(quadro.fStatus, dia.fStatus);
+    assert.deepEqual(quadro.fObs, { '1000_0_1': { novoInicio: 640 }, '1001_0_1': { motivo: 'Outro' } });
+    assert.deepEqual(quadroDoDia({ pedidos: {} }), { voos: null, fStatus: {}, fObs: {} }, 'dia sem escala gravada');
+    assert.deepEqual(quadroDoDia(null), { voos: null, fStatus: {}, fObs: {} });
   });
 });

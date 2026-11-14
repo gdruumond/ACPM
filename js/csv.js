@@ -23,7 +23,11 @@ function observacoes(o, status, detalhe, revisao) {
   if (o.limKg) {
     if (!o.stuKg) notas.push(`Peso do aluno não informado: limite de ${o.limKg} kg do ${o.eqType} não verificado`);
     else if (!o.insKg) notas.push(`Peso do instrutor não informado: limite de ${o.limKg} kg do ${o.eqType} não verificado`);
-    else {
+    else if (o.comb) {
+      // Acima do limite com os tanques cheios: o voo sai com menos combustível (fase 10)
+      const { abastecerGal, reduzirGal, minimoGal } = o.comb;
+      notas.push(`Peso aluno + instrutor: ${o.stuKg + o.insKg} kg (limite do ${o.eqType} com os tanques cheios: ${o.limKg} kg) · combustível: abastecer até ${abastecerGal} gal (${reduzirGal} a menos); o voo, o táxi e a reserva pedem ${minimoGal} gal`);
+    } else {
       const total = o.stuKg + o.insKg;
       notas.push(`Peso aluno + instrutor: ${total} kg (limite do ${o.eqType}: ${o.limKg} kg) · ${total <= o.limKg ? 'dentro do envelope' : 'ACIMA DO LIMITE'}`);
     }
@@ -38,7 +42,8 @@ export function linhasDoCsv(res, fStatus = {}, fObs = {}) {
     .sort((a, b) => ordemDoTipo(a) - ordemDoTipo(b) || a.r.localeCompare(b.r) || a.a - b.a || a.o - b.o)
     .map(o => {
       const status = fStatus[o.fKey] || o.status || 'Confirmado';
-      const missao = o.ss && o.ss !== '1/1' ? `${o.mis} (sessão ${o.ss})` : o.mis;
+      // A missão do curso (fase 14) vem antes do tipo de missão: "PP-07 · Navegação"
+      const missao = (o.etapa ? `${o.etapa} · ` : '') + (o.ss && o.ss !== '1/1' ? `${o.mis} (sessão ${o.ss})` : o.mis);
       return [o.r, `${hm(o.a)}–${hm(o.b)}`, o.s, missao, o.ins, observacoes(o, status, fObs[o.fKey], res.revisao)];
     });
 }

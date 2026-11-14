@@ -7,8 +7,10 @@ import { habilitacoesDoNivel } from './habilitacoes.js';
 import { FROTA_INICIAL } from './frota.js';
 import { HORARIOS_INICIAIS, minutoDaPreferencia, ajustarPreferencias } from './horarios.js';
 import { disponibilidadeAtual } from './rules.js';
+import { LIMITES_DA_LEI } from './limites.js';
+import { cursosVazios } from './cursos.js';
 
-export const ESQUEMA = 13;
+export const ESQUEMA = 18;
 
 // Um pedido do dia com as preferências em minutos e a disponibilidade no formato atual (formato 12)
 function pedidoEmMinutos(pedido) {
@@ -102,6 +104,40 @@ const PASSOS = {
   // grave os dias sem esse campo
   13: {
     cadastro: cadastro => cadastro,
+    dia: dia => dia
+  },
+  // Versão 14 (fase 10): os dias guardam a ordem dos aviões no hangar (campo "hangar"), pelo mesmo motivo da versão 13
+  14: {
+    cadastro: cadastro => cadastro,
+    dia: dia => dia
+  },
+  // Versão 15 (fase 11): o cadastro guarda os limites dos instrutores pela Lei do Aeronauta (os padrões da lei) e cada
+  // instrutor pode ter as horas de voo fora do app (horasExternas)
+  15: {
+    cadastro: cadastro => {
+      if (cadastro.limites && typeof cadastro.limites === 'object') return cadastro;
+      const { esquema, ...resto } = cadastro;
+      return { ...resto, limites: { ...LIMITES_DA_LEI }, ...(esquema === undefined ? {} : { esquema }) };
+    },
+    dia: dia => dia
+  },
+  // Versão 16 (fase 12): os dias guardam a escala aprovada (os voos fixos e quem aprovou), pelo mesmo motivo da versão 13
+  16: {
+    cadastro: cadastro => cadastro,
+    dia: dia => dia
+  },
+  // Versão 17 (fase 13): os dias guardam os critérios da compactação (campo "criterios"), pelo mesmo motivo da versão 13
+  17: {
+    cadastro: cadastro => cadastro,
+    dia: dia => dia
+  },
+  // Versão 18 (fase 14): o cadastro guarda o programa dos cursos (PP, PC e INVA; começa vazio) e o curso de cada aluno
+  18: {
+    cadastro: cadastro => {
+      if (cadastro.cursos && typeof cadastro.cursos === 'object') return cadastro;
+      const { esquema, ...resto } = cadastro;
+      return { ...resto, cursos: cursosVazios(), ...(esquema === undefined ? {} : { esquema }) };
+    },
     dia: dia => dia
   }
 };

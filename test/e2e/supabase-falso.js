@@ -5,6 +5,10 @@
 import { separar } from '../../js/dias.js';
 import { migrarCadastro, migrarDia } from '../../js/migracoes.js';
 import { prazoDaAgendaPermite } from '../../js/agenda.js';
+import { gravarDadosPessoais } from '../../js/dados-pessoais.js';
+import { quadroDoDia } from '../../js/quadro.js';
+import { acumularHoras } from '../../js/limites.js';
+import { situacaoPorMissao, validarRegistro } from '../../js/resultados.js';
 
 export const URL_TESTE = 'https://acpm-teste.supabase.invalid';
 
@@ -13,7 +17,8 @@ export const CONTAS = {
   gestor: { email: 'gestor@teste.acpm', senha: 'senha-do-gestor', id: '00000000-0000-4000-a000-000000000002', perfil: 'gestor', nome: 'Gestor de Teste' },
   semPerfil: { email: 'sem-perfil@teste.acpm', senha: 'senha-sem-perfil', id: '00000000-0000-4000-a000-000000000003', perfil: null, nome: '' },
   secretaria: { email: 'secretaria@teste.acpm', senha: 'senha-da-secretaria', id: '00000000-0000-4000-a000-000000000004', perfil: 'secretaria', nome: 'Secretaria de Teste' },
-  administrador: { email: 'admin@teste.acpm', senha: 'senha-do-administrador', id: '00000000-0000-4000-a000-000000000005', perfil: 'administrador', nome: 'Admin de Teste' }
+  administrador: { email: 'admin@teste.acpm', senha: 'senha-do-administrador', id: '00000000-0000-4000-a000-000000000005', perfil: 'administrador', nome: 'Admin de Teste' },
+  painel: { email: 'tv@teste.acpm', senha: 'senha-da-tv', id: '00000000-0000-4000-a000-000000000006', perfil: 'painel', nome: 'TV da recepção' }
 };
 
 // Documentos no formato por data da fase 3 (sem a versão do formato) a partir de um estado da aplicação
@@ -63,6 +68,10 @@ export function criarSupabaseFalso({ documentos = {}, dias = {}, agora = new Dat
   const tabelaDias = new Map(Object.entries(dias).map(([data, conteudo]) => [data, { conteudo, versao: 1 }]));
   const historico = [];
   const solicitacoes = [];
+  // Dados pessoais ('aluno:1000' → campos, atualizado_em e atualizado_por): operadores e secretaria leem e gravam
+  const dadosPessoais = new Map();
+  // Resultados das missões dos cursos (fase 14): só acréscimo
+  const resultados = [];
   const sessoes = new Map();
   // Contas criadas pelo administrador, senhas e e-mails trocados e pedidos de troca de e-mail (só neste servidor)
   const contasCriadas = [];
@@ -105,6 +114,9 @@ export function criarSupabaseFalso({ documentos = {}, dias = {}, agora = new Dat
     const conta = sessoes.get((req.headers().authorization || '').replace(/^Bearer /, ''));
     const comPerfil = conta && conta.perfil;
     const operador = conta && ['operador', 'administrador'].includes(conta.perfil);
+    const veDados = conta && ['operador', 'administrador', 'secretaria'].includes(conta.perfil);
+    // Os perfis da escala leem os documentos, os dias, o histórico e a agenda (a TV, perfil "painel", não)
+    const leEscala = conta && ['operador', 'administrador', 'gestor', 'secretaria'].includes(conta.perfil);
 
     if (url.pathname === '/auth/v1/token' && url.searchParams.get('grant_type') === 'password') {
       const { email, password } = req.postDataJSON();
@@ -134,6 +146,7 @@ export function criarSupabaseFalso({ documentos = {}, dias = {}, agora = new Dat
     if (req.method() === 'GET') {
       if (url.pathname === '/rest/v1/perfis') return responder(200, comPerfil ? [{ perfil: conta.perfil, nome: conta.nome }] : []);
       if (!comPerfil) return responder(200, []);
+      if (!leEscala && ['/rest/v1/documentos', '/rest/v1/dias', '/rest/v1/historico', '/rest/v1/solicitacoes'].includes(url.pathname)) return responder(200, []);
       if (url.pathname === '/rest/v1/documentos') {
         return responder(200, consultar([...banco].map(([chave, d]) => ({ chave, ...d })), url).map(({ conteudo, versao }) => ({ conteudo, versao })));
       }
@@ -143,6 +156,12 @@ export function criarSupabaseFalso({ documentos = {}, dias = {}, agora = new Dat
       }
       if (url.pathname === '/rest/v1/historico') return responder(200, consultar(historico, url));
       if (url.pathname === '/rest/v1/solicitacoes') return responder(200, consultar(solicitacoes, url));
+      if (url.pathname === '/rest/v1/resultados_de_missao') return responder(200, leEscala ? consultar(resultados, url) : []);
+      if (url.pathname === '/rest/v1/dados_pessoais') {
+        if (!veDados) return responder(200, []);
+        const linhas = [...dadosPessoais].map(([chave, d]) => ({ tipo: chave.split(':')[0], id_cadastro: Number(chave.split(':')[1]), cpf: null, canac: null, nascimento: null, celular: null, email: null, ...d }));
+        return responder(200, consultar(linhas, url).map(({ tipo, ...linha }) => linha));
+      }
     }
 
     if (req.method() === 'POST' && url.pathname.startsWith('/rest/v1/rpc/')) {
@@ -196,6 +215,32 @@ export function criarSupabaseFalso({ documentos = {}, dias = {}, agora = new Dat
         });
         return responder(200, id);
       }
+      // As horas de voo de cada instrutor antes da data (limites da lei); quem não lê as escalas recebe vazio
+      if (funcao === 'horas_dos_instrutores') {
+        if (!leEscala) return responder(200, {});
+        return responder(200, acumularHoras([...tabelaDias].map(([data, d]) => ({ data, conteudo: d.conteudo })), args.p_data));
+      }
+      // O quadro de hoje (São Paulo) para a TV da recepção: qualquer perfil vê
+      if (funcao === 'painel_do_dia') {
+        if (!comPerfil) return responder(403, { code: '42501', message: 'sem acesso ao painel' });
+        const hoje = new Date(agora.getTime() - 3 * 3600e3).toISOString().slice(0, 10);
+        const dia = tabelaDias.get(hoje);
+        return responder(200, { data: hoje, ...quadroDoDia(dia ? dia.conteudo : null) });
+      }
+      // A situação de cada missão (o último registro); quem não lê a escala recebe a lista vazia
+      if (funcao === 'situacao_das_missoes') return responder(200, leEscala ? [...situacaoPorMissao(resultados).values()].map(({ id, ...r }) => r) : []);
+      if (funcao === 'salvar_dados_pessoais') {
+        if (!veDados) return responder(403, { code: '42501', message: 'somente operadores e a secretaria alteram dados pessoais' });
+        try {
+          const tabela = gravarDadosPessoais(Object.fromEntries(dadosPessoais), args.p_tipo, args.p_id, args.p_dados,
+            { hoje: agora.toISOString().slice(0, 10), autor: conta.nome, agora: agora.toISOString() });
+          dadosPessoais.clear();
+          Object.entries(tabela).forEach(([chave, d]) => dadosPessoais.set(chave, d));
+          return responder(204);
+        } catch (e) {
+          return responder(e.code === '23505' ? 409 : 400, { code: e.code, message: e.message.replace(/\.$/, ''), hint: e.campo });
+        }
+      }
       if (!operador) return responder(403, { code: '42501', message: 'somente operadores podem alterar a escala' });
       if (funcao === 'salvar_documento') {
         // Depois da conversão (o cadastro existe), os documentos da fase 2 ficam só como cópia
@@ -203,6 +248,15 @@ export function criarSupabaseFalso({ documentos = {}, dias = {}, agora = new Dat
         return responder(...salvar(banco, args.p_chave, args.p_conteudo, args.p_versao_lida));
       }
       if (funcao === 'salvar_dia') return responder(...salvar(tabelaDias, args.p_data, args.p_conteudo, args.p_versao_lida));
+      if (funcao === 'registrar_resultado') {
+        try {
+          const r = validarRegistro({ aluno: args.p_aluno, curso: args.p_curso, missao: args.p_missao, resultado: args.p_resultado, data: args.p_data, voo: args.p_voo });
+          resultados.push({ id: resultados.length + 1, ...r, registrado_em: new Date(Date.now() + resultados.length).toISOString(), registrado_por: conta.nome });
+          return responder(200, resultados.length);
+        } catch (e) {
+          return responder(400, { code: e.code, message: e.message });
+        }
+      }
       if (funcao === 'registrar_historico') {
         const id = historico.length + 1;
         historico.push({ id, data: args.p_data, registrado_em: new Date(Date.now() + id).toISOString(), usuario: conta.id, autor: conta.nome,
@@ -226,6 +280,8 @@ export function criarSupabaseFalso({ documentos = {}, dias = {}, agora = new Dat
     dias: tabelaDias,
     historico,
     solicitacoes,
+    dadosPessoais,
+    resultados,
     contasCriadas,
     trocasDeEmail,
     senhaDe,

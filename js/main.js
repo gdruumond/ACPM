@@ -17,7 +17,7 @@ import { WIN, NI, T, GROUND_EQ_TYPE, GROUND_REG, GROUND_DURATION_MIN, GROUND_DUR
 import { novoRecurso, matriculasDoTipo } from './frota.js';
 import { HORARIOS_PADRAO, DE_30_EM_30, horariosDaMissao, ajustarPreferencias, paraMinuto } from './horarios.js';
 import { hm, fmtH, fmtDurLabel, pad, amanhaISO, isoMenosDias } from './format.js';
-import { isGroundMission, blank, rotuloDaDisponibilidade } from './rules.js';
+import { isGroundMission, blank, rotuloDaDisponibilidade, normalizeMissionFields } from './rules.js';
 import { habilitacoesDoNivel, normalizarHabilitacoes, nomeDaHabilitacao, podeFazer } from './habilitacoes.js';
 import { ApiClient } from './storage.js';
 import { S, RES, AUDIT_LOG, DATA, setS, setRES, setAuditLog, setTLMode, isGestor, insBy, stuBy, getMissionTarget } from './state.js';
@@ -27,10 +27,20 @@ import { rBI, alternarTodosDoBI } from './views/bi.js';
 import { renderAuditPanel, rOut, alternarTempo, abrirPopupDoMapa, fecharPopupDoMapa, popupDoMapaAberto, reposicionarPopupDoMapa } from './views/escala.js';
 import { pedirDetalheDoStatus, dialogoDeStatusAberto } from './views/dialogo-status.js';
 import { acaoDoPainel } from './views/painel-aeroporto.js';
+import { abrirPainelDeDados, fecharPainelDeDados, salvarPainelDeDados, carregarDadosPessoais } from './views/dados-pessoais.js';
+import { abrirPainelDeReparo, fecharPainelDeReparo, opcaoDoPainel, painelDeReparoAberto } from './views/reparo.js';
+import { aplicarReparo } from './reparo.js';
+import { OPCOES_DE_BURACOS, OPCOES_DE_HORARIOS, normalizarCriterios } from './criterios.js';
+import { normalizarCursos, normalizarCursoDoAluno, novaMissaoDoCurso, codigoValido } from './cursos.js';
+import { rCursos, mostrarVistaDosAlunos, podeEditarCursos, atualizarLinhaDoPrograma } from './views/cursos.js';
+import { proximaDoPedido } from './views/etapas.js';
 import { STATUS_COM_DETALHE, textoParaOHistorico } from './status.js';
+import { pinoDoVoo, normalizarFixos } from './fixos.js';
 import { singleDemandRowHTML, cnt, rDem, applyDemandFilters } from './views/demanda.js';
-import { rIns, rAlu, applyInstructorFilters, preencherFiltroDeHabilitacoes, mostrarVistaDosInstrutores, abrirPainelDoInstrutor, fecharPainelDoInstrutor, atualizarLinhaDoCadastro, atualizarLinhaDoAluno } from './views/cadastros.js';
-import { rRec, rRevisao, alternarGrupoDaFrota, NOMES_DAS_CATEGORIAS } from './views/recursos.js';
+import { rIns, rAlu, applyInstructorFilters, preencherFiltroDeHabilitacoes, mostrarVistaDosInstrutores, abrirPainelDoInstrutor, fecharPainelDoInstrutor, atualizarLinhaDoCadastro, atualizarLinhaDoAluno, rPainelDoInstrutor, rLimites, podeEditarLimites } from './views/cadastros.js';
+import { LIMITES_DA_LEI, normalizarLimites, comHorasExternas } from './limites.js';
+import { rRec, rRevisao, rHangar, alternarGrupoDaFrota, NOMES_DAS_CATEGORIAS } from './views/recursos.js';
+import { normalizarHangar, moverNoHangar } from './hangar.js';
 import { opcoesDeCategoria, categoriaDoTipo } from './categorias.js';
 import { setRole, save, logChange, refazerEscala, escalaCalculada, marcarEscalaSoCalculada, gravarEscalaCalculada, abrirData, historicoParaPainel, carregarData, carregarBI } from './actions.js';
 import { exp, pdf } from './export.js';
@@ -76,6 +86,8 @@ document.addEventListener('click', e => {
   if (grupo) { alternarGrupoDaFrota(grupo.dataset.recolherGrupo); return; }
   const vistaIns = e.target.closest('[data-vista-ins]');
   if (vistaIns) { mostrarVistaDosInstrutores(vistaIns.dataset.vistaIns); return; }
+  const vistaAlu = e.target.closest('[data-vista-alu]');
+  if (vistaAlu) { mostrarVistaDosAlunos(vistaAlu.dataset.vistaAlu); return; }
   const todosDoBI = e.target.closest('[data-bi-todos]');
   if (todosDoBI) { alternarTodosDoBI(todosDoBI.dataset.biTodos); return; }
   // Links para uma parte do Manual
@@ -103,6 +115,30 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('scroll', reposicionarPopupDoMapa, { capture: true, passive: true });
 window.addEventListener('resize', reposicionarPopupDoMapa);
+
+// Dados pessoais de um aluno ou instrutor: o botão da linha abre o painel; Cancelar, ✕ e Esc fecham (o foco volta para
+// o botão). Salvar valida e grava; o histórico registra só os nomes dos campos que mudaram
+document.addEventListener('click', e => {
+  const botao = e.target.closest('[data-dados]');
+  if (botao) {
+    const [tipo, id] = botao.dataset.dados.split(':');
+    abrirPainelDeDados(tipo, +id, botao);
+    return;
+  }
+  if (e.target.closest('#btn-fechar-dados, #btn-cancelar-dados')) fecharPainelDeDados(true);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !$('#painel-dados').hidden && !dialogoDeStatusAberto()) fecharPainelDeDados(true);
+});
+document.addEventListener('submit', async e => {
+  if (e.target.id !== 'form-dados') return;
+  e.preventDefault();
+  const salvo = await salvarPainelDeDados();
+  if (!salvo) return;
+  fecharPainelDeDados(true);
+  showToast(`Dados pessoais de ${salvo.nome} salvos.`, 'ok');
+  if (salvo.alterados.length) logChange('mod', `Dados pessoais de ${salvo.nome} atualizados: ${salvo.alterados.join(', ')}`);
+});
 
 // Painel das habilitações de um instrutor: ✕ e Esc fecham (o foco volta para o botão que abriu)
 document.addEventListener('click', e => {
@@ -504,7 +540,7 @@ async function importarDaAgenda() {
     showToast(`Nenhum pedido novo na agenda para ${DATA.slice(8, 10)}/${DATA.slice(5, 7)}.`);
     return;
   }
-  const resumo = importarSolicitacoes(S, pendentes);
+  const resumo = importarSolicitacoes(S, pendentes, { situacao: (S.resultados && S.resultados.situacao) || [] });
   pendentes.filter(s => S.stu.some(x => x.id === s.aluno)).forEach(s => {
     logChange('inc', `Agenda: ${s.aluno_nome} incluído (${s.missao} · ${rotuloDaDisponibilidade(disponibilidadeDaSolicitacao(s))})`);
   });
@@ -576,6 +612,19 @@ document.addEventListener('click', e => {
   if (isGestor()) { e.preventDefault(); return; }
   const a = b.dataset.act, c = b.closest('[data-k]'), id = c ? +c.dataset.id : +b.dataset.id || 0;
   const mid = b.dataset.mid !== undefined ? +b.dataset.mid : (c && c.dataset.mid !== undefined ? +c.dataset.mid : 0);
+
+  // A próxima missão do curso (fase 14): o pedido vira a missão do programa (tipo, recurso e horas) e o aluno voa
+  if (a === 'usar-proxima') {
+    const s = stuBy(id), target = getMissionTarget(id, mid);
+    const m = s && target ? proximaDoPedido(s, mid) : null;
+    if (!m) return;
+    Object.assign(target, { fly: true, mis: m.mis, eq: m.eq, nb: m.nb, etapa: m.id });
+    ajustarPreferencias(target, horariosDaMissao(S.horarios, target.mis, target.eq));
+    normalizeMissionFields(target);
+    logChange('inc', `${s.nm}: ${m.id} na demanda (${m.mis} · ${m.eq} · ${fmtDurLabel(m.nb)})`);
+    save(); rDem();
+    return;
+  }
 
   if (a === 'add-mis') {
     const s = stuBy(id);
@@ -658,6 +707,11 @@ document.addEventListener('click', e => {
         logChange(rev.val ? 'inc' : 'exc', `Revertido: ${ins.nm} ${rev.val ? 'disponível' : 'indisponível'}`, null, entry.id);
         save(); rIns();
       }
+    } else if (rev.kind === 'restaurarFixos' && rev.fixos && typeof rev.fixos === 'object') {
+      // Um reparo desfeito: os voos voltam a ser fixos como antes dele
+      S.fixos = normalizarFixos({ ...(S.fixos || {}), ...rev.fixos });
+      logChange('mod', `Revertido: ${entry.desc}`, null, entry.id);
+      save();
     } else if (rev.kind === 'readicionarRecurso' && rev.recurso && !S.frota.some(f => f.reg === rev.recurso.reg)) {
       // Um recurso retirado volta para a frota, como estava
       S.frota.push({ ...rev.recurso });
@@ -710,6 +764,16 @@ document.addEventListener('click', e => {
     });
     save(); rRec();
     showToast(`${recurso.reg} retirado da frota.`, 'ok');
+    return;
+  }
+
+  // Hangar: sobe, desce ou põe na frente um avião (na data aberta; a data seguinte começa com esta ordem)
+  if (a === 'hangar-subir' || a === 'hangar-descer' || a === 'hangar-frente') {
+    const r = b.dataset.id;
+    S.hangar = moverNoHangar(normalizarHangar(S.hangar, S.frota), r, a.slice('hangar-'.length));
+    logChange('mod', `Hangar: ${r} passou para ${S.hangar.indexOf(r) + 1}º`);
+    save();
+    rHangar();
     return;
   }
 
@@ -785,6 +849,152 @@ document.addEventListener('click', e => {
   }
 });
 
+// Aprovar a escala (fase 12): todos os voos ficam fixos e o selo diz quando e quem aprovou. Reabrir solta os voos: a
+// escala volta a ser refeita inteira a cada alteração. Os dois pedem confirmação
+document.addEventListener('click', e => {
+  const aprovar = e.target.closest('#btn-aprovar'), reabrir = e.target.closest('#btn-reabrir');
+  if ((!aprovar && !reabrir) || isGestor() || !RES) return;
+  if (aprovar) {
+    if (!confirmado(aprovar, 'Confirmar aprovação')) return;
+    S.fixos = Object.fromEntries(RES.out.map(o => [o.fKey, pinoDoVoo(o)]));
+    S.aprovacao = { em: new Date().toISOString(), por: ApiClient.autorAtual || '' };
+    save();
+    logChange('mod', `Escala aprovada: ${RES.out.length} ${RES.out.length === 1 ? 'voo fixado' : 'voos fixados'}`);
+    showToast('Escala aprovada: os voos ficam fixos.', 'ok');
+  } else {
+    if (!confirmado(reabrir, 'Confirmar reabertura')) return;
+    S.fixos = {};
+    S.aprovacao = null;
+    save();
+    logChange('mod', 'Escala reaberta: volta a ser refeita a cada alteração');
+    showToast('Escala reaberta.', 'ok');
+  }
+});
+
+// O programa dos cursos (fase 14), em Alunos › Cursos: só o Administrador (neste navegador, o Operador) muda. Incluir,
+// subir, descer e tirar (com confirmação) refazem a tabela; os campos mudam no lugar. O código vale uma vez por curso
+const ondeNoPrograma = el => { const tr = el.closest('tr[data-curso]'); return { curso: tr.dataset.curso, i: +tr.dataset.i, tr }; };
+const gravarPrograma = (curso, lista) => { S.cursos = normalizarCursos({ ...normalizarCursos(S.cursos), [curso]: lista }); save(); };
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act^="curso-"]');
+  if (!b || !podeEditarCursos()) return;
+  const a = b.dataset.act;
+  if (a === 'curso-nova') {
+    const curso = b.dataset.curso, lista = normalizarCursos(S.cursos)[curso];
+    const nova = novaMissaoDoCurso(curso, lista);
+    gravarPrograma(curso, [...lista, nova]);
+    logChange('inc', `Programa do ${curso}: ${nova.id} incluída`);
+    rCursos();
+    $(`#cursos tr[data-curso="${curso}"][data-i="${lista.length}"] [data-cf="nome"]`).focus();
+    return;
+  }
+  const { curso, i } = ondeNoPrograma(b);
+  const lista = normalizarCursos(S.cursos)[curso], m = lista[i];
+  if (!m) return;
+  if (a === 'curso-remover') {
+    if (!confirmado(b, 'Confirmar')) return;
+    gravarPrograma(curso, lista.filter((_, j) => j !== i));
+    logChange('exc', `Programa do ${curso}: ${m.id} removida`);
+    rCursos();
+    return;
+  }
+  const j = a === 'curso-subir' ? i - 1 : i + 1;
+  if (j < 0 || j >= lista.length) return;
+  [lista[i], lista[j]] = [lista[j], lista[i]];
+  gravarPrograma(curso, lista);
+  logChange('mod', `Programa do ${curso}: ${m.id} passou para ${j + 1}ª`);
+  rCursos();
+  const mesmo = $(`#cursos tr[data-curso="${curso}"][data-i="${j}"] [data-act="${a}"]`);
+  (mesmo && !mesmo.disabled ? mesmo : $(`#cursos tr[data-curso="${curso}"][data-i="${j}"] [data-cf="id"]`)).focus();
+});
+document.addEventListener('change', e => {
+  const campo = e.target.closest('#cursos [data-cf]');
+  if (!campo || !podeEditarCursos()) return;
+  const { curso, i, tr } = ondeNoPrograma(campo);
+  const lista = normalizarCursos(S.cursos)[curso];
+  if (!lista[i]) return;
+  const m = { ...lista[i] }, cf = campo.dataset.cf;
+  if (cf === 'id') {
+    const id = campo.value.trim().toUpperCase();
+    const erro = !codigoValido(id) ? 'O código da missão usa letras, números, ponto e hífen (até 15).'
+      : lista.some((o, j) => j !== i && o.id === id) ? `O código ${id} já existe no ${curso}.` : '';
+    if (erro) { showToast(erro); campo.value = m.id; return; }
+    m.id = id;
+  } else {
+    m[cf] = cf === 'nb' ? +campo.value : campo.value;
+  }
+  lista[i] = m;
+  gravarPrograma(curso, lista);
+  const salvo = normalizarCursos(S.cursos)[curso][i];
+  atualizarLinhaDoPrograma(tr, salvo);
+  logChange('mod', `Programa do ${curso}: ${salvo.id} alterada`);
+});
+
+// Critérios da compactação (fase 13): a escala é refeita com o critério novo (com a escala aprovada, não mudam)
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-criterio]');
+  if (!b || b.disabled || isGestor() || S.aprovacao) return;
+  const campo = b.dataset.criterio, antes = normalizarCriterios(S.criterios);
+  if (antes[campo] === b.dataset.valor) return;
+  S.criterios = normalizarCriterios({ ...antes, [campo]: b.dataset.valor });
+  const opcoes = campo === 'buracos' ? OPCOES_DE_BURACOS : OPCOES_DE_HORARIOS;
+  const nome = id => opcoes.find(([v]) => v === id)[1];
+  save();
+  logChange('mod', `Compactação: ${campo === 'buracos' ? 'buracos' : 'horários'} ${nome(antes[campo])} → ${nome(S.criterios[campo])}`);
+});
+
+// O resultado da missão do curso (fase 14), na linha do voo: vai para o servidor (só acréscimo) e entra na situação do
+// aluno (o progresso e a próxima missão mudam). Sem conexão, o seletor volta ao que estava
+document.addEventListener('change', async e => {
+  const sel = e.target.closest('[data-resultado]');
+  if (!sel || isGestor()) return;
+  const o = vooDaChave(sel.dataset.resultado), stu = o ? stuBy(o.stuId) : null;
+  if (!o || !o.etapa || !stu || !stu.curso) return;
+  const registro = { aluno: o.stuId, curso: stu.curso, missao: o.etapa, resultado: sel.value, data: DATA, voo: o.fKey };
+  sel.disabled = true;
+  try {
+    const id = await ApiClient.registrarResultado(registro);
+    const novo = { id, ...registro, registrado_em: new Date().toISOString(), registrado_por: ApiClient.autorAtual || null };
+    const atual = S.resultados || { situacao: [], doDia: [] };
+    const mesmaMissao = r => r.aluno === novo.aluno && r.curso === novo.curso && r.missao === novo.missao;
+    S.resultados = { situacao: [...atual.situacao.filter(r => !mesmaMissao(r)), novo], doDia: [...atual.doDia, novo] };
+    logChange('mod', `Resultado de ${o.s} em ${o.etapa}: ${sel.value}`);
+  } catch (err) {
+    showToast('Não foi possível registrar o resultado. Verifique a conexão e tente de novo.');
+  }
+  rOut(); rAlu(); rDem();
+});
+
+// Sugestões para um conflito (fase 12): a gaveta abre pelo botão do conflito. "Aplicar" muda o voo fixo (na turma de
+// Ground, a turma inteira) e o histórico guarda os fixos de antes, para reverter; cancelar abre o diálogo do status, já
+// com o motivo do conflito marcado
+document.addEventListener('click', e => {
+  const abrirSugestoes = e.target.closest('[data-reparo]');
+  if (abrirSugestoes) { if (!isGestor()) abrirPainelDeReparo(abrirSugestoes.dataset.reparo); return; }
+  if (e.target.closest('#btn-fechar-reparo')) { fecharPainelDeReparo(true); return; }
+  const botao = e.target.closest('[data-reparo-aplicar]');
+  if (!botao || isGestor()) return;
+  const escolha = opcaoDoPainel(+botao.dataset.reparoAplicar);
+  if (!escolha) return;
+  const { fKey, voo, opcao } = escolha;
+  fecharPainelDeReparo();
+  if (!opcao.mudancas) {
+    pedirDetalheDoStatus({ voo, status: 'Cancelado', detalhe: opcao.motivo ? { motivo: opcao.motivo } : null, aoConfirmar: detalhe => aplicarStatus(fKey, 'Cancelado', detalhe) });
+    return;
+  }
+  const antes = S.fixos || {};
+  S.fixos = aplicarReparo(antes, RES, fKey, opcao);
+  const mudados = Object.keys(S.fixos).filter(k => S.fixos[k] !== antes[k]);
+  save();
+  logChange('mod', `Reparo: ${voo.s} (${hm(voo.a)}–${hm(voo.b)}): ${opcao.texto}`, {
+    kind: 'restaurarFixos', fixos: Object.fromEntries(mudados.map(k => [k, antes[k]])), label: '↶ Reverter'
+  });
+  showToast('Sugestão aplicada: o voo continua fixo.', 'ok');
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && painelDeReparoAberto() && !dialogoDeStatusAberto()) fecharPainelDeReparo(true);
+});
+
 // Status do voo: Atrasado e Cancelado pedem o detalhe (a nova decolagem ou o motivo) antes de valer; desistir deixa o
 // status anterior. O histórico registra só a categoria do motivo
 const vooDaChave = fKey => (RES && Array.isArray(RES.out) ? RES.out.find(o => o.fKey === fKey) : null);
@@ -796,6 +1006,8 @@ function aplicarStatus(fKey, status, detalhe) {
   else delete S.fObs[fKey];
   const voo = vooDaChave(fKey);
   if (voo) voo.status = status;
+  // Em Voo e Atrasado fixam o voo (fase 12): uma alteração na escala não o tira do lugar
+  if (voo && (status === 'Em Voo' || status === 'Atrasado')) S.fixos = { ...(S.fixos || {}), [fKey]: S.fixos && S.fixos[fKey] ? S.fixos[fKey] : pinoDoVoo(voo) };
   save();
   logChange('mod', `Status de ${voo ? `${voo.s} (${hm(voo.a)}–${hm(voo.b)})` : fKey}: ${textoParaOHistorico(status, detalhe)}`);
 }
@@ -804,6 +1016,30 @@ function mudarStatus(fKey, status) {
   if (!voo || !STATUS_COM_DETALHE.includes(status)) { aplicarStatus(fKey, status, null); return; }
   pedirDetalheDoStatus({ voo, status, aoConfirmar: detalhe => aplicarStatus(fKey, status, detalhe), aoDesistir: () => rOut() });
 }
+
+// Limites da lei (fase 11), no cadastro dos instrutores: só o Administrador muda (neste navegador, o Operador). Vazio é
+// sem limite; os campos em horas viram minutos onde o limite é guardado em minutos
+const ROTULOS_DOS_LIMITES = { vooPorJornadaMin: 'voo por jornada', jornadaMin: 'jornada', vooMesH: 'voo no mês', vooSemestreH: 'voo no semestre', vooAnoH: 'voo no ano', repousoMin: 'repouso' };
+const emHoras = (chave, valor) => (valor === null ? 'sem limite' : `${String(chave.endsWith('Min') ? valor / 60 : valor).replace('.', ',')} h`);
+document.addEventListener('change', e => {
+  const campo = e.target.closest('[data-limite]');
+  if (!campo || !podeEditarLimites()) return;
+  const chave = campo.dataset.limite, divisor = +campo.dataset.divisor;
+  const antes = normalizarLimites(S.limites);
+  const valor = campo.value.trim() === '' ? null : Math.max(0, +campo.value) * divisor;
+  if (valor !== null && !Number.isFinite(valor)) { rLimites(); return; }
+  S.limites = normalizarLimites({ ...antes, [chave]: valor });
+  logChange('mod', `Limites da lei: ${ROTULOS_DOS_LIMITES[chave]} ${emHoras(chave, antes[chave])} → ${emHoras(chave, S.limites[chave])}`);
+  save();
+  rLimites();
+});
+document.addEventListener('click', e => {
+  if (!e.target.closest('[data-limites-padrao]') || !podeEditarLimites()) return;
+  S.limites = { ...LIMITES_DA_LEI };
+  logChange('mod', 'Limites da lei: de volta aos valores da lei');
+  save();
+  rLimites();
+});
 
 // Sincronização em tempo real de alterações (com trava estrita para Perfil Gestor e Links Compartilhados)
 document.addEventListener('change', e => {
@@ -869,6 +1105,19 @@ document.addEventListener('change', e => {
       const h = t.dataset.h;
       x.hab = normalizarHabilitacoes(t.checked ? [...x.hab, h] : x.hab.filter(k => k !== h));
       logChange('mod', `Habilitação ${t.checked ? 'incluída' : 'retirada'}: ${x.nm} · ${nomeDaHabilitacao(h)}`);
+    } else if (f === 'ext-mes' || f === 'ext-ano') {
+      // Horas de voo fora do app (limites da lei): neste mês ou, no ano, antes deste mês
+      const chave = f === 'ext-mes' ? DATA.slice(0, 7) : `${DATA.slice(0, 4)}-00`;
+      const horas = Math.round(Math.min(2000, Math.max(0, +t.value || 0)) * 10) / 10;
+      x.horasExternas = { ...(x.horasExternas || {}) };
+      if (horas > 0) x.horasExternas[chave] = horas;
+      else delete x.horasExternas[chave];
+      if (!Object.keys(x.horasExternas).length) delete x.horasExternas;
+      S.horasDosInstrutores = comHorasExternas(S.horasBase || {}, S.ins, DATA);
+      logChange('mod', `Horas de voo fora do app de ${x.nm} (${f === 'ext-mes' ? 'neste mês' : 'no ano, antes deste mês'}): ${String(horas).replace('.', ',')} h`);
+      save();
+      rPainelDoInstrutor();
+      return;
     } else if (f === 'aw') {
       x.aw[+t.dataset.w] = t.checked;
     } else if (f === 'pre') {
@@ -893,6 +1142,12 @@ document.addEventListener('change', e => {
         s.bl.push(+t.value);
         const ins = insBy(+t.value);
         logChange('exc', `${s.nm}: não escalar com ${ins ? ins.nm : ''}`);
+      } else if (f === 'curso') {
+        // O curso do aluno (fase 14)
+        const curso = normalizarCursoDoAluno(t.value);
+        if (curso) s.curso = curso;
+        else delete s.curso;
+        logChange('mod', `Curso de ${s.nm}: ${curso || 'nenhum'}`);
       }
       save(); atualizarLinhaDoAluno(s, { naoEscalar: f === 'bl' });
       if (f === 'nm') rDem();
@@ -913,6 +1168,8 @@ document.addEventListener('change', e => {
         logChange('mod', `Pedido ${s.nm}: disponibilidade ${rotuloDaDisponibilidade(target.jan)} (${target.mis})`);
       } else {
         target[f] = (f === 'mis' || f === 'eq') ? t.value : +t.value;
+        // Missão, recurso ou horas mudados à mão: o pedido deixa de ser a missão do curso (fase 14)
+        if (['mis', 'eq', 'nb'].includes(f)) delete target.etapa;
         if (f === 'mis') {
           const mRule = MIS[target.mis] || MIS['Voo Local'];
           if (!mRule.eq.includes(target.eq)) {
@@ -965,8 +1222,8 @@ document.addEventListener('change', e => {
     await ApiClient.atualizarFormatoGravado();
 
     abrirData(data);
-    const { estado, escala } = await ApiClient.carregarDia(data);
-    setS(estado);
+    const { estado, escala, horasBase, horasDosInstrutores, resultados } = await ApiClient.carregarDia(data);
+    setS({ ...estado, horasBase, horasDosInstrutores, resultados });
     // Data sem escala gravada: a escala calculada aparece na hora (é gravada junto com a primeira alteração)
     setRES(escala || escalaCalculada());
     marcarEscalaSoCalculada(!escala);
@@ -991,6 +1248,8 @@ document.addEventListener('change', e => {
 
   rRec(); rIns(); rAlu(); rDem(); renderAuditPanel();
   document.body.dataset.agenda = podeEditarAgenda() ? 'edita' : 'consulta';
+  // Dados pessoais (para a coluna CANAC das tabelas), para quem pode vê-los
+  carregarDadosPessoais();
 
   // A Secretaria trabalha na agenda: o app abre nela
   if (ApiClient.perfil === 'secretaria') {

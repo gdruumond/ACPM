@@ -33,6 +33,11 @@ describe('CSV da escala por avião', () => {
     assert.deepEqual(linha.slice(0, 5), ['PR-BTB', '06:30–07:30', 'Ana', 'Navegação (sessão 2/2)', 'Bruno']);
   });
 
+  it('a missão do curso vai na coluna Fase / Missão, antes do tipo de missão (fase 14)', () => {
+    const [linha] = linhasDoCsv(escala([voo('PR-BTB', 'C152', 390, { mis: 'Navegação', etapa: 'PP-07' })]));
+    assert.equal(linha[3], 'PP-07 · Navegação');
+  });
+
   it('observações: peso do aluno + instrutor contra o limite do avião, pesos não informados, status e turma de Ground', () => {
     const obs = (o, fStatus) => linhasDoCsv(escala([o]), fStatus)[0][5];
     assert.equal(obs(voo('PR-BTB', 'C152', 390)), 'Peso aluno + instrutor: 150 kg (limite do C152: 170 kg) · dentro do envelope');
@@ -50,6 +55,11 @@ describe('CSV da escala por avião', () => {
     assert.match(obs({ k: 'Cancelado' }, { k: { motivo: 'Meteorologia' } }), /^Status: Cancelado: Meteorologia · /);
     assert.match(obs({ k: 'Cancelado' }, { k: { motivo: 'Outro', texto: 'Pista interditada' } }), /^Status: Cancelado: Pista interditada · /);
     assert.match(obs({ k: 'Cancelado' }, {}), /^Status: Cancelado · /);
+  });
+
+  it('observações: acima do limite com os tanques cheios, quanto abastecer e quanto o voo pede (fase 10)', () => {
+    const obs = linhasDoCsv(escala([voo('PR-BTB', 'C152', 390, { stuKg: 100, comb: { reduzirGal: 4, abastecerGal: 22, minimoGal: 11, autonomiaMin: 203 } })]))[0][5];
+    assert.equal(obs, 'Peso aluno + instrutor: 180 kg (limite do C152 com os tanques cheios: 170 kg) · combustível: abastecer até 22 gal (4 a menos); o voo, o táxi e a reserva pedem 11 gal');
   });
 
   it('observações: avião que para para a revisão de 50 horas naquele dia', () => {
