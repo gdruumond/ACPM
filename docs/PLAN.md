@@ -243,7 +243,10 @@ One PR per phase, opened when Pedro says. Each phase starts from the upstream `m
    - A flight moved off its preferences shows "horário ajustado"; a box next to the summary shows the idle time left (instructors, aircraft) and the hangar exits.
    - In the 41 reference schedules, with the defaults: instructor idle time 374.8 → 263.8 h (−30%), instructors idle 2 h or more 95 → 64, aircraft idle 406.3 → 333.7 h, hangar exits 303 → 274, aircraft used 220 → 214; 17 of 990 flights leave their preference (1st −9, 2nd −8); the even split unchanged. Avião: aircraft idle 299 h and 270 exits (instructors 297.8 h; 31 flights leave a preference). Maior buraco: 272.7 h and 302.2 h (46 leave). Só 1ª e 2ª: instructors 363.8 h, and 9 more flights land on a preference. Engine time: median 2.4 ms, p90 7.8 ms.
 
-#### Phase 14: Courses and mission results
+#### Phase 14: Courses and mission results (branch `fase-14`, on top of `fase-13`)
+1. [x] **The syllabus in the app** (board item 12; data format 18). Alunos gets a second view, *Cursos*: the program of PP, PC and INVA in flying order, each mission with a code (PP-07; letters, digits, dots and hyphens, unique in the course), a name, the schedule's mission type, the resource and the hours (Ground: the room, 1h30). The Administrador adds (next free number), edits in place, reorders and removes (with confirmation); everyone else reads. Each student gets a course in the Alunos table. The program lives in the roster (`cadastro.cursos`, like the legal limits), so it needs no new server document; it starts empty until ACPM enters the official program.
+2. [ ] **Mission results**: an append-only server table (aprovado/reprovado per student, course and mission), recorded by the operator from the schedule row; a mission's status is its latest result, otherwise pendente.
+3. [ ] **The next mission**: Demanda shows "Próxima: PP-07 · Usar", the Agenda import uses it, the request carries the mission code into the schedule, the CSV and the board, and Alunos shows the progress ("PP · 12/40").
 
 #### Phase 15: CAVOK and Plane It
 

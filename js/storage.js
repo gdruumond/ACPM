@@ -15,6 +15,7 @@ import { normalizarHangar } from './hangar.js';
 import { LIMITES_DA_LEI, normalizarLimites, comHorasExternas } from './limites.js';
 import { normalizarFixos, normalizarAprovacao } from './fixos.js';
 import { normalizarCriterios } from './criterios.js';
+import { normalizarCursos, normalizarCursoDoAluno } from './cursos.js';
 
 // Validação do link compartilhado: o conteúdo vem da URL, então só entram os tipos e as faixas que a interface produz
 const LIMITE = { instrutores: 200, alunos: 500, extras: 10, bloqueios: 50, matriculas: 100, nome: 80 };
@@ -94,6 +95,13 @@ export const ApiClient = {
     x.hangar = normalizarHangar(x.hangar, x.frota);
     // Limites da Lei do Aeronauta (fase 11) e as horas de voo fora do app de cada instrutor ('AAAA-MM' ou 'AAAA-00')
     x.limites = normalizarLimites(x.limites);
+    // O programa dos cursos e o curso de cada aluno (fase 14)
+    x.cursos = normalizarCursos(x.cursos);
+    x.stu.forEach(s => {
+      const curso = normalizarCursoDoAluno(s.curso);
+      if (curso) s.curso = curso;
+      else delete s.curso;
+    });
     x.ins.forEach(i => {
       const externas = i.horasExternas && typeof i.horasExternas === 'object' ? i.horasExternas : {};
       const validas = Object.entries(externas).filter(([quando, horas]) => /^\d{4}-(0\d|1[0-2])$/.test(quando) && typeof horas === 'number' && horas > 0 && horas <= 2000);

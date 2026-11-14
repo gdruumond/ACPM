@@ -208,17 +208,23 @@
   </section>
 
   <!-- ALUNOS -->
-  <section id="s-alu">
+  <section id="s-alu" data-vista="alunos">
     <h2>Alunos</h2>
     <div class="bar">
-      <input type="search" class="flt-ctrl" data-flt="alu" placeholder="Buscar aluno…" aria-label="Buscar aluno">
+      <div class="seg" role="group" aria-label="O que ver">
+        <button type="button" data-vista-alu="alunos" class="on"><svg class="ico"><use href="#i-instrutor"/></svg>Alunos</button>
+        <button type="button" data-vista-alu="cursos"><svg class="ico"><use href="#i-lista"/></svg>Cursos</button>
+      </div>
+      <input type="search" class="flt-ctrl vista-alunos" data-flt="alu" placeholder="Buscar aluno…" aria-label="Buscar aluno">
       <span class="cresce"></span>
-      <button class="btn edit-only" data-act="adds">+ Novo aluno</button>
+      <button class="btn edit-only vista-alunos" data-act="adds">+ Novo aluno</button>
     </div>
-    <div class="tw"><table class="cadastro alunos">
-      <thead><tr><th>Nome</th><th class="so-dados">CANAC</th><th>Peso (kg)</th><th>Não escalar com</th><th></th></tr></thead>
+    <div class="tw vista-alunos"><table class="cadastro alunos">
+      <thead><tr><th>Nome</th><th class="so-dados">CANAC</th><th>Curso</th><th>Peso (kg)</th><th>Não escalar com</th><th></th></tr></thead>
       <tbody id="alu"></tbody>
     </table></div>
+    <!-- O programa de cada curso (fase 14, js/views/cursos.js) -->
+    <div class="vista-cursos" id="cursos"></div>
   </section>
 
   <!-- AGENDA DE SOLICITAÇÕES (secretaria) -->
@@ -460,7 +466,8 @@
       <p>O instrutor só recebe uma missão se tiver as habilitações que ela exige (veja a tabela em <a href="#manual-regras">Como a escala é montada</a>) e se estiver disponível durante o voo inteiro.</p>
 
       <h4>Alunos</h4>
-      <p>Nome, CANAC e peso de cada aluno; o peso entra no limite de peso de cada avião (sem o peso, a escala avisa que não conferiu). Em <i>Não escalar com</i>, escolha os instrutores que não devem voar com o aluno.</p>
+      <p>Nome, CANAC, curso e peso de cada aluno; o peso entra no limite de peso de cada avião (sem o peso, a escala avisa que não conferiu). Em <i>Não escalar com</i>, escolha os instrutores que não devem voar com o aluno.</p>
+      <p><b>Cursos</b> (o botão ao lado de <i>Alunos</i>): o programa do PP, do PC e do INVA, na ordem em que o aluno voa. Cada missão tem um código (por exemplo, PP-07, até 15 letras, números, pontos e hífens, sem repetir no curso), um nome, o tipo de missão da escala, o recurso e as horas (o Ground é sempre na sala, com 1h30). <i>+ Missão</i> inclui com o próximo número livre; as setas mudam a ordem e o ✕ tira (pede confirmação). Só o Administrador muda o programa; os outros perfis consultam.</p>
       <p><b>Dados pessoais</b> (o botão na linha do aluno ou do instrutor): CPF, CANAC (o código da ANAC, 6 dígitos), nascimento, celular (com DDD) e e-mail. O app confere o CPF pelos dígitos verificadores e não aceita o mesmo CPF ou CANAC em dois alunos; deixar tudo vazio apaga os dados da pessoa. Só operadores, administradores e a secretaria veem esses dados: eles ficam fora da escala e não vão para o CSV, o PDF nem o link compartilhado, e o Histórico registra só quais campos mudaram, nunca os valores.</p>
 
       <h4 id="manual-aba-rodizio">Rodízio</h4>
