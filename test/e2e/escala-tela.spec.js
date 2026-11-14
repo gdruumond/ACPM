@@ -62,6 +62,16 @@ test.describe('Tela da Escala', () => {
     await expect(segundo.locator('td').nth(0)).toContainText('2ª preferência');
   });
 
+  test('acima do limite com os tanques cheios, o voo sai com menos combustível: a coluna Peso diz quanto reduzir', async ({ page }) => {
+    await abrir(page, { estado: cenario({ ins: [instrutor(1, 9, { kg: 80 })], stu: [aluno(1000, { p1: 500, p2: -1 }, { kg: 100 })] }) });
+    await abrirEscala(page);
+    const linha = page.locator('#out tbody tr:not(.win)', { hasText: 'Aluno 1000' });
+    await expect(linha.locator('.c-peso')).toContainText('180 / 170 kg');
+    const selo = linha.locator('.c-peso .tag.comb');
+    await expect(selo).toHaveText('reduzir 4 gal');
+    await expect(selo).toHaveAttribute('title', 'Abastecer até 22 gal (4 a menos que o tanque cheio); o voo, o táxi e a reserva pedem 11 gal; autonomia de 3h23.');
+  });
+
   test('turma de Ground: horário, missão, sala e instrutor uma vez só; cada aluno com o seu status e a sua ação', async ({ page }) => {
     await abrir(page, { estado: cenario({ ins: [instrutor(1, 9)], stu: [1000, 1001, 1002].map(id => aluno(id, { ...GROUND_C152, p1: 0, p2: 1 })) }) });
     await abrirEscala(page);

@@ -72,8 +72,15 @@ export const MIS = {
 export const REVISAO_H = 50;
 export const MENOR_VOO_H = 1;
 
-// Limites máximos de peso implícitos ao equipamento (fixos na regra operacional)
+// Limites máximos de peso implícitos ao equipamento (fixos na regra operacional), aluno + instrutor com os tanques cheios
 export const DEFAULT_LIM = { 'C152': 170, 'C172': 222, 'PA-34': 250 };
+
+// Combustível (fase 10): o tanque (galões americanos) e a autonomia com ele cheio. Acima do limite de peso, o avião
+// pode sair com menos combustível (js/combustivel.js). 1 galão de gasolina de aviação = 6 lb = 2,72 kg
+export const COMBUSTIVEL = { C152: { galoes: 26, autonomiaMin: 240 }, C172: { galoes: 53, autonomiaMin: 360 }, 'PA-34': { galoes: 93, autonomiaMin: 270 } };
+export const KG_POR_GALAO = 6 * 0.45359237;
+// Táxi e espera antes da decolagem (minutos de consumo além do voo)
+export const TAXI_MIN = 10;
 
 export const PRE = {
   'Dia inteiro': [0,1,2,3,4,5,6,7],

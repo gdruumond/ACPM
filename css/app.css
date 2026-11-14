@@ -568,6 +568,7 @@ td.c-canac { font-variant-numeric: tabular-nums; white-space: nowrap; color: var
 .tag.fb { background: var(--wa-bg); color: var(--wa); }
 .tag.grp { background: var(--ok-bg); color: var(--ok); }
 .tag.er { background: var(--er-bg); color: var(--er); }
+.tag.comb { background: var(--wa-bg); color: var(--wa); cursor: help; }
 /* Interruptor (é uma caixa de seleção com outra aparência) */
 input.sw {
   -webkit-appearance: none; appearance: none; width: 32px; height: 18px; border-radius: 9px; margin: 0; flex: none;

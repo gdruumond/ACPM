@@ -39,6 +39,7 @@ function conteudoDoPopup(o) {
       <span>Recurso:</span><span>${esc(nomeDoRecurso(o.r))}</span>
       <span>Missão:</span><span>${esc(o.mis)}</span>
       <span>Peso Trip.:</span><span>${o.kg ? `${o.kg} kg` : '—'}</span>
+      ${o.comb ? `<span>Combustível:</span><span>${textoDoCombustivel(o.comb)}</span>` : ''}
       <span>Status:</span>
       <span>
         <select class="st-sel st-${st.replace(/\s+/g, '')}" data-f="fstatus" data-fkey="${principal.fKey}" aria-label="Status do voo"${isGestor() ? ' disabled' : ''}>
@@ -246,8 +247,13 @@ function preferencia(o) {
 function peso(o) {
   if (!o.limKg) return '';
   if (!o.kg) return '<span class="tag fb">sem peso</span>';
-  return `<span class="${o.kg > o.limKg - PERTO_DO_LIMITE_KG ? 'perto' : ''}">${o.kg}</span> <span class="sm">/ ${o.limKg} kg</span>`;
+  return `<span class="${o.kg > o.limKg - PERTO_DO_LIMITE_KG ? 'perto' : ''}">${o.kg}</span> <span class="sm">/ ${o.limKg} kg</span>${seloDoCombustivel(o)}`;
 }
+
+// Acima do limite com os tanques cheios, o voo sai com menos combustível: quanto reduzir (e, na dica, quanto abastecer)
+const autonomia = min => `${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')}`;
+const textoDoCombustivel = c => `Abastecer até ${c.abastecerGal} gal (${c.reduzirGal} a menos que o tanque cheio); o voo, o táxi e a reserva pedem ${c.minimoGal} gal; autonomia de ${autonomia(c.autonomiaMin)}.`;
+const seloDoCombustivel = o => (o.comb ? ` <span class="tag comb" title="${textoDoCombustivel(o.comb)}">reduzir ${o.comb.reduzirGal} gal</span>` : '');
 
 function seletorDeStatus(o) {
   const st = statusDe(o);

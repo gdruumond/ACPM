@@ -181,10 +181,16 @@ describe('Habilitações exigidas (os instrutores migrados fazem o mesmo que os 
 });
 
 describe('Peso da tripulação', () => {
-  it('aluno + instrutor acima do limite é rejeitado', () => {
-    const { out, al } = alocar({ ins: [instrutor(1, 1, { kg: 80 })], stu: [aluno(1000, {}, { kg: 100 })] });
+  it('aluno + instrutor acima do limite, mesmo com o mínimo de combustível, é rejeitado', () => {
+    const { out, al } = alocar({ ins: [instrutor(1, 1, { kg: 100 })], stu: [aluno(1000, {}, { kg: 120 })] });
     assert.equal(out.length, 0);
-    assert.deepEqual(al, [{ t: 'err', s: 'Aluno 1000', m: 'Rejeitado: peso aluno + instrutor acima do limite de 170 kg do C152.' }]);
+    assert.deepEqual(al, [{ t: 'err', s: 'Aluno 1000', m: 'Rejeitado: peso aluno + instrutor acima do limite de 170 kg do C152, mesmo com o mínimo de combustível.' }]);
+  });
+
+  it('um pouco acima do limite: o voo sai com menos combustível (fase 10)', () => {
+    const { out, al } = alocar({ ins: [instrutor(1, 1, { kg: 80 })], stu: [aluno(1000, {}, { kg: 100 })] });
+    assert.deepEqual(al, []);
+    assert.deepEqual([out[0].kg, out[0].limKg, out[0].comb.reduzirGal], [180, 170, 4]);
   });
 
   it('escolhe um instrutor mais leve que respeite o limite', () => {

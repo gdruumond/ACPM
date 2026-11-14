@@ -9,6 +9,7 @@ import { podeFazer, descreverExigencias } from './habilitacoes.js';
 import { categoriaDoRodizio, ajustarFilas } from './rodizio.js';
 import { avisosDeAtraso } from './status.js';
 import { sobrepoe, livre, cobre, pesoCabe, cabeNoSaldo } from './viabilidade.js';
+import { pesoECombustivel, reducaoNecessaria } from './combustivel.js';
 
 // Entre os instrutores possíveis, primeiro os que têm menos habilitações: os mais versáteis ficam livres
 const qtdHabilitacoes = x => (Array.isArray(x.hab) ? x.hab.length : 0);
@@ -84,6 +85,12 @@ function manterInstrutorNoMesmoAviao(out, state, saldo, frota) {
   }
 }
 
+// O combustível do voo quando ele precisa sair com menos (o peso passa do limite com o tanque cheio)
+function combustivelDoVoo(stuKg, insKg, tipo, minutos, mis) {
+  const { reduzirGal, abastecerGal, minimoGal, autonomiaMin } = pesoECombustivel({ stuKg, insKg, tipo, minutos, mis });
+  return reduzirGal ? { comb: { reduzirGal, abastecerGal, minimoGal, autonomiaMin } } : {};
+}
+
 // Divisão igual das horas do dia (fase 7): depois de montada a escala, voos e aulas passam do instrutor com mais
 // horas para o com menos, enquanto todas as regras continuam valendo: a habilitação, a disponibilidade durante todo o
 // voo, o horário livre, o bloqueio do aluno, o peso e o aluno não repetir o instrutor no dia. Os voos do rodízio
@@ -111,7 +118,9 @@ function equalizarHoras(out, state) {
       const aluno = alunos.get(v.stuId);
       if (aluno && aluno.bl.includes(x.id)) return false;
       if (deles.some(o => o.voos.some(w => w.stuId === v.stuId))) return false;
-      return u.isGround || pesoCabe(v.stuKg, x.kg, v.limKg, { exigirPesoDoInstrutor: true });
+      if (u.isGround || !v.limKg || !v.stuKg) return true;
+      if (!x.kg) return false;
+      return reducaoNecessaria({ stuKg: v.stuKg, insKg: x.kg, tipo: v.eqType, minutos: v.b - v.a, mis: v.mis }) <= (v.comb ? v.comb.reduzirGal : 0);
     });
   };
 
@@ -134,6 +143,10 @@ function equalizarHoras(out, state) {
       v.ins = troca.x.nm;
       v.insKg = troca.x.kg || 0;
       v.kg = v.stuKg && troca.x.kg ? v.stuKg + troca.x.kg : 0;
+      if (!v.isGround) {
+        delete v.comb;
+        Object.assign(v, combustivelDoVoo(v.stuKg, troca.x.kg, v.eqType, v.b - v.a, v.mis));
+      }
     }
   }
 }
@@ -422,9 +435,13 @@ export function runAllocationEngine(state) {
     // Filtra a frota candidata respeitando a exclusividade do C152 PR-JPL (Acrobat) para Parafuso
     const fleetPool = matriculasDoTipo(frota, d.eq, { parafuso: isParafuso });
 
-    const fc = { stu_busy: 0, eq: 0, revisao: 0, disp: 0, busy: 0, bloq: 0, peso: 0 };
-    let ch = null;
-
+    // Duas tentativas: com o tanque cheio em todos os horários; só se nenhum par couber assim, com menos combustível
+    // (o par que precisa reduzir menos vem antes)
+    let fc, ch = null;
+    const reducao = x => reducaoNecessaria({ stuKg: stu.kg, insKg: x.kg, tipo: d.eq, minutos: len[0], mis: d.mis });
+    for (const comMenosCombustivel of [false, true]) {
+    fc = { stu_busy: 0, eq: 0, revisao: 0, disp: 0, busy: 0, bloq: 0, peso: 0 };
+    if (comMenosCombustivel && !lim) break;
     for (const pl of plans) {
       const pick = [];
       const horasNoPlano = {};
@@ -447,10 +464,10 @@ export function runAllocationEngine(state) {
         const f2 = f1.filter(x => !stu.bl.includes(x.id));
         if (!f2.length) { bad = 'bloq'; break; }
 
-        const ins = f2.filter(x => pesoCabe(stu.kg, x.kg, lim));
+        const ins = f2.filter(x => (comMenosCombustivel ? reducao(x) < Infinity : pesoCabe(stu.kg, x.kg, lim)));
         if (!ins.length) { bad = 'peso'; break; }
 
-        ins.sort((a, b) => (prev && (a.id === prev.x.id) - (b.id === prev.x.id)) ||
+        ins.sort((a, b) => (comMenosCombustivel && reducao(a) - reducao(b)) || (prev && (a.id === prev.x.id) - (b.id === prev.x.id)) ||
           voosHoje(a) - voosHoje(b) || naFila(a) - naFila(b) ||
           qtdHabilitacoes(a) - qtdHabilitacoes(b) || (load[a.id] || 0) - (load[b.id] || 0));
 
@@ -468,6 +485,8 @@ export function runAllocationEngine(state) {
       if (bad) { fc[bad]++; continue; }
       ch = { pl, pick };
       break;
+    }
+    if (ch || !fc.peso) break;
     }
 
     if (ch) {
@@ -500,6 +519,7 @@ export function runAllocationEngine(state) {
           insKg: x.kg || 0,
           limKg: lim,
           kg: stu.kg && x.kg ? stu.kg + x.kg : 0,
+          ...combustivelDoVoo(stu.kg, x.kg, d.eq, len[j], d.mis),
           baseTag,
           tag: baseTag,
           status: (state.fStatus && state.fStatus[fKey]) || 'Confirmado'
@@ -541,7 +561,7 @@ export function runAllocationEngine(state) {
           disp: `nenhum instrutor habilitado (${exige}) disponível durante todo o voo nos horários testados`,
           busy: `instrutores habilitados (${exige}) já ocupados em algum trecho do voo (conflito de horário)`,
           bloq: `os instrutores habilitados (${exige}) livres estão bloqueados por este aluno`,
-          peso: `peso aluno + instrutor acima do limite de ${lim} kg do ${d.eq}`
+          peso: `peso aluno + instrutor acima do limite de ${lim} kg do ${d.eq}, mesmo com o mínimo de combustível`
         }[key];
       }
       al.push({ t: 'err', s: labelStu, m: `Rejeitado: ${why}.` });
