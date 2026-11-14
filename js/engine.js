@@ -51,9 +51,9 @@ function trocasDeAviao(voos, matricula) {
 
 // As matrículas chegam na ordem do hangar. Cada instrutor, pela hora do primeiro voo, vai para o avião onde o dia
 // inteiro dele cabe: primeiro um que já saiu, com a menor folga até os voos dele; senão, o primeiro do hangar
-function redistribuirTipo(voos, matriculas, saldo) {
-  const ocupacao = new Map(matriculas.map(r => [r, []]));
-  const horas = new Map(matriculas.map(r => [r, 0]));
+function redistribuirTipo(voos, matriculas, saldo, fixos = []) {
+  const ocupacao = new Map(matriculas.map(r => [r, fixos.filter(o => o.r === r).map(o => [o.a, o.b])]));
+  const horas = new Map(matriculas.map(r => [r, fixos.filter(o => o.r === r).reduce((total, o) => total + o.h, 0)]));
   const cabe = (r, f) => livre(ocupacao.get(r), f.a, f.b) && cabeNoSaldo(horas.get(r), f.h, saldo(r));
   const blocos = new Map();
   voos.forEach(o => (blocos.get(o.insId) || blocos.set(o.insId, []).get(o.insId)).push(o));
@@ -81,9 +81,11 @@ function manterInstrutorNoMesmoAviao(out, state, saldo, frota, posicao) {
   // Os aviões "Só Parafuso" ficam de fora: o Parafuso no C152 só pode ir para eles
   const soParafuso = matriculasDoTipo(frota, 'C152', { parafuso: true });
   for (const tipo of TIPOS_DE_AVIAO) {
-    const voos = out.filter(o => o.eqType === tipo && !soParafuso.includes(o.r));
+    const voos = out.filter(o => o.eqType === tipo && !soParafuso.includes(o.r) && !o.fixo);
+    // Os voos fixos (escala aprovada) ficam no avião deles e ocupam o horário
+    const fixosDoTipo = out.filter(o => o.eqType === tipo && o.fixo && o.status !== 'Cancelado');
     const matriculas = matriculasDoTipo(frota, tipo).filter(r => state.av[r]).sort((a, b) => posicao(a) - posicao(b));
-    const nova = redistribuirTipo(voos, matriculas, saldo);
+    const nova = redistribuirTipo(voos, matriculas, saldo, fixosDoTipo);
     // A distribuição nova vale quando tem menos trocas de avião; com as mesmas trocas, menos aviões fora do hangar e,
     // com os mesmos aviões, menos tempo parado
     const pontos = matricula => [trocasDeAviao(voos, matricula), new Set(voos.map(matricula)).size, paradoDosAvioes(voos, matricula)];
@@ -92,8 +94,8 @@ function manterInstrutorNoMesmoAviao(out, state, saldo, frota, posicao) {
 
     // Cada mudança tira uma troca do dia, então a repetição termina; uma mudança pode liberar outra
     const horasDe = lista => lista.reduce((total, o) => total + o.h, 0);
-    const livreEmTodos = (r, meus) => meus.every(f => !voos.some(o => !meus.includes(o) && o.r === r && sobrepoe(o.a, o.b, f.a, f.b))) &&
-      cabeNoSaldo(horasDe(voos.filter(o => o.r === r && !meus.includes(o))), horasDe(meus), saldo(r));
+    const livreEmTodos = (r, meus) => meus.every(f => ![...voos, ...fixosDoTipo].some(o => !meus.includes(o) && o.r === r && sobrepoe(o.a, o.b, f.a, f.b))) &&
+      cabeNoSaldo(horasDe([...voos, ...fixosDoTipo].filter(o => o.r === r && !meus.includes(o))), horasDe(meus), saldo(r));
     let mudou = true;
     while (mudou) {
       mudou = false;
@@ -198,7 +200,7 @@ function equalizarHoras(out, state, limites, historico) {
     let troca = null;
     for (const doador of [...horas.keys()].sort((p, q) => horas.get(q) - horas.get(p) || p - q)) {
       const meus = daQuem(doador);
-      for (const u of meus.filter(o => !categoriaDoRodizio(o.mis, o.eqType))) {
+      for (const u of meus.filter(o => !categoriaDoRodizio(o.mis, o.eqType) && !o.voos.some(v => v.fixo))) {
         const semEle = paradoDasUnidades(meus.filter(o => o !== u)) - paradoDasUnidades(meus);
         for (const x of ativos) {
           if (!(horas.get(x.id) + u.h < horas.get(doador) - 1e-9) || !podeReceber(x, u)) continue;
@@ -297,7 +299,88 @@ export function runAllocationEngine(state) {
   const horas = state.horas || {};
   const saldo = r => (typeof horas[r] === 'number' ? REVISAO_H - horas[r] : Infinity);
 
+  // Escala aprovada (fase 12): os voos fixos entram primeiro, no mesmo horário, avião e instrutor; o resto é encaixado
+  // em volta. O fixo que ficou impossível continua onde está, em conflito (com o motivo); o cancelado não ocupa nada
+  const fixos = state.fixos && typeof state.fixos === 'object' ? state.fixos : {};
+  // As sessões fixas de um pedido (as chaves aluno_missão_sessão), em ordem
+  const sessoesFixas = item => Object.keys(fixos).filter(k => k.startsWith(`${item.stuId}_${item.mid}_`) && /^\d+$/.test(k.slice(`${item.stuId}_${item.mid}_`.length)))
+    .sort((p, q) => +p.split('_')[2] - +q.split('_')[2]);
   for (const item of act) {
+    const chaves = sessoesFixas(item);
+    for (const [j, fKey] of chaves.entries()) {
+      const pino = fixos[fKey];
+      const { stu, stuId, mid, ref: d, stuOrder } = item;
+      const ground = isGroundMission(d.mis);
+      const { a, b, r, insId } = pino;
+      const classKey = ground ? pino.classKey || fKey : fKey;
+      const x = state.ins.find(i => i.id === insId);
+      const status = (state.fStatus && state.fStatus[fKey]) || 'Confirmado';
+      const tipo = ground ? GROUND_EQ_TYPE : d.eq;
+      const daMesmaTurma = ground && out.some(o => o.classKey === classKey && o.stuId !== stuId);
+      const conflito = [];
+      if (status !== 'Cancelado') {
+        if (!x) conflito.push('o instrutor saiu do cadastro');
+        else {
+          if (!x.on || !cobre(x.aw, a, b)) conflito.push('o instrutor não está disponível');
+          if (!podeFazer(x, d.mis, tipo)) conflito.push('o instrutor não tem a habilitação da missão');
+          if (!daMesmaTurma && !free(busy, x.id, a, b)) conflito.push('o instrutor já tem outro compromisso neste horário');
+        }
+        if (!ground) {
+          const recurso = frota.find(f => f.reg === r);
+          if (!recurso || recurso.tipo !== d.eq) conflito.push('a missão ou o avião do pedido mudou');
+          else if (!state.av[r]) conflito.push('o avião está indisponível');
+          if (!free(used, r, a, b)) conflito.push('o avião já está ocupado neste horário');
+        } else if (!daMesmaTurma && !free(used, GROUND_REG, a, b)) conflito.push('a sala de Ground já está ocupada neste horário');
+        if (!free(stuBusy, stuId, a, b)) conflito.push('o aluno já tem outro voo neste horário');
+        // Ocupa o avião (ou a sala), o instrutor e o aluno; a turma ocupa a sala e o instrutor uma vez só
+        const h = ground ? GROUND_DURATION_H : (b - a) / 60;
+        if (!daMesmaTurma) {
+          (used[ground ? GROUND_REG : r] = used[ground ? GROUND_REG : r] || []).push([a, b]);
+          if (x) {
+            (busy[x.id] = busy[x.id] || []).push([a, b]);
+            (compromissos[x.id] ||= []).push({ a, b, voo: AIRCRAFT_EQ_TYPES.includes(tipo) });
+            load[x.id] = (load[x.id] || 0) + h;
+          }
+          eu[ground ? GROUND_REG : r] = (eu[ground ? GROUND_REG : r] || 0) + h;
+        }
+        (stuBusy[stuId] = stuBusy[stuId] || []).push([a, b]);
+        if (x && !ground) {
+          const avioes = (insAircraft[x.id] = insAircraft[x.id] || []);
+          if (!avioes.includes(r)) avioes.push(r);
+          stuLastPick[stuId] = { r, x };
+          const categoria = categoriaDoRodizio(d.mis, d.eq);
+          if (categoria) voosNaCategoria[`${categoria}:${x.id}`] = (voosNaCategoria[`${categoria}:${x.id}`] || 0) + 1;
+        }
+        if (ground) {
+          // A turma fixa fica aberta: um aluno novo do mesmo Ground pode entrar nela
+          const turmas = (openGroundClasses[d.mis] = openGroundClasses[d.mis] || []);
+          if (x && !turmas.some(c => c.classKey === classKey)) turmas.push({ classKey, mis: d.mis, w: T.indexOf(a), a, b, x, count: 0 });
+          const turma = turmas.find(c => c.classKey === classKey);
+          if (turma) turma.count++;
+          const gRec = (stuGroundStatus[stuId] || []).find(g => g.mis === d.mis && g.allocatedEnd === null);
+          if (gRec) gRec.allocatedEnd = b;
+        }
+      }
+      const pf = [minutoDaPreferencia(d.p1), minutoDaPreferencia(d.p2)];
+      const baseTag = a === pf[0] ? 'Pref. 1' : a === pf[1] ? 'Pref. 2' : 'Próximo livre';
+      const lim = ground ? 0 : DEFAULT_LIM[d.eq] || 0;
+      out.push({
+        fKey, classKey, isGround: ground,
+        w: ground && T.indexOf(a) >= 0 ? T.indexOf(a) : periodoDoMinuto(a), a, b,
+        o: stuOrder, stuId, mid, insId, eqType: tipo,
+        s: stu.nm, mis: d.mis, h: ground ? GROUND_DURATION_H : (b - a) / 60, ss: `${j + 1}/${chaves.length}`,
+        r: ground ? GROUND_REG : r, ins: x ? x.nm : 'Instrutor fora do cadastro',
+        stuKg: stu.kg || 0, insKg: (x && x.kg) || 0, limKg: lim, kg: stu.kg && x && x.kg ? stu.kg + x.kg : 0,
+        ...(ground || !x ? {} : combustivelDoVoo(stu.kg, x.kg, d.eq, b - a, d.mis)),
+        baseTag, tag: baseTag, status, fixo: true,
+        ...(conflito.length ? { conflito } : {})
+      });
+      if (conflito.length) al.push({ t: 'conf', s: mid ? `${stu.nm} (${d.mis})` : stu.nm, m: `Conflito na escala aprovada: ${conflito.join('; ')}.` });
+    }
+  }
+
+  for (const item of act) {
+    if (sessoesFixas(item).length) continue;
     const { stu, stuId, mid, ref: d, stuOrder } = item;
     const m = MIS[d.mis] || MIS['Voo Local'];
     const nm = stu.nm;
