@@ -30,6 +30,7 @@ import { acaoDoPainel } from './views/painel-aeroporto.js';
 import { abrirPainelDeDados, fecharPainelDeDados, salvarPainelDeDados, carregarDadosPessoais } from './views/dados-pessoais.js';
 import { abrirPainelDeReparo, fecharPainelDeReparo, opcaoDoPainel, painelDeReparoAberto } from './views/reparo.js';
 import { aplicarReparo } from './reparo.js';
+import { OPCOES_DE_BURACOS, OPCOES_DE_HORARIOS, normalizarCriterios } from './criterios.js';
 import { STATUS_COM_DETALHE, textoParaOHistorico } from './status.js';
 import { pinoDoVoo, normalizarFixos } from './fixos.js';
 import { singleDemandRowHTML, cnt, rDem, applyDemandFilters } from './views/demanda.js';
@@ -850,6 +851,19 @@ document.addEventListener('click', e => {
     logChange('mod', 'Escala reaberta: volta a ser refeita a cada alteração');
     showToast('Escala reaberta.', 'ok');
   }
+});
+
+// Critérios da compactação (fase 13): a escala é refeita com o critério novo (com a escala aprovada, não mudam)
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-criterio]');
+  if (!b || b.disabled || isGestor() || S.aprovacao) return;
+  const campo = b.dataset.criterio, antes = normalizarCriterios(S.criterios);
+  if (antes[campo] === b.dataset.valor) return;
+  S.criterios = normalizarCriterios({ ...antes, [campo]: b.dataset.valor });
+  const opcoes = campo === 'buracos' ? OPCOES_DE_BURACOS : OPCOES_DE_HORARIOS;
+  const nome = id => opcoes.find(([v]) => v === id)[1];
+  save();
+  logChange('mod', `Compactação: ${campo === 'buracos' ? 'buracos' : 'horários'} ${nome(antes[campo])} → ${nome(S.criterios[campo])}`);
 });
 
 // Sugestões para um conflito (fase 12): a gaveta abre pelo botão do conflito. "Aplicar" muda o voo fixo (na turma de

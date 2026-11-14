@@ -7,6 +7,8 @@ import { textoDoDetalhe } from '../status.js';
 import { linhasDoQuadro } from '../quadro.js';
 import { painelDaEscala } from './painel-aeroporto.js';
 import { atualizarPainelDeReparo } from './reparo.js';
+import { OPCOES_DE_BURACOS, OPCOES_DE_HORARIOS, normalizarCriterios } from '../criterios.js';
+import { metricasDaEscala } from '../metricas.js';
 import { sumUniqueOperationalHours, consolidateTimelineSlots } from '../engine.js';
 import { S, RES, AUDIT_LOG, TL_MODE, DATA, isGestor } from '../state.js';
 import { $ } from '../dom.js';
@@ -241,6 +243,7 @@ const statusDe = o => (S.fStatus && S.fStatus[o.fKey]) || o.status || 'Confirmad
 function preferencia(o) {
   if (o.baseTag === 'Pref. 2') return ' <span class="tag">2ª preferência</span>';
   if (o.baseTag === 'Próximo livre') return ' <span class="tag fb">horário livre</span>';
+  if (o.baseTag === 'Horário ajustado') return ' <span class="tag fb" title="A compactação mudou o horário para fechar um buraco do dia (pela regra dos horários escolhida)">horário ajustado</span>';
   return '';
 }
 
@@ -252,8 +255,8 @@ function peso(o) {
 }
 
 // Acima do limite com os tanques cheios, o voo sai com menos combustível: quanto reduzir (e, na dica, quanto abastecer)
-const autonomia = min => `${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')}`;
-const textoDoCombustivel = c => `Abastecer até ${c.abastecerGal} gal (${c.reduzirGal} a menos que o tanque cheio); o voo, o táxi e a reserva pedem ${c.minimoGal} gal; autonomia de ${autonomia(c.autonomiaMin)}.`;
+const horasEMinutos = min => `${Math.floor(min / 60)}h${String(Math.round(min) % 60).padStart(2, '0')}`;
+const textoDoCombustivel = c => `Abastecer até ${c.abastecerGal} gal (${c.reduzirGal} a menos que o tanque cheio); o voo, o táxi e a reserva pedem ${c.minimoGal} gal; autonomia de ${horasEMinutos(c.autonomiaMin)}.`;
 const seloDoCombustivel = o => (o.comb ? ` <span class="tag comb" title="${textoDoCombustivel(o.comb)}">reduzir ${o.comb.reduzirGal} gal</span>` : '');
 
 function seletorDeStatus(o) {
@@ -292,6 +295,30 @@ function rAprovacao(temVoos) {
   }
 }
 
+// Compactação (fase 13): os critérios do dia. Com a escala aprovada (os voos fixos não mudam) e no Gestor, só aparecem.
+// A linha some sem voos e sem aprovação
+function rCompactacao(out) {
+  const lugar = $('#compactacao');
+  if (!lugar) return;
+  lugar.hidden = !out.length && !S.aprovacao;
+  const criterios = normalizarCriterios(S.criterios);
+  const travado = isGestor() || Boolean(S.aprovacao);
+  const grupo = (campo, rotulo, opcoes) => `<span class="flt-rotulo"><span>${rotulo}</span> <span class="seg" role="group" aria-label="${rotulo}">${opcoes.map(([id, nome, dica]) =>
+    `<button type="button" data-criterio="${campo}" data-valor="${id}" aria-pressed="${criterios[campo] === id}"${criterios[campo] === id ? ' class="on"' : ''} title="${esc(dica)}"${travado ? ' disabled' : ''}>${esc(nome)}</button>`).join('')}</span></span>`;
+  $('#criterios').title = S.aprovacao && !isGestor() ? 'Com a escala aprovada, os voos fixos não mudam: reabra a escala para mudar os critérios.' : '';
+  $('#criterios').innerHTML = grupo('buracos', 'Buracos', OPCOES_DE_BURACOS) + grupo('horarios', 'Horários', OPCOES_DE_HORARIOS);
+}
+
+// O tempo parado que sobra na escala (sem os voos cancelados), ao lado do resumo: o efeito dos critérios da compactação
+function tempoParado(out) {
+  const m = metricasDaEscala(out.filter(o => statusDe(o) !== 'Cancelado'));
+  return `<div class="parado" id="tempo-parado" title="Tempo entre um voo e o seguinte de cada instrutor e de cada avião (sem os voos cancelados); parado 2 h ou mais, o avião volta para o hangar">
+      <div><strong>${horasEMinutos(m.instrutoresParadoMin)}</strong> INVAs parados</div>
+      <div><strong>${horasEMinutos(m.avioesParadoMin)}</strong> aviões parados</div>
+      <div><strong>${m.saidasDoHangar}</strong> ${m.saidasDoHangar === 1 ? 'saída' : 'saídas'} do hangar</div>
+    </div>`;
+}
+
 // Avisos agrupados por tipo: alunos sem peso, aviões que param para a revisão e outros
 function resumoDosAvisos(avisos) {
   const ehPeso = a => a.m.startsWith('Peso do aluno não informado');
@@ -325,7 +352,7 @@ function resumo(out, al, tot) {
       <div><strong>${tot}</strong> missões pedidas</div>
       <div><strong>${tot - erros.length}</strong> escaladas</div>
       <div><strong>${fmtH(horas)}</strong> de voo e aula</div>
-    </div>`;
+    </div>${tempoParado(out)}`;
   if (erros.length) {
     h += `<details class="caixa erros" open><summary>${erros.length === 1 ? '1 missão não entrou' : `${erros.length} missões não entraram`} na escala: ${esc(nomes)}</summary>
       <ul>${erros.map(item).join('')}</ul></details>`;
@@ -409,6 +436,8 @@ export function rOut() {
   $('#out').dataset.vista = TL_MODE === 'lista' || TL_MODE === 'painel' ? TL_MODE : 'mapa';
   if (!RES || (!RES.out.length && !RES.al.length)) {
     $('#out').innerHTML = `<p class="h">Nenhum voo nesta data. Marque quem vai voar na aba Demanda: a escala é montada automaticamente.</p>`;
+    rCompactacao([]);
+    rAprovacao(false);
     atualizarPainelDeReparo();
     return;
   }
@@ -434,6 +463,7 @@ export function rOut() {
   });
 
   rAprovacao(out.length > 0);
+  rCompactacao(out);
   let h = resumo(out, al, tot);
   if (!voos.length) h += `<p class="h">${tot ? 'Nenhum voo na escala com esses filtros.' : 'Nenhuma missão marcada na Demanda.'}</p>`;
   else h += tabela(voos) + renderVisualTimeline(voos) + (TL_MODE === 'painel' ? painelDoDia(voos) : '');

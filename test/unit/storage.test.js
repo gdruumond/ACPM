@@ -147,6 +147,7 @@ describe('Link compartilhável (perfil Gestor)', () => {
     estado.limites = { ...estado.limites, vooMesH: 90 };
     estado.fixos = { '1000_0_1': { a: 390, b: 450, r: 'PR-VOB', insId: 7 } };
     estado.aprovacao = { em: '2026-11-10T21:05:00.000Z', por: 'Rayane' };
+    estado.criterios = { buracos: 'maior', horarios: 'preferencias' };
     estado.horasDosInstrutores = { [estado.ins[0].id]: { mes: 80, semestre: 400, ano: 700, fimAnterior: 1110 } };
     estado.filas = { cheque: [], mlte: [9], noturno: [8, 7], c172: [8, 7, 9] };
     estado.stu = [
@@ -170,6 +171,7 @@ describe('Link compartilhável (perfil Gestor)', () => {
     assert.deepEqual(destino.hangar, estado.hangar, 'a ordem do hangar vai no link');
     assert.deepEqual([destino.limites, destino.horasDosInstrutores], [estado.limites, estado.horasDosInstrutores], 'os limites e as horas passadas vão no link (quem abre gera a mesma escala)');
     assert.deepEqual([destino.fixos, destino.aprovacao], [estado.fixos, estado.aprovacao], 'a escala aprovada vai no link');
+    assert.deepEqual(destino.criterios, estado.criterios, 'os critérios da compactação vão no link (quem abre gera a mesma escala)');
     assert.equal(destino.stu[0].jan, 'manha', 'a disponibilidade vai no link');
     assert.deepEqual(destino.stu.map(s => [s.id, s.fly, s.kg, s.bl, s.extra.map(ex => [ex.mid, ex.mis])]), [
       [1000, true, 81, [3], []],
@@ -236,6 +238,11 @@ describe('Link compartilhável: validação do conteúdo (vem da URL, não é co
     });
     assert.deepEqual(estado.fixos, { '1000_0_1': { a: 390, b: 450, r: 'PR-VOB', insId: 7 } });
     assert.equal(estado.aprovacao.por.length <= 80, true);
+  });
+
+  it('critérios da compactação: só os valores conhecidos (o resto volta ao padrão)', () => {
+    assert.deepEqual(abrir({ cr: { buracos: ATAQUE, horarios: 'fixos' } }).estado.criterios, { buracos: 'inva', horarios: 'fixos' });
+    assert.deepEqual(abrir({ cr: ATAQUE }).estado.criterios, { buracos: 'inva', horarios: 'disponibilidade' });
   });
 
   it('ordem do hangar: só os aviões da frota, sem repetir (o resto entra no fundo)', () => {

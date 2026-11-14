@@ -301,10 +301,17 @@
       <label class="flt-rotulo"><span>Categoria</span> <select id="flt-esc-cat" class="flt-ctrl"></select></label>
       <label class="flt-rotulo"><span>Recurso</span> <select id="flt-esc-eq" class="flt-ctrl"><option value="">Todos</option></select></label>
       <input type="search" id="flt-esc-q" class="flt-ctrl" placeholder="Buscar aluno, instrutor ou missão…" aria-label="Filtrar na escala">
-      <span class="aprovacao" id="aprovacao"></span>
       <button class="btn sec" id="btn-share-link" title="Copiar link compartilhável da escala (abre bloqueado como Gestor)"><svg class="ico"><use href="#i-compartilhar"/></svg>Compartilhar</button>
       <button class="btn sec" id="exp" title="Exportar o CSV para o lançamento no portal">CSV</button>
       <button class="btn sec" id="pdf" title="Emitir o PDF da escala para impressão">PDF</button>
+    </div>
+
+    <!-- Como a escala é montada: os critérios da compactação (fase 13: o que pesa mais nos buracos do dia e até onde os
+         horários mudam) e a aprovação (fase 12) -->
+    <div class="bar compactacao" id="compactacao" hidden>
+      <span class="criterios" id="criterios"></span>
+      <span class="cresce"></span>
+      <span class="aprovacao" id="aprovacao"></span>
     </div>
 
     <div id="out">
@@ -487,6 +494,12 @@
       </ul>
       <p>Entre os instrutores possíveis, a escolha segue esta ordem: um instrutor diferente daquele do voo anterior do aluno no dia (o aluno roda entre instrutores); o rodízio da categoria; quem tem menos habilitações (os mais versáteis ficam livres para as missões que só eles fazem); e quem tem menos horas no dia. Sempre que possível, cada instrutor fica no mesmo avião o dia todo, e o aluno troca de avião entre um voo e outro.</p>
       <p>Depois de montada, a escala <b>divide as horas do dia</b> entre os instrutores: voos e aulas passam de quem tem mais horas para quem tem menos, sempre que todas as regras continuam valendo (habilitação, disponibilidade durante todo o voo, horário livre, bloqueios do aluno e peso), e o aluno não repete o instrutor no dia. Os voos do rodízio ficam com quem a fila escolheu, e a turma de Ground muda de instrutor inteira. Nenhuma missão sai da escala por causa disso.</p>
+      <p>Por fim, a escala <b>fecha os buracos do dia</b> (a compactação): voos mudam de horário ou de instrutor, ou dois voos de mesma duração trocam de instrutor, sempre que isso diminui o tempo parado mais do que custa ao aluno sair da preferência dele. Dois controles embaixo da barra da Escala dizem como:</p>
+      <ul>
+        <li><b>Buracos</b>: <i>INVA</i> (o padrão) fecha primeiro os buracos dos instrutores; <i>Avião</i>, os dos aviões (menos tempo parado e menos saídas do hangar; parado 2 h ou mais, o avião volta para o hangar); <i>Maior buraco</i> ataca primeiro os maiores, de instrutor ou de avião (um buraco de 4 h pesa mais que quatro de 1 h).</li>
+        <li><b>Horários</b>: <i>Na disponibilidade</i> (o padrão) deixa o voo mudar para qualquer horário da categoria dentro da disponibilidade do aluno (manhã, tarde, noite ou o horário exato da Agenda; sem disponibilidade, qualquer horário); <i>Só 1ª e 2ª</i> só troca entre as duas preferências; <i>Não mudar</i> deixa os horários como a escala pôs, e só os instrutores podem trocar.</li>
+      </ul>
+      <p>Todas as regras continuam valendo (habilitação, disponibilidade, peso e combustível, limites da lei e o Ground antes do voo), a divisão das horas não piora, e a 1ª preferência pesa mais para quem tem mais prioridade. Ficam como estão os voos fixos e os que já têm status (Atrasado, Em Voo, Cancelado), o instrutor dos voos do rodízio, o Noturno, o Parafuso no C152 e o horário das turmas de Ground. O voo que mudou de horário fora das preferências aparece com <i>horário ajustado</i>, e o quadro ao lado do resumo mostra o tempo parado que sobra (dos instrutores e dos aviões) e as saídas do hangar. Os critérios ficam com a data, e a data seguinte começa com os mesmos; com a escala aprovada, eles só aparecem.</p>
       <p><b>Grounds</b> duram 1h30, numa sala só, e são dados em turma: alunos do mesmo Ground no mesmo horário ficam com o mesmo instrutor (o disponível com menos habilitações), e as horas contam uma vez só para ele.</p>
       <div class="tw">
         <table id="manual-missoes">

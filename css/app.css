@@ -301,9 +301,9 @@ input[type=number] { width: 88px; }
 
 /* Escala: resumo numa linha, erros e avisos agrupados, uma linha por voo e o mapa como outra visão */
 .resumo { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; margin: 0 0 12px; }
-.resumo .st { display: flex; gap: 22px; margin: 0; background: var(--pn); border: 1px solid var(--ln); border-radius: 8px; padding: 8px 16px; }
-.resumo .st div { border: 0; padding: 0; background: transparent; font: 400 12.5px 'Barlow', sans-serif; }
-.resumo .st strong { font: 700 22px 'Barlow Semi Condensed', sans-serif; line-height: 1.05; }
+.resumo .st, .resumo .parado { display: flex; gap: 22px; margin: 0; background: var(--pn); border: 1px solid var(--ln); border-radius: 8px; padding: 8px 16px; }
+.resumo .st div, .resumo .parado div { border: 0; padding: 0; background: transparent; font: 400 12.5px 'Barlow', sans-serif; }
+.resumo .st strong, .resumo .parado strong { font: 700 22px 'Barlow Semi Condensed', sans-serif; line-height: 1.05; }
 details.caixa { flex: 1; min-width: 280px; border-radius: 8px; padding: 9px 14px; font-size: 14px; }
 details.caixa summary { cursor: pointer; font-weight: 600; }
 details.caixa ul { margin: 6px 0 2px; padding-left: 18px; }
@@ -432,7 +432,7 @@ table.frota .acoes-frota { white-space: nowrap; text-align: right; }
   #s-esc .flt-rotulo, #flt-esc-q { flex: 1 1 140px; min-width: 0; }
   .flt-rotulo select { flex: 1; min-width: 0; }
   .bar .cresce { display: none; }
-  .resumo .st { width: 100%; justify-content: space-between; gap: 8px; }
+  .resumo .st, .resumo .parado { width: 100%; justify-content: space-between; gap: 8px; }
   details.caixa { min-width: 0; flex-basis: 100%; }
   .tabela-escala { overflow: visible; border: 0; background: transparent; }
   .tabela-escala table { min-width: 0; }
@@ -541,6 +541,20 @@ details.caixa.conflitos { background: var(--er-bg); border: 1px solid var(--er);
 details.caixa.conflitos summary { color: var(--er); }
 .tabela-escala tr.em-conflito td:first-child { box-shadow: inset 3px 0 0 var(--er); }
 details.caixa.conflitos .btn.quiet { padding: 1px 8px; margin-left: 4px; font-size: 13.5px; }
+/* Compactação (fase 13): os critérios do dia, o tempo parado e a aprovação numa segunda linha da barra da Escala; no
+   celular, cada controle ocupa a linha, com o rótulo em cima */
+.bar.compactacao { margin-top: -2px; }
+.bar.compactacao[hidden] { display: none; }
+.criterios { display: inline-flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+@media (max-width: 600px) {
+  .criterios, .criterios .flt-rotulo { display: flex; flex-direction: column; align-items: stretch; width: 100%; gap: 4px; }
+  #s-esc .criterios .flt-rotulo { flex: none; }
+  .criterios { gap: 10px; }
+  .criterios .seg button { flex: 1; justify-content: center; padding: 6px 6px; }
+}
+.bar.compactacao .seg button:disabled { cursor: default; opacity: .75; }
+.bar.compactacao .seg button.on:disabled { opacity: 1; }
+.resumo .parado strong { display: block; color: var(--ink); font-variant-numeric: tabular-nums; }
 /* Sugestões para um conflito (fase 12): a gaveta com as opções, a melhor primeiro */
 .motivo-conflito { margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--er-bg); color: var(--er); }
 .opcoes-reparo { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }

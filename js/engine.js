@@ -9,9 +9,10 @@ import { podeFazer, descreverExigencias } from './habilitacoes.js';
 import { categoriaDoRodizio, ajustarFilas } from './rodizio.js';
 import { avisosDeAtraso } from './status.js';
 import { sobrepoe, livre, cobre, pesoCabe, cabeNoSaldo } from './viabilidade.js';
-import { pesoECombustivel, reducaoNecessaria } from './combustivel.js';
+import { reducaoNecessaria, combustivelDoVoo } from './combustivel.js';
 import { normalizarHangar, posicaoNoHangar } from './hangar.js';
 import { normalizarLimites, dentroDosLimites } from './limites.js';
+import { compactar, custoDaEscala } from './compactar.js';
 
 // Entre os instrutores possíveis, primeiro os que têm menos habilitações: os mais versáteis ficam livres
 const qtdHabilitacoes = x => (Array.isArray(x.hab) ? x.hab.length : 0);
@@ -113,12 +114,6 @@ function manterInstrutorNoMesmoAviao(out, state, saldo, frota, posicao) {
       }
     }
   }
-}
-
-// O combustível do voo quando ele precisa sair com menos (o peso passa do limite com o tanque cheio)
-function combustivelDoVoo(stuKg, insKg, tipo, minutos, mis) {
-  const { reduzirGal, abastecerGal, minimoGal, autonomiaMin } = pesoECombustivel({ stuKg, insKg, tipo, minutos, mis });
-  return reduzirGal ? { comb: { reduzirGal, abastecerGal, minimoGal, autonomiaMin } } : {};
 }
 
 // Comparação de chaves de ordenação: a primeira posição diferente decide
@@ -225,7 +220,8 @@ function equalizarHoras(out, state, limites, historico) {
   }
 }
 
-export function runAllocationEngine(state) {
+// opcoes.compactar: false monta a escala sem a compactação (para comparar e medir)
+export function runAllocationEngine(state, opcoes = {}) {
   const used = {}, busy = {}, stuBusy = {}, stuLastPick = {}, load = {}, eu = {}, out = [], al = [];
   // A frota vem do cadastro (fase 7); sem ela (estados de teste antigos), a frota inicial
   const frota = Array.isArray(state.frota) ? state.frota : FROTA_INICIAL;
@@ -749,8 +745,17 @@ export function runAllocationEngine(state) {
   }
 
   equalizarHoras(out, state, limites, historico);
+  // Compactação (fase 13): a escala compactada vale quando, já com as matrículas trocadas, custa menos pelo critério do
+  // dia do que a escala sem compactar (a troca de matrículas mexe no tempo parado dos aviões)
+  const compactada = opcoes.compactar === false ? null : out.map(o => ({ ...o }));
+  if (compactada && compactar(compactada, state, { saldo, posicao, limites, historico })) {
+    manterInstrutorNoMesmoAviao(compactada, state, saldo, frota, posicao);
+    manterInstrutorNoMesmoAviao(out, state, saldo, frota, posicao);
+    if (custoDaEscala(compactada, state) < custoDaEscala(out, state) - 1e-9) out.splice(0, out.length, ...compactada);
+  } else {
+    manterInstrutorNoMesmoAviao(out, state, saldo, frota, posicao);
+  }
   al.push(...avisosDeLimite(out, state, limites, historico));
-  manterInstrutorNoMesmoAviao(out, state, saldo, frota, posicao);
 
   // Revisão de 50 horas: horas de cada avião controlado e onde ele para (sem saldo para mais uma missão de 1 h)
   const revisao = {};

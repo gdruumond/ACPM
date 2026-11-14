@@ -9,7 +9,7 @@ import { HORARIOS_INICIAIS, minutoDaPreferencia, ajustarPreferencias } from './h
 import { disponibilidadeAtual } from './rules.js';
 import { LIMITES_DA_LEI } from './limites.js';
 
-export const ESQUEMA = 16;
+export const ESQUEMA = 17;
 
 // Um pedido do dia com as preferências em minutos e a disponibilidade no formato atual (formato 12)
 function pedidoEmMinutos(pedido) {
@@ -122,6 +122,11 @@ const PASSOS = {
   },
   // Versão 16 (fase 12): os dias guardam a escala aprovada (os voos fixos e quem aprovou), pelo mesmo motivo da versão 13
   16: {
+    cadastro: cadastro => cadastro,
+    dia: dia => dia
+  },
+  // Versão 17 (fase 13): os dias guardam os critérios da compactação (campo "criterios"), pelo mesmo motivo da versão 13
+  17: {
     cadastro: cadastro => cadastro,
     dia: dia => dia
   }

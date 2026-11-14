@@ -120,6 +120,12 @@ describe('Migrações do formato dos dados', () => {
     assert.ok(ESQUEMA >= 16);
   });
 
+  it('versão 17: os dias guardam os critérios da compactação', () => {
+    const dia = { criterios: { buracos: 'aviao', horarios: 'fixos' }, esquema: 16 };
+    assert.deepEqual(migrarDia(dia), { ...dia, esquema: ESQUEMA });
+    assert.ok(ESQUEMA >= 17);
+  });
+
   it('os nomes novos são os da frota cadastrada, na mesma ordem', () => {
     assert.deepEqual(EQ['Sim. Mono'], ['SIM-MONO-A', 'SIM-MONO-C']);
     assert.deepEqual(EQ['Sim. Multi'], ['SIM-MLTE-E', 'SIM-MLTE-D']);

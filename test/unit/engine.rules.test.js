@@ -5,7 +5,8 @@ import { runAllocationEngine, sumUniqueOperationalHours, consolidateTimelineSlot
 import { hm } from '../../js/format.js';
 import { aluno, apenas, cenario, instrutor, missaoExtra, GROUND_C152 } from '../helpers/montar.js';
 
-const alocar = opts => runAllocationEngine(cenario(opts));
+// As regras da alocação, sem a compactação que vem depois (fase 13; ela tem os testes dela em compactar.test.js)
+const alocar = opts => runAllocationEngine(cenario(opts), { compactar: false });
 const resumo = o => ({ s: o.s, w: o.w, tag: o.tag });
 const SO_PP_LJV = apenas('C152', 'PP-LJV');
 

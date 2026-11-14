@@ -1,7 +1,8 @@
 // Compara as escalas de referência gravadas (antes) com o motor atual (depois), nas 41 escalas (o exemplo e as 40
 // geradas), e imprime uma tabela em Markdown para o commit ou o PR. Rode antes de regravar as referências
 // (node scripts/capturar-goldens-motor.mjs): depois disso, antes e depois ficam iguais.
-// Uso: node scripts/medir-escalas.mjs
+// Uso: node scripts/medir-escalas.mjs [buracos] [horários]: com os critérios da compactação (fase 13), por exemplo
+// "aviao fixos"; sem eles, os do padrão
 import { readFile } from 'node:fs/promises';
 import { performance } from 'node:perf_hooks';
 import { runAllocationEngine } from '../js/engine.js';
@@ -9,7 +10,9 @@ import { metricasDaEscala } from '../js/metricas.js';
 import { gerarCenario } from '../test/helpers/cenarios.js';
 
 const goldens = JSON.parse(await readFile(new URL('../test/fixtures/motor-goldens.json', import.meta.url), 'utf8'));
-const estados = [goldens.exemplo.estado, ...goldens.cenarios.map(c => gerarCenario(c.seed))];
+const [buracos, horarios] = process.argv.slice(2);
+const criterios = buracos ? { criterios: { buracos, ...(horarios ? { horarios } : {}) } } : {};
+const estados = [goldens.exemplo.estado, ...goldens.cenarios.map(c => gerarCenario(c.seed))].map(e => ({ ...e, ...criterios }));
 const antes = [goldens.exemplo.saida, ...goldens.cenarios.map(c => c.saida)];
 
 // O tempo do motor: a terceira rodada (as duas primeiras aquecem o JavaScript)
@@ -44,7 +47,7 @@ const LINHAS = [
 const numero = v => (Number.isInteger(v) ? String(v) : v.toFixed(1)).replace('.', ',');
 const diferenca = (a, d) => (Math.abs(d - a) < 1e-9 ? '=' : `${d > a ? '+' : '−'}${numero(Math.abs(d - a))}`);
 
-console.log(`Nas ${estados.length} escalas de referência:\n`);
+console.log(`Nas ${estados.length} escalas de referência${buracos ? ` (compactação: ${buracos}${horarios ? `, ${horarios}` : ''})` : ''}:\n`);
 console.log('| Métrica | Antes | Depois | Diferença |');
 console.log('|---|---:|---:|---:|');
 for (const [rotulo, campo] of LINHAS) {

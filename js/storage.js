@@ -14,6 +14,7 @@ import { normalizarDetalhes } from './status.js';
 import { normalizarHangar } from './hangar.js';
 import { LIMITES_DA_LEI, normalizarLimites, comHorasExternas } from './limites.js';
 import { normalizarFixos, normalizarAprovacao } from './fixos.js';
+import { normalizarCriterios } from './criterios.js';
 
 // Validação do link compartilhado: o conteúdo vem da URL, então só entram os tipos e as faixas que a interface produz
 const LIMITE = { instrutores: 200, alunos: 500, extras: 10, bloqueios: 50, matriculas: 100, nome: 80 };
@@ -79,6 +80,8 @@ export const ApiClient = {
     // Escala aprovada (fase 12): os voos fixos e quem aprovou
     x.fixos = normalizarFixos(x.fixos);
     x.aprovacao = normalizarAprovacao(x.aprovacao);
+    // Critérios da compactação (fase 13)
+    x.criterios = normalizarCriterios(x.criterios);
     if (!x.horas || typeof x.horas !== 'object' || Array.isArray(x.horas)) x.horas = {};
     if (!Array.isArray(x.importadas)) x.importadas = [];
     if (!x.nid || x.nid < 1000) x.nid = 1000;
@@ -307,6 +310,8 @@ export const ApiClient = {
       // A escala aprovada: os voos fixos e quem aprovou
       fx: state.fixos || {},
       ap: state.aprovacao || null,
+      // Os critérios da compactação (quem abre o link gera a mesma escala)
+      cr: state.criterios || null,
       // Limites da lei e as horas passadas de cada instrutor (quem abre o link gera a mesma escala)
       li: state.limites || null,
       hi: state.horasDosInstrutores || {},
@@ -355,6 +360,7 @@ export const ApiClient = {
       if (decoded.li && typeof decoded.li === 'object') state.limites = normalizarLimites(decoded.li);
       if (decoded.fx && typeof decoded.fx === 'object') state.fixos = normalizarFixos(decoded.fx);
       if (decoded.ap !== undefined) state.aprovacao = normalizarAprovacao(decoded.ap);
+      if (decoded.cr !== undefined) state.criterios = normalizarCriterios(decoded.cr);
       if (decoded.hi && typeof decoded.hi === 'object') {
         const numero = v => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : 0);
         state.horasDosInstrutores = Object.fromEntries(Object.entries(decoded.hi)

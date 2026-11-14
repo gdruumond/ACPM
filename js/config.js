@@ -82,6 +82,19 @@ export const KG_POR_GALAO = 6 * 0.45359237;
 // Táxi e espera antes da decolagem (minutos de consumo além do voo)
 export const TAXI_MIN = 10;
 
+// Compactação da escala (fase 13, js/compactar.js): o peso de cada parte no custo do dia, em minutos. INVA: o tempo
+// parado dos instrutores vale mais; Avião: o tempo parado dos aviões e as saídas do hangar; Maior buraco: cada buraco
+// (de instrutor ou de avião) vale o quadrado da duração dividido por 60 (1 h vale 60; 2 h, 240; 4 h, 960). A
+// preferência perdida pesa igual nos três: a 2ª vale 30 e outro horário 60, vezes a prioridade do pedido sobre 3
+export const PESOS_DA_COMPACTACAO = {
+  inva: { invaParado: 1, aviaoParado: 0.1, saida: 10 },
+  aviao: { invaParado: 0.1, aviaoParado: 1, saida: 60 },
+  maior: { quadrado: 1 / 60 },
+  preferencia: { p2: 30, outro: 60 }
+};
+// Até onde a busca vai (contagens, não tempo: a mesma escala dá sempre o mesmo resultado)
+export const LIMITES_DA_COMPACTACAO = { movimentos: 200, verificacoes: 20000, avaliacoes: 200000 };
+
 export const PRE = {
   'Dia inteiro': [0,1,2,3,4,5,6,7],
   'Manhã': [0,1,2,3],

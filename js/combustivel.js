@@ -23,3 +23,9 @@ export function reducaoNecessaria(dados) {
   const r = pesoECombustivel(dados);
   return r.cabe ? r.reduzirGal : Infinity;
 }
+
+// O combustível do voo quando ele precisa sair com menos (o peso passa do limite com o tanque cheio): { comb } ou {}
+export function combustivelDoVoo(stuKg, insKg, tipo, minutos, mis) {
+  const { reduzirGal, abastecerGal, minimoGal, autonomiaMin } = pesoECombustivel({ stuKg, insKg, tipo, minutos, mis });
+  return reduzirGal ? { comb: { reduzirGal, abastecerGal, minimoGal, autonomiaMin } } : {};
+}

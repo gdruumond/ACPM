@@ -249,7 +249,9 @@ test.describe('Painel: partidas e chegadas como no aeroporto', () => {
         aluno(1003, { ...GROUND_C152, p1: 500, p2: -1 }), aluno(1004, { ...GROUND_C152, p1: 500, p2: -1 })],
       fStatus: { '1000_0_1': 'Atrasado', '1002_0_1': 'Cancelado' }
     }),
-    fObs: { '1000_0_1': { novoInicio: 660 }, '1002_0_1': { motivo: 'Meteorologia' } }
+    fObs: { '1000_0_1': { novoInicio: 660 }, '1002_0_1': { motivo: 'Meteorologia' } },
+    // O teste é do quadro: os horários ficam onde a escala pôs (sem a compactação mudar)
+    criterios: { buracos: 'inva', horarios: 'fixos' }
   });
   const abrirPainel = async page => {
     await abrirEscala(page);
