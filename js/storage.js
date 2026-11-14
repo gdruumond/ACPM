@@ -254,6 +254,21 @@ export const ApiClient = {
     return this.backend.salvarDadosPessoais(tipo, id, dados, { autor: this.autorAtual || null });
   },
 
+  // Resultados das missões dos cursos (fase 14): fora do estado; o servidor decide quem lê (os perfis da escala) e quem
+  // registra (operadores e administradores)
+  registrarResultado(registro) {
+    if (this.readOnly) return Promise.reject(Object.assign(new Error('somente leitura'), { code: '42501' }));
+    return this.backend.registrarResultado(registro, { autor: this.autorAtual || null });
+  },
+
+  situacaoDasMissoes() {
+    return this.backend.situacaoDasMissoes();
+  },
+
+  resultadosDoDia(data) {
+    return this.backend.resultadosDoDia(data);
+  },
+
   async biDoPeriodo(de, ate) {
     return biDosDias((await this.backend.listarDias(de, ate)).map(d => ({ ...d, conteudo: migrarDia(d.conteudo) })));
   },
