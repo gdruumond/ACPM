@@ -8,6 +8,7 @@ import { HORARIOS_INICIAIS, horariosDaMissao, periodoDoMinuto, minutoDaPreferenc
 import { podeFazer, descreverExigencias } from './habilitacoes.js';
 import { categoriaDoRodizio, ajustarFilas } from './rodizio.js';
 import { avisosDeAtraso } from './status.js';
+import { sobrepoe, livre, cobre, pesoCabe, cabeNoSaldo } from './viabilidade.js';
 
 // Entre os instrutores possíveis, primeiro os que têm menos habilitações: os mais versáteis ficam livres
 const qtdHabilitacoes = x => (Array.isArray(x.hab) ? x.hab.length : 0);
@@ -31,14 +32,14 @@ function trocasDeAviao(voos, matricula) {
 function redistribuirTipo(voos, matriculas, saldo) {
   const ocupacao = new Map(matriculas.map(r => [r, []]));
   const horas = new Map(matriculas.map(r => [r, 0]));
-  const cabe = (r, f) => !ocupacao.get(r).some(([a, b]) => f.a < b && f.b > a) && horas.get(r) + f.h <= saldo(r) + 1e-9;
+  const cabe = (r, f) => livre(ocupacao.get(r), f.a, f.b) && cabeNoSaldo(horas.get(r), f.h, saldo(r));
   const blocos = new Map();
   voos.forEach(o => (blocos.get(o.insId) || blocos.set(o.insId, []).get(o.insId)).push(o));
   const ordem = [...blocos.values()].sort((x, y) => y.length - x.length || Math.min(...x.map(o => o.a)) - Math.min(...y.map(o => o.a)));
   const nova = new Map();
   for (const bloco of ordem) {
     const horasDoBloco = bloco.reduce((total, f) => total + f.h, 0);
-    const inteira = matriculas.find(r => bloco.every(f => cabe(r, f)) && horas.get(r) + horasDoBloco <= saldo(r) + 1e-9);
+    const inteira = matriculas.find(r => bloco.every(f => cabe(r, f)) && cabeNoSaldo(horas.get(r), horasDoBloco, saldo(r)));
     for (const f of [...bloco].sort((x, y) => x.a - y.a)) {
       const jaUsadas = [...new Set(bloco.filter(o => nova.has(o)).map(o => nova.get(o)))];
       const r = inteira || [...jaUsadas, ...matriculas.filter(m => !jaUsadas.includes(m))].find(m => cabe(m, f));
@@ -62,8 +63,8 @@ function manterInstrutorNoMesmoAviao(out, state, saldo, frota) {
 
     // Cada mudança tira uma troca do dia, então a repetição termina; uma mudança pode liberar outra
     const horasDe = lista => lista.reduce((total, o) => total + o.h, 0);
-    const livreEmTodos = (r, meus) => meus.every(f => !voos.some(o => !meus.includes(o) && o.r === r && o.a < f.b && o.b > f.a)) &&
-      horasDe(voos.filter(o => o.r === r && !meus.includes(o))) + horasDe(meus) <= saldo(r) + 1e-9;
+    const livreEmTodos = (r, meus) => meus.every(f => !voos.some(o => !meus.includes(o) && o.r === r && sobrepoe(o.a, o.b, f.a, f.b))) &&
+      cabeNoSaldo(horasDe(voos.filter(o => o.r === r && !meus.includes(o))), horasDe(meus), saldo(r));
     let mudou = true;
     while (mudou) {
       mudou = false;
@@ -89,7 +90,7 @@ function manterInstrutorNoMesmoAviao(out, state, saldo, frota) {
 // (cheque, MLTE, noturno e C172) ficam com quem a fila escolheu; a turma de Ground se move inteira e conta 1h30 uma
 // vez. Cada troca diminui a soma dos quadrados das horas, então a repetição termina. O status dos voos não conta: o
 // equilíbrio não muda quando um voo é cancelado
-function equalizarHoras(out, state, cover) {
+function equalizarHoras(out, state) {
   const ativos = state.ins.filter(x => x.on);
   const alunos = new Map(state.stu.map(s => [s.id, s]));
   const grupos = new Map();
@@ -103,14 +104,14 @@ function equalizarHoras(out, state, cover) {
   const daQuem = id => unidades.filter(u => instrutorDa(u) === id);
 
   const podeReceber = (x, u) => {
-    if (instrutorDa(u) === x.id || !podeFazer(x, u.mis, u.isGround ? GROUND_EQ_TYPE : u.eqType) || !cover(x.aw, u.a, u.b)) return false;
+    if (instrutorDa(u) === x.id || !podeFazer(x, u.mis, u.isGround ? GROUND_EQ_TYPE : u.eqType) || !cobre(x.aw, u.a, u.b)) return false;
     const deles = daQuem(x.id);
-    if (deles.some(o => o.a < u.b && o.b > u.a)) return false;
+    if (deles.some(o => sobrepoe(o.a, o.b, u.a, u.b))) return false;
     return u.voos.every(v => {
       const aluno = alunos.get(v.stuId);
       if (aluno && aluno.bl.includes(x.id)) return false;
       if (deles.some(o => o.voos.some(w => w.stuId === v.stuId))) return false;
-      return u.isGround || !v.limKg || !v.stuKg || (x.kg > 0 && v.stuKg + x.kg <= v.limKg);
+      return u.isGround || pesoCabe(v.stuKg, x.kg, v.limKg, { exigirPesoDoInstrutor: true });
     });
   };
 
@@ -191,7 +192,7 @@ export function runAllocationEngine(state) {
     return b.ref.pr - a.ref.pr || a.stuOrder - b.stuOrder || a.misOrder - b.misOrder;
   });
 
-  const free = (mp, id, s, e) => !(mp[id] || []).some(([a, b]) => s < b && e > a);
+  const free = (mp, id, s, e) => livre(mp[id], s, e);
   // Rodízio: a fila de cada categoria (cheque, MLTE, noturno e C172) e os voos dela que cada instrutor já recebeu hoje
   const filas = ajustarFilas(state.filas, state.ins);
   const voosNaCategoria = {};
@@ -199,7 +200,6 @@ export function runAllocationEngine(state) {
   // Revisão de 50 horas: horas que o avião ainda pode voar hoje (sem as horas informadas, não há limite)
   const horas = state.horas || {};
   const saldo = r => (typeof horas[r] === 'number' ? REVISAO_H - horas[r] : Infinity);
-  const cover = (aw, s, e) => T.every((c, k) => !(s < (k < NI ? T[k + 1] : 1440) && e > c) || aw[k]);
 
   for (const item of act) {
     const { stu, stuId, mid, ref: d, stuOrder } = item;
@@ -283,7 +283,7 @@ export function runAllocationEngine(state) {
           // Há uma única sala de Ground: só abre turma nova com a sala livre durante toda a 01h30
           if (!free(used, GROUND_REG, a, b)) { fcGnd.sala++; continue; }
 
-          const q = state.ins.filter(x => x.on && habilitado(x) && cover(x.aw, a, b));
+          const q = state.ins.filter(x => x.on && habilitado(x) && cobre(x.aw, a, b));
           if (!q.length) { fcGnd.disp++; continue; }
 
           const f1 = q.filter(x => free(busy, x.id, a, b));
@@ -435,10 +435,10 @@ export function runAllocationEngine(state) {
 
         const livres = fleetPool.filter(r => state.av[r] && free(used, r, p.a, p.b));
         if (!livres.length) { bad = 'eq'; break; }
-        const eqs = livres.filter(r => (eu[r] || 0) + (horasNoPlano[r] || 0) + len[j] / 60 <= saldo(r) + 1e-9);
+        const eqs = livres.filter(r => cabeNoSaldo((eu[r] || 0) + (horasNoPlano[r] || 0), len[j] / 60, saldo(r)));
         if (!eqs.length) { bad = 'revisao'; break; }
 
-        const q = state.ins.filter(x => x.on && podeFazer(x, d.mis, d.eq) && cover(x.aw, p.a, p.b));
+        const q = state.ins.filter(x => x.on && podeFazer(x, d.mis, d.eq) && cobre(x.aw, p.a, p.b));
         if (!q.length) { bad = 'disp'; break; }
 
         const f1 = q.filter(x => free(busy, x.id, p.a, p.b));
@@ -447,7 +447,7 @@ export function runAllocationEngine(state) {
         const f2 = f1.filter(x => !stu.bl.includes(x.id));
         if (!f2.length) { bad = 'bloq'; break; }
 
-        const ins = f2.filter(x => !lim || !stu.kg || !x.kg || stu.kg + x.kg <= lim);
+        const ins = f2.filter(x => pesoCabe(stu.kg, x.kg, lim));
         if (!ins.length) { bad = 'peso'; break; }
 
         ins.sort((a, b) => (prev && (a.id === prev.x.id) - (b.id === prev.x.id)) ||
@@ -548,7 +548,7 @@ export function runAllocationEngine(state) {
     }
   }
 
-  equalizarHoras(out, state, cover);
+  equalizarHoras(out, state);
   manterInstrutorNoMesmoAviao(out, state, saldo, frota);
 
   // Revisão de 50 horas: horas de cada avião controlado e onde ele para (sem saldo para mais uma missão de 1 h)
