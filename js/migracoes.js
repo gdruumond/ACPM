@@ -8,7 +8,7 @@ import { FROTA_INICIAL } from './frota.js';
 import { HORARIOS_INICIAIS, minutoDaPreferencia, ajustarPreferencias } from './horarios.js';
 import { disponibilidadeAtual } from './rules.js';
 
-export const ESQUEMA = 13;
+export const ESQUEMA = 14;
 
 // Um pedido do dia com as preferências em minutos e a disponibilidade no formato atual (formato 12)
 function pedidoEmMinutos(pedido) {
@@ -101,6 +101,11 @@ const PASSOS = {
   // novo horário do atraso). O passo não muda nada; a versão nova impede que uma aba com a versão anterior do app
   // grave os dias sem esse campo
   13: {
+    cadastro: cadastro => cadastro,
+    dia: dia => dia
+  },
+  // Versão 14 (fase 10): os dias guardam a ordem dos aviões no hangar (campo "hangar"), pelo mesmo motivo da versão 13
+  14: {
     cadastro: cadastro => cadastro,
     dia: dia => dia
   }

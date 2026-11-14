@@ -6,6 +6,7 @@ import { blank } from './rules.js';
 import { filasDoDiaSeguinte } from './rodizio.js';
 import { FROTA_INICIAL, normalizarFrota } from './frota.js';
 import { normalizarHorarios } from './horarios.js';
+import { normalizarHangar } from './hangar.js';
 
 // jan: disponibilidade do aluno (só quando o pedido tem uma)
 const CAMPOS_DO_PEDIDO = ['fly', 'mis', 'eq', 'p1', 'p2', 'nb', 'ss', 'pr', 'jan'];
@@ -18,7 +19,8 @@ const avDaFrota = frota => Object.fromEntries(frota.map(f => [f.reg, true]));
 // filas: filas do rodízio (cheque, MLTE, noturno e C172) no início do dia
 // importadas: solicitações da agenda já importadas para a demanda do dia
 // fObs: o detalhe do status de cada voo (motivo do cancelamento, novo horário do atraso)
-export const diaPadrao = () => ({ win: WIN.map(() => true), av: avDaFrota(FROTA_INICIAL), ins: {}, pedidos: {}, fStatus: {}, fObs: {}, horas: {}, filas: {}, importadas: [] });
+// hangar: a ordem dos aviões no hangar, da frente para o fundo (sem ela, a ordem da frota)
+export const diaPadrao = () => ({ win: WIN.map(() => true), av: avDaFrota(FROTA_INICIAL), ins: {}, pedidos: {}, fStatus: {}, fObs: {}, horas: {}, filas: {}, hangar: normalizarHangar(null, FROTA_INICIAL), importadas: [] });
 
 export function separar(estado) {
   return {
@@ -42,6 +44,7 @@ export function separar(estado) {
       fObs: structuredClone(estado.fObs || {}),
       horas: { ...(estado.horas || {}) },
       filas: structuredClone(estado.filas || {}),
+      hangar: [...(estado.hangar || [])],
       importadas: [...(estado.importadas || [])]
     }
   };
@@ -74,16 +77,17 @@ export function juntar(cadastro, dia = diaPadrao()) {
     fObs: structuredClone(dia.fObs || {}),
     horas: { ...(dia.horas || {}) },
     filas: structuredClone(dia.filas || {}),
+    hangar: normalizarHangar(dia.hangar, frota),
     importadas: [...(dia.importadas || [])]
   };
 }
 
-// Nova data: começa com a disponibilidade e a demanda do dia anterior, sem status dos voos (nem os detalhes) nem escala gerada; as horas
+// Nova data: começa com a disponibilidade, a demanda e a ordem do hangar do dia anterior, sem status dos voos (nem os detalhes) nem escala gerada; as horas
 // até a revisão e as filas do rodízio já contam os voos do dia anterior (instrutores: o cadastro, para as filas)
 export function diaParaCopiar(anterior, instrutores = []) {
   if (!anterior || !anterior.ins || !anterior.pedidos) return diaPadrao();
-  const { win, av, ins, pedidos } = structuredClone(anterior);
-  return { win, av, ins, pedidos, fStatus: {}, fObs: {}, horas: horasDoDiaSeguinte(anterior), filas: filasDoDiaSeguinte(anterior, instrutores), importadas: [] };
+  const { win, av, ins, pedidos, hangar = null } = structuredClone(anterior);
+  return { win, av, ins, pedidos, fStatus: {}, fObs: {}, horas: horasDoDiaSeguinte(anterior), filas: filasDoDiaSeguinte(anterior, instrutores), hangar: hangar || normalizarHangar(null, FROTA_INICIAL), importadas: [] };
 }
 
 // Horas desde a última revisão no início do dia seguinte: as do dia mais os voos dele que não foram cancelados

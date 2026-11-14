@@ -11,6 +11,7 @@ import { ESQUEMA, migrarCadastro, migrarDia, precisaMigrar, renomearSimulador } 
 import { habilitacoesDoNivel, normalizarHabilitacoes } from './habilitacoes.js';
 import { ajustarFilas, CATEGORIAS_DO_RODIZIO } from './rodizio.js';
 import { normalizarDetalhes } from './status.js';
+import { normalizarHangar } from './hangar.js';
 
 // Validação do link compartilhado: o conteúdo vem da URL, então só entram os tipos e as faixas que a interface produz
 const LIMITE = { instrutores: 200, alunos: 500, extras: 10, bloqueios: 50, matriculas: 100, nome: 80 };
@@ -59,7 +60,8 @@ export const ApiClient = {
       horas: {},
       importadas: [],
       frota: FROTA_INICIAL.map(f => ({ ...f })),
-      horarios: normalizarHorarios(HORARIOS_INICIAIS)
+      horarios: normalizarHorarios(HORARIOS_INICIAIS),
+      hangar: normalizarHangar(null, FROTA_INICIAL)
     };
     state.frota.forEach(f => { state.av[f.reg] = true; });
     return state;
@@ -79,6 +81,8 @@ export const ApiClient = {
     x.frota = normalizarFrota(x.frota);
     // Horários de decolagem de cada categoria (fase 7)
     x.horarios = normalizarHorarios(x.horarios);
+    // Ordem dos aviões no hangar (fase 10): só os da frota; quem falta entra no fundo
+    x.hangar = normalizarHangar(x.hangar, x.frota);
     const naFrota = r => x.frota.some(f => f.reg === r);
     const av = Object.fromEntries(Object.entries(x.av && typeof x.av === 'object' ? x.av : {}).map(([r, v]) => [renomearSimulador(r), v]));
     x.av = Object.fromEntries(x.frota.map(f => [f.reg, typeof av[f.reg] === 'boolean' ? av[f.reg] : true]));
@@ -202,6 +206,16 @@ export const ApiClient = {
     return this.backend.cancelarSolicitacao(id, por);
   },
 
+  // Dados pessoais (fase 9): fora do estado e do cadastro. No modo compartilhado o servidor decide quem lê e grava
+  // (operadores, administradores e a secretaria, que entra no modo só leitura da escala)
+  listarDadosPessoais(tipo) {
+    return this.backend.listarDadosPessoais(tipo);
+  },
+
+  salvarDadosPessoais(tipo, id, dados) {
+    return this.backend.salvarDadosPessoais(tipo, id, dados, { autor: this.autorAtual || null });
+  },
+
   async biDoPeriodo(de, ate) {
     return biDosDias((await this.backend.listarDias(de, ate)).map(d => ({ ...d, conteudo: migrarDia(d.conteudo) })));
   },
@@ -262,6 +276,7 @@ export const ApiClient = {
       // Revisão de 50 horas e filas do rodízio: quem abre o link gera a mesma escala
       h: state.horas || {},
       f: state.filas || {},
+      hg: state.hangar || [],
       fly: state.stu
         .filter(s => s.fly || (s.extra && s.extra.some(ex => ex.fly)))
         .map(s => [
@@ -304,6 +319,8 @@ export const ApiClient = {
           .filter(([, d]) => d && typeof d === 'object')
           .map(([fKey, d]) => [fKey, { motivo: d.m, novoInicio: d.n }])), state.fStatus);
       }
+      // A ordem do hangar de quem compartilhou (links anteriores à fase 10: a ordem da frota)
+      if (Array.isArray(decoded.hg)) state.hangar = normalizarHangar(decoded.hg.filter(r => typeof r === 'string'), normalizarFrota(state.frota));
       if (decoded.h && typeof decoded.h === 'object') {
         const avioes = normalizarFrota(state.frota).filter(f => AIRCRAFT_EQ_TYPES.includes(f.tipo)).map(f => f.reg);
         state.horas = Object.fromEntries(Object.entries(decoded.h)

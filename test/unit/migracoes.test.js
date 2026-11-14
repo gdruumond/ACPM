@@ -97,6 +97,12 @@ describe('Migrações do formato dos dados', () => {
     assert.ok(ESQUEMA >= 13);
   });
 
+  it('versão 14: os dias guardam a ordem dos aviões no hangar', () => {
+    const dia = { hangar: ['PR-VOB'], esquema: 13 };
+    assert.deepEqual(migrarDia(dia), { ...dia, esquema: ESQUEMA });
+    assert.ok(ESQUEMA >= 14);
+  });
+
   it('os nomes novos são os da frota cadastrada, na mesma ordem', () => {
     assert.deepEqual(EQ['Sim. Mono'], ['SIM-MONO-A', 'SIM-MONO-C']);
     assert.deepEqual(EQ['Sim. Multi'], ['SIM-MLTE-E', 'SIM-MLTE-D']);
