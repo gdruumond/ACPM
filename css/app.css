@@ -531,6 +531,15 @@ dialog.dlg .dlg-acoes, .form-dados .dlg-acoes { display: flex; justify-content: 
 .campo-dado input[aria-invalid="true"] { border-color: var(--er); }
 .campo-dado .erro-campo:empty { display: none; }
 td.c-canac { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--mu); }
+/* Limites da lei (fase 11) */
+td.mes { white-space: nowrap; font-variant-numeric: tabular-nums; }
+td.mes.perto { color: var(--wa); font-weight: 700; }
+.limites-lei { margin-top: 12px; }
+.limites-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px 14px; margin: 8px 0 10px; }
+.limites-grade label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }
+.horas-ins { display: grid; gap: 8px; }
+.horas-ins p { margin: 0; }
+.horas-ins label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }
 
 .stu-cell {
   display: flex;

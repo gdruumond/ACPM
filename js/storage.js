@@ -155,9 +155,10 @@ export const ApiClient = {
     // As horas de voo de cada instrutor antes da data e o fim de ontem (limites da lei), mais as de fora do app. Não são
     // gravadas (vão à parte, para o estado da tela): saem das escalas guardadas a cada abertura. Sem resposta, o motor
     // confere só os limites do dia
-    const horasDosInstrutores = comHorasExternas(await this.horasDosInstrutores(data), estado.ins, data);
+    const horasBase = await this.horasDosInstrutores(data);
+    const horasDosInstrutores = comHorasExternas(horasBase, estado.ins, data);
     const escala = dia && dia.resultado && Array.isArray(dia.resultado.out) ? dia.resultado : null;
-    return { estado, escala, novo: !dia, horasDosInstrutores };
+    return { estado, escala, novo: !dia, horasBase, horasDosInstrutores };
   },
 
   async horasDosInstrutores(data) {
