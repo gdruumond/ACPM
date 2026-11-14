@@ -31,7 +31,8 @@ import { abrirPainelDeDados, fecharPainelDeDados, salvarPainelDeDados, carregarD
 import { STATUS_COM_DETALHE, textoParaOHistorico } from './status.js';
 import { singleDemandRowHTML, cnt, rDem, applyDemandFilters } from './views/demanda.js';
 import { rIns, rAlu, applyInstructorFilters, preencherFiltroDeHabilitacoes, mostrarVistaDosInstrutores, abrirPainelDoInstrutor, fecharPainelDoInstrutor, atualizarLinhaDoCadastro, atualizarLinhaDoAluno } from './views/cadastros.js';
-import { rRec, rRevisao, alternarGrupoDaFrota, NOMES_DAS_CATEGORIAS } from './views/recursos.js';
+import { rRec, rRevisao, rHangar, alternarGrupoDaFrota, NOMES_DAS_CATEGORIAS } from './views/recursos.js';
+import { normalizarHangar, moverNoHangar } from './hangar.js';
 import { opcoesDeCategoria, categoriaDoTipo } from './categorias.js';
 import { setRole, save, logChange, refazerEscala, escalaCalculada, marcarEscalaSoCalculada, gravarEscalaCalculada, abrirData, historicoParaPainel, carregarData, carregarBI } from './actions.js';
 import { exp, pdf } from './export.js';
@@ -735,6 +736,16 @@ document.addEventListener('click', e => {
     });
     save(); rRec();
     showToast(`${recurso.reg} retirado da frota.`, 'ok');
+    return;
+  }
+
+  // Hangar: sobe, desce ou põe na frente um avião (na data aberta; a data seguinte começa com esta ordem)
+  if (a === 'hangar-subir' || a === 'hangar-descer' || a === 'hangar-frente') {
+    const r = b.dataset.id;
+    S.hangar = moverNoHangar(normalizarHangar(S.hangar, S.frota), r, a.slice('hangar-'.length));
+    logChange('mod', `Hangar: ${r} passou para ${S.hangar.indexOf(r) + 1}º`);
+    save();
+    rHangar();
     return;
   }
 

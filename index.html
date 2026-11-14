@@ -166,6 +166,11 @@
       </table>
     </div>
     <p class="h">A data seguinte começa com estas horas mais os voos do dia que não foram cancelados. Avião sem as horas informadas fica sem o controle da revisão.</p>
+    <div class="pn">
+      <h3>Ordem no hangar</h3>
+      <p class="h">Da frente para o fundo. A escala tira primeiro os aviões da frente e junta os voos nos que já saíram, para não deixar avião parado no meio do dia; a data seguinte começa com esta ordem.</p>
+      <ol class="fila hangar" id="hangar"></ol>
+    </div>
   </section>
 
   <!-- INSTRUTORES: disponibilidade do dia e cadastro -->
@@ -432,6 +437,7 @@
       <ul class="manual-lista-curta" id="manual-janelas"></ul>
       <p><b>Horários de decolagem:</b> cada categoria (C152, C172, Simulador e PA-34) tem os seus horários de saída. O padrão são as janelas do dia, e o PA-34 sai de 30 em 30 minutos. Tire um horário pelo ✕, acrescente outro pelo campo de hora ou use um modelo (<i>Janelas do dia</i> ou <i>De 30 em 30 min</i>). Os pedidos da categoria vão para o horário mais próximo da lista nova. O voo noturno sai sempre às 17:30, e o Ground, nas janelas do dia.</p>
       <p><b>Aviões e simuladores:</b> desligado quer dizer indisponível (em manutenção). O avião marcado “Só Parafuso” só voa Parafuso. Para acrescentar um recurso à frota, use <i>+ Novo recurso</i>: a matrícula e a categoria (no C152, também “Só Parafuso”); o limite de peso e o controle das 50 horas vêm da categoria. <i>Retirar</i> (aparece ao passar o mouse na linha) tira um recurso da frota, com confirmação; o Histórico desfaz. A tabela mostra quanto cada avião voa na escala do dia e o saldo até a revisão de 50 horas. Escolha uma categoria para ver só a frota dela; um clique no nome da categoria recolhe ou abre as linhas.</p>
+      <p><b>Ordem no hangar:</b> os aviões da frente para o fundo, como estão guardados. A escala tira primeiro os da frente e junta os voos nos que já saíram; os do fundo só saem quando os da frente não dão conta. Use os botões que aparecem ao passar o mouse para subir, descer ou pôr um avião na frente. A data seguinte começa com a mesma ordem; ajuste quando o hangar for arrumado de outro jeito.</p>
       <p><b>Revisão de 50 horas:</b> informe as horas de cada avião desde a última revisão. A escala não passa das 50 horas: o avião para quando não tem saldo para mais um voo, e o aviso aparece na escala. Depois da revisão, clique em <i>Revisão feita</i> (aparece ao passar o mouse na linha) para zerar. A data seguinte começa com as horas desta data mais os voos dela que não foram cancelados. Avião sem as horas informadas fica sem esse controle.</p>
 
       <h4>Instrutores</h4>
@@ -462,6 +468,7 @@
         <li>Primeiro os <b>Grounds</b>, que definem a partir de que horário o voo do aluno pode começar.</li>
         <li>Depois os voos e simuladores, por <b>prioridade</b> (5 primeiro) e, empatados, na ordem do cadastro dos alunos.</li>
         <li>Para cada pedido, tenta a 1ª preferência, depois a 2ª e depois o próximo horário livre, entre os horários de decolagem da categoria, sempre dentro da disponibilidade do aluno e das janelas abertas.</li>
+        <li>O <b>avião</b>: o instrutor fica no mesmo avião durante o dia; fora isso, o voo vai para um avião que já saiu (o de menor folga até o voo, para não deixar buraco no meio do dia) e, quando precisa de outro, sai o da frente do <i>hangar</i> (a ordem em Recursos).</li>
       </ol>
       <p>Um voo só entra na escala quando tudo isto vale ao mesmo tempo:</p>
       <ul>

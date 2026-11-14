@@ -10,6 +10,7 @@ import { categoriaDoRodizio, ajustarFilas } from './rodizio.js';
 import { avisosDeAtraso } from './status.js';
 import { sobrepoe, livre, cobre, pesoCabe, cabeNoSaldo } from './viabilidade.js';
 import { pesoECombustivel, reducaoNecessaria } from './combustivel.js';
+import { normalizarHangar, posicaoNoHangar } from './hangar.js';
 
 // Entre os instrutores possíveis, primeiro os que têm menos habilitações: os mais versáteis ficam livres
 const qtdHabilitacoes = x => (Array.isArray(x.hab) ? x.hab.length : 0);
@@ -23,6 +24,23 @@ const qtdHabilitacoes = x => (Array.isArray(x.hab) ? x.hab.length : 0);
 // Por último, quem ainda estiver em duas matrículas passa para uma que esteja livre em todos os horários dele.
 const TIPOS_DE_AVIAO = ['C152', 'C172', 'PA-34'];
 
+// A folga entre um voo e o que o avião já voa (0 se encosta; Infinity se o avião ainda está no hangar)
+const folgaAte = (ocupados, a, b) => ocupados.reduce((menor, [x, y]) => Math.min(menor, y <= a ? a - y : x >= b ? x - b : 0), Infinity);
+const menorPrimeiro = (fa, fb) => (fa === fb ? 0 : fa - fb);
+
+// O tempo parado dos aviões (minutos entre um voo e o seguinte de cada matrícula)
+function paradoDosAvioes(voos, matricula) {
+  const porMatricula = new Map();
+  voos.forEach(o => (porMatricula.get(matricula(o)) || porMatricula.set(matricula(o), []).get(matricula(o))).push([o.a, o.b]));
+  let total = 0;
+  for (const lista of porMatricula.values()) {
+    lista.sort((x, y) => x[0] - y[0]);
+    let fim = lista[0][1];
+    for (const [a, b] of lista.slice(1)) { if (a > fim) total += a - fim; fim = Math.max(fim, b); }
+  }
+  return total;
+}
+
 // Matrículas a mais (do mesmo tipo) por instrutor no dia
 function trocasDeAviao(voos, matricula) {
   const porInstrutor = new Map();
@@ -30,17 +48,22 @@ function trocasDeAviao(voos, matricula) {
   return [...porInstrutor.values()].reduce((total, regs) => total + regs.size - 1, 0);
 }
 
+// As matrículas chegam na ordem do hangar. Cada instrutor, pela hora do primeiro voo, vai para o avião onde o dia
+// inteiro dele cabe: primeiro um que já saiu, com a menor folga até os voos dele; senão, o primeiro do hangar
 function redistribuirTipo(voos, matriculas, saldo) {
   const ocupacao = new Map(matriculas.map(r => [r, []]));
   const horas = new Map(matriculas.map(r => [r, 0]));
   const cabe = (r, f) => livre(ocupacao.get(r), f.a, f.b) && cabeNoSaldo(horas.get(r), f.h, saldo(r));
   const blocos = new Map();
   voos.forEach(o => (blocos.get(o.insId) || blocos.set(o.insId, []).get(o.insId)).push(o));
-  const ordem = [...blocos.values()].sort((x, y) => y.length - x.length || Math.min(...x.map(o => o.a)) - Math.min(...y.map(o => o.a)));
+  const primeiro = bloco => Math.min(...bloco.map(o => o.a));
+  const ordem = [...blocos.values()].sort((x, y) => primeiro(x) - primeiro(y) || y.length - x.length);
+  const folgaDoBloco = (r, bloco) => Math.min(...bloco.map(f => folgaAte(ocupacao.get(r), f.a, f.b)));
   const nova = new Map();
   for (const bloco of ordem) {
     const horasDoBloco = bloco.reduce((total, f) => total + f.h, 0);
-    const inteira = matriculas.find(r => bloco.every(f => cabe(r, f)) && cabeNoSaldo(horas.get(r), horasDoBloco, saldo(r)));
+    const inteira = matriculas.filter(r => bloco.every(f => cabe(r, f)) && cabeNoSaldo(horas.get(r), horasDoBloco, saldo(r)))
+      .sort((a, b) => menorPrimeiro(folgaDoBloco(a, bloco), folgaDoBloco(b, bloco)))[0];
     for (const f of [...bloco].sort((x, y) => x.a - y.a)) {
       const jaUsadas = [...new Set(bloco.filter(o => nova.has(o)).map(o => nova.get(o)))];
       const r = inteira || [...jaUsadas, ...matriculas.filter(m => !jaUsadas.includes(m))].find(m => cabe(m, f));
@@ -53,14 +76,18 @@ function redistribuirTipo(voos, matriculas, saldo) {
   return nova;
 }
 
-function manterInstrutorNoMesmoAviao(out, state, saldo, frota) {
+function manterInstrutorNoMesmoAviao(out, state, saldo, frota, posicao) {
   // Os aviões "Só Parafuso" ficam de fora: o Parafuso no C152 só pode ir para eles
   const soParafuso = matriculasDoTipo(frota, 'C152', { parafuso: true });
   for (const tipo of TIPOS_DE_AVIAO) {
     const voos = out.filter(o => o.eqType === tipo && !soParafuso.includes(o.r));
-    const matriculas = matriculasDoTipo(frota, tipo).filter(r => state.av[r]);
+    const matriculas = matriculasDoTipo(frota, tipo).filter(r => state.av[r]).sort((a, b) => posicao(a) - posicao(b));
     const nova = redistribuirTipo(voos, matriculas, saldo);
-    if (nova && trocasDeAviao(voos, o => nova.get(o)) < trocasDeAviao(voos, o => o.r)) voos.forEach(o => { o.r = nova.get(o); });
+    // A distribuição nova vale quando tem menos trocas de avião; com as mesmas trocas, menos aviões fora do hangar e,
+    // com os mesmos aviões, menos tempo parado
+    const pontos = matricula => [trocasDeAviao(voos, matricula), new Set(voos.map(matricula)).size, paradoDosAvioes(voos, matricula)];
+    const [novos, atuais] = nova && voos.length ? [pontos(o => nova.get(o)), pontos(o => o.r)] : [null, null];
+    if (novos && (novos[0] - atuais[0] || novos[1] - atuais[1] || novos[2] - atuais[2]) < 0) voos.forEach(o => { o.r = nova.get(o); });
 
     // Cada mudança tira uma troca do dia, então a repetição termina; uma mudança pode liberar outra
     const horasDe = lista => lista.reduce((total, o) => total + o.h, 0);
@@ -159,6 +186,9 @@ export function runAllocationEngine(state) {
   const nomesSoParafuso = soParafuso.length ? soParafuso.join(' ou ') : 'marcada como “Só Parafuso”';
   // Os horários de decolagem de cada categoria vêm do cadastro (fase 7); sem eles, os iniciais
   const horarios = state.horarios || HORARIOS_INICIAIS;
+  // A ordem dos aviões no hangar (fase 10): da frente para o fundo; sem ela, a ordem da frota
+  const hangar = normalizarHangar(state.hangar, frota);
+  const posicao = r => posicaoNoHangar(hangar, r);
   // Aeronaves/simuladores que cada instrutor já usou no dia, na ordem em que foram escalados
   const insAircraft = {};
   // Armazena turmas abertas de Ground School por missão para permitir múltiplos alunos no mesmo horário/instrutor
@@ -471,11 +501,13 @@ export function runAllocationEngine(state) {
           voosHoje(a) - voosHoje(b) || naFila(a) - naFila(b) ||
           qtdHabilitacoes(a) - qtdHabilitacoes(b) || (load[a.id] || 0) - (load[b.id] || 0));
 
-        // O instrutor fica no mesmo avião durante o dia: primeiro o avião que ele já usou hoje,
-        // depois o rodízio do aluno (evita o avião anterior dele) e o avião menos usado
+        // O instrutor fica no mesmo avião durante o dia: primeiro o avião que ele já usou hoje, depois o rodízio do aluno
+        // (evita o avião anterior dele); então um avião que já saiu, com a menor folga até o voo (fecha os buracos do dia),
+        // e por último o primeiro do hangar
         const x = ins[0];
         const ordemNoInstrutor = r => { const i = (insAircraft[x.id] || []).indexOf(r); return i < 0 ? Infinity : i; };
-        eqs.sort((a, b) => (ordemNoInstrutor(a) - ordemNoInstrutor(b)) || (prev && (a === prev.r) - (b === prev.r)) || (eu[a] || 0) - (eu[b] || 0));
+        eqs.sort((a, b) => menorPrimeiro(ordemNoInstrutor(a), ordemNoInstrutor(b)) || (prev && (a === prev.r) - (b === prev.r)) ||
+          menorPrimeiro(folgaAte(used[a] || [], p.a, p.b), folgaAte(used[b] || [], p.a, p.b)) || posicao(a) - posicao(b));
 
         prev = { r: eqs[0], x };
         pick.push(prev);
@@ -569,7 +601,7 @@ export function runAllocationEngine(state) {
   }
 
   equalizarHoras(out, state);
-  manterInstrutorNoMesmoAviao(out, state, saldo, frota);
+  manterInstrutorNoMesmoAviao(out, state, saldo, frota, posicao);
 
   // Revisão de 50 horas: horas de cada avião controlado e onde ele para (sem saldo para mais uma missão de 1 h)
   const revisao = {};

@@ -59,9 +59,9 @@ describe('Voos: janelas preferidas e encaixe', () => {
 
   // Intencional (Gabriel, PR #2): o aluno não voa o dia inteiro com o mesmo instrutor.
   // O avião acompanha o instrutor, então a troca de instrutor também troca o avião.
-  it('sessão seguinte troca de instrutor (e de avião) quando há alternativa', () => {
+  it('sessão seguinte troca de instrutor quando há alternativa; o avião é o que já saiu (fase 10: menos aviões fora do hangar)', () => {
     const { out } = alocar({ ins: [instrutor(1, 1), instrutor(2, 1)], stu: [aluno(1000, { nb: 3, ss: 2, p1: 0, p2: 2 })] });
-    assert.deepEqual(out.map(o => [o.r, o.insId]), [['PP-LJV', 1], ['PR-BTB', 2]]);
+    assert.deepEqual(out.map(o => [o.r, o.insId]), [['PP-LJV', 1], ['PP-LJV', 2]]);
   });
 
   it('o instrutor fica no mesmo avião ao longo do dia', () => {

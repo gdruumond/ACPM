@@ -8,7 +8,7 @@ import { rBI } from './views/bi.js';
 import { renderAuditPanel, rOut } from './views/escala.js';
 import { rDem } from './views/demanda.js';
 import { rIns, rInsDia, rAlu } from './views/cadastros.js';
-import { rRec, rRevisao } from './views/recursos.js';
+import { rRec, rRevisao, rHangar } from './views/recursos.js';
 import { podeEditarAgenda, rAgenda } from './views/agenda.js';
 import { atualizarSelosDaEscala, atualizarSeloDaAgenda, lerPedidosDaData } from './views/selos.js';
 
@@ -182,6 +182,7 @@ export function refazerEscala() {
   setRES(escalaCalculada());
   syncBIHistoryForCurrentDate();
   rRevisao();
+  rHangar();
   rInsDia();
   rOut();
   renderAuditPanel();
