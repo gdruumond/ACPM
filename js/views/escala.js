@@ -275,6 +275,22 @@ const acao = o => (o.stuId
   ? `<button class="x" data-act="rm-fly" data-id="${o.stuId}" data-mid="${o.mid || 0}" aria-label="Tirar ${esc(o.s)} da escala" title="Tirar da escala">✕</button>`
   : '');
 
+// Escala aprovada (fase 12): o selo diz quando (e quem) aprovou e o botão reabre; sem aprovação, o botão aprova
+function rAprovacao(temVoos) {
+  const lugar = $('#aprovacao'), selo = $('#selo-aprovada');
+  if (!lugar || !selo) return;
+  selo.hidden = !S.aprovacao;
+  if (S.aprovacao) {
+    const em = new Date(S.aprovacao.em);
+    const hora = `${String(em.getHours()).padStart(2, '0')}:${String(em.getMinutes()).padStart(2, '0')}`;
+    selo.title = 'Os voos estão fixos: uma alteração não tira ninguém do lugar; o pedido novo entra em volta. Voo que ficar impossível aparece em conflito.';
+    selo.innerHTML = `<svg class="ico" aria-hidden="true"><use href="#i-cadeado"/></svg>Aprovada às ${hora}${S.aprovacao.por ? ` por ${esc(S.aprovacao.por)}` : ''}`;
+    lugar.innerHTML = `<button type="button" class="btn sec edit-only" id="btn-reabrir" title="Os voos deixam de ser fixos e a escala volta a ser refeita inteira a cada alteração">Reabrir</button>`;
+  } else {
+    lugar.innerHTML = temVoos ? `<button type="button" class="btn edit-only" id="btn-aprovar" title="Fixa os voos: depois disso, as alterações não tiram ninguém do lugar">Aprovar escala</button>` : '';
+  }
+}
+
 // Avisos agrupados por tipo: alunos sem peso, aviões que param para a revisão e outros
 function resumoDosAvisos(avisos) {
   const ehPeso = a => a.m.startsWith('Peso do aluno não informado');
@@ -298,7 +314,8 @@ function resumoDosAvisos(avisos) {
 
 function resumo(out, al, tot) {
   const erros = al.filter(a => a.t === 'err');
-  const avisos = al.filter(a => a.t !== 'err');
+  const conflitos = al.filter(a => a.t === 'conf');
+  const avisos = al.filter(a => a.t !== 'err' && a.t !== 'conf');
   const horas = sumUniqueOperationalHours(out, statusDe);
   const item = a => `<li class="al ${a.t}"><b>${esc(a.s)}</b> ${esc(a.m)}</li>`;
   const nomes = [...new Set(erros.map(a => a.s))].join(', ');
@@ -312,6 +329,8 @@ function resumo(out, al, tot) {
     h += `<details class="caixa erros" open><summary>${erros.length === 1 ? '1 missão não entrou' : `${erros.length} missões não entraram`} na escala: ${esc(nomes)}</summary>
       <ul>${erros.map(item).join('')}</ul></details>`;
   }
+  // Voos fixos que ficaram impossíveis (escala aprovada): continuam no lugar até o operador resolver
+  if (conflitos.length) h += `<details class="caixa conflitos" open><summary>${conflitos.length} ${conflitos.length === 1 ? 'voo em conflito' : 'voos em conflito'} na escala aprovada</summary><ul>${conflitos.map(item).join('')}</ul></details>`;
   if (avisos.length) h += `<details class="caixa avisos"><summary>${resumoDosAvisos(avisos)}</summary><ul>${avisos.map(item).join('')}</ul></details>`;
   return h + '</div>';
 }
@@ -353,10 +372,14 @@ function tabela(voos) {
       h += `<tr class="win" data-w="${o.w}"><td colspan="8"><button type="button" class="win-btn" data-recolher-tempo="${o.w}" aria-expanded="${!recolhido}"><svg class="ico seta" aria-hidden="true"><use href="#i-baixo"/></svg>${WLB(o.w)} <small>${n} ${n === 1 ? 'decolagem ou aula' : 'decolagens e aulas'}</small></button></td></tr>`;
     }
     const rs = grupo.length > 1 ? ` rowspan="${grupo.length}"` : '';
-    const cancelado = voo => (statusDe(voo) === 'Cancelado' ? ' class="st-Cancelado"' : '');
+    const cancelado = voo => {
+      const classes = [statusDe(voo) === 'Cancelado' ? 'st-Cancelado' : '', voo.conflito ? 'em-conflito' : ''].filter(Boolean);
+      return classes.length ? ` class="${classes.join(' ')}"` : '';
+    };
+    const fixo = o.fixo ? ' <svg class="ico fixo" role="img" aria-label="Voo fixo (escala aprovada)"><title>Voo fixo (escala aprovada)</title><use href="#i-cadeado"/></svg>' : '';
     const doTempo = ` data-w="${o.w}"${recolhido ? ' hidden' : ''}`;
     h += `<tr${cancelado(o)}${doTempo}>
-      <td class="c-hr hr"${rs}>${hm(o.a)}–${hm(o.b)} <small>${duracao(o)}</small>${preferencia(o)}</td>
+      <td class="c-hr hr"${rs}>${hm(o.a)}–${hm(o.b)} <small>${duracao(o)}</small>${fixo}${preferencia(o)}${o.conflito ? ' <span class="tag er">conflito</span>' : ''}</td>
       <td class="c-aluno"><b>${esc(o.s)}</b></td>
       <td class="c-missao"${rs}>${esc(o.mis)}${grupo.length > 1 ? ` <small>Turma de ${grupo.length} alunos</small>` : ''}</td>
       <td class="c-aviao nw"${rs}>${esc(nomeDoRecurso(o.r))}${ehGround(o) ? '' : ` <small>${esc(o.eqType || '')}</small>`}</td>
@@ -407,6 +430,7 @@ export function rOut() {
     return true;
   });
 
+  rAprovacao(out.length > 0);
   let h = resumo(out, al, tot);
   if (!voos.length) h += `<p class="h">${tot ? 'Nenhum voo na escala com esses filtros.' : 'Nenhuma missão marcada na Demanda.'}</p>`;
   else h += tabela(voos) + renderVisualTimeline(voos) + (TL_MODE === 'painel' ? painelDoDia(voos) : '');

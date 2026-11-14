@@ -27,7 +27,7 @@ describe('Separar e juntar', () => {
     assert.deepEqual(Object.keys(cadastro).sort(), ['frota', 'horarios', 'ins', 'limites', 'nid', 'stu']);
     assert.deepEqual(Object.keys(cadastro.ins[0]).sort(), ['hab', 'id', 'kg', 'lv', 'nm']);
     assert.deepEqual(Object.keys(cadastro.stu[0]).sort(), ['bl', 'id', 'kg', 'nm']);
-    assert.deepEqual(Object.keys(dia).sort(), ['av', 'fObs', 'fStatus', 'filas', 'hangar', 'horas', 'importadas', 'ins', 'pedidos', 'win']);
+    assert.deepEqual(Object.keys(dia).sort(), ['aprovacao', 'av', 'fObs', 'fStatus', 'filas', 'fixos', 'hangar', 'horas', 'importadas', 'ins', 'pedidos', 'win']);
     assert.deepEqual(Object.keys(dia.ins[estado.ins[0].id]).sort(), ['aw', 'on']);
     const pedido = dia.pedidos[estado.stu[0].id];
     assert.equal('nm' in pedido || 'kg' in pedido, false);
@@ -63,6 +63,15 @@ describe('Separar e juntar', () => {
     assert.equal(JSON.stringify(dia).includes('horasDosInstrutores'), false);
     const junto = juntar(cadastro, dia);
     assert.deepEqual([junto.limites.vooMesH, junto.ins[0].horasExternas], [90, { '2026-11': 12, '2026-00': 300 }]);
+  });
+
+  it('a escala aprovada (os voos fixos e quem aprovou) vai e volta com o dia', () => {
+    const estado = normalizado({ ...estadoSintetico(), stu: [aluno(1000)] });
+    estado.fixos = { '1000_0_1': { a: 390, b: 450, r: 'PR-VOB', insId: 1 } };
+    estado.aprovacao = { em: '2026-11-10T21:05:00.000Z', por: 'Rayane' };
+    const { cadastro, dia } = separar(estado);
+    assert.deepEqual([dia.fixos, dia.aprovacao], [estado.fixos, estado.aprovacao]);
+    assert.deepEqual([juntar(cadastro, dia).fixos, juntar(cadastro, dia).aprovacao], [estado.fixos, estado.aprovacao]);
   });
 
   it('a ordem do hangar vai e volta com o dia; sem ela, a ordem da frota (só os aviões)', () => {
@@ -108,8 +117,8 @@ describe('Nova data', () => {
     estado.fObs = { '1000_0_1': { motivo: 'Meteorologia' } };
     const anterior = { ...separar(estado).dia, resultado: { out: [{ fKey: '1000_0_1' }], al: [], tot: 1 } };
     const novo = diaParaCopiar(anterior);
-    assert.deepEqual(Object.keys(novo).sort(), ['av', 'fObs', 'fStatus', 'filas', 'hangar', 'horas', 'importadas', 'ins', 'pedidos', 'win']);
-    assert.deepEqual([novo.fStatus, novo.fObs], [{}, {}]);
+    assert.deepEqual(Object.keys(novo).sort(), ['aprovacao', 'av', 'fObs', 'fStatus', 'filas', 'fixos', 'hangar', 'horas', 'importadas', 'ins', 'pedidos', 'win']);
+    assert.deepEqual([novo.fStatus, novo.fObs, novo.fixos, novo.aprovacao], [{}, {}, {}, null], 'a data nova começa sem status, sem voos fixos e sem aprovação');
     assert.deepEqual(novo.hangar, anterior.hangar, 'a ordem do hangar continua a da data anterior');
     assert.equal(novo.av['PR-BTB'], false);
     assert.deepEqual(novo.pedidos[1000], anterior.pedidos[1000]);

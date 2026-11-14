@@ -145,6 +145,8 @@ describe('Link compartilhável (perfil Gestor)', () => {
     estado.horas = { 'PR-BTB': 42 };
     estado.hangar = ['PR-VOB', ...estado.hangar.filter(r => r !== 'PR-VOB')];
     estado.limites = { ...estado.limites, vooMesH: 90 };
+    estado.fixos = { '1000_0_1': { a: 390, b: 450, r: 'PR-VOB', insId: 7 } };
+    estado.aprovacao = { em: '2026-11-10T21:05:00.000Z', por: 'Rayane' };
     estado.horasDosInstrutores = { [estado.ins[0].id]: { mes: 80, semestre: 400, ano: 700, fimAnterior: 1110 } };
     estado.filas = { cheque: [], mlte: [9], noturno: [8, 7], c172: [8, 7, 9] };
     estado.stu = [
@@ -167,6 +169,7 @@ describe('Link compartilhável (perfil Gestor)', () => {
     assert.deepEqual([destino.horas, destino.filas], [estado.horas, estado.filas], 'as horas até a revisão e as filas do rodízio vão no link');
     assert.deepEqual(destino.hangar, estado.hangar, 'a ordem do hangar vai no link');
     assert.deepEqual([destino.limites, destino.horasDosInstrutores], [estado.limites, estado.horasDosInstrutores], 'os limites e as horas passadas vão no link (quem abre gera a mesma escala)');
+    assert.deepEqual([destino.fixos, destino.aprovacao], [estado.fixos, estado.aprovacao], 'a escala aprovada vai no link');
     assert.equal(destino.stu[0].jan, 'manha', 'a disponibilidade vai no link');
     assert.deepEqual(destino.stu.map(s => [s.id, s.fly, s.kg, s.bl, s.extra.map(ex => [ex.mid, ex.mis])]), [
       [1000, true, 81, [3], []],
@@ -223,6 +226,16 @@ describe('Link compartilhável: validação do conteúdo (vem da URL, não é co
     assert.equal(estado.limites.vooMesH, 100);
     assert.equal(estado.limites.vooAnoH, 900);
     assert.deepEqual(estado.horasDosInstrutores, { 7: { mes: 3, semestre: 0, ano: 5, fimAnterior: 1000 } });
+  });
+
+  it('escala aprovada: voos fixos com horário, avião e instrutor válidos; quem aprovou é texto curto', () => {
+    const { estado } = abrir({
+      fx: { '1000_0_1': { a: 390, b: 450, r: 'PR-VOB', insId: 7 }, '1001_0_1': { a: ATAQUE, b: 450, r: 'PR-VOB', insId: 7 }, [ATAQUE]: { a: 390, b: 450, r: 'PR-VOB', insId: 7 },
+        '1002_0_1': { a: 500, b: 560, r: ATAQUE, insId: 7 } },
+      ap: { em: '2026-11-10T21:05:00.000Z', por: ATAQUE.repeat(10) }
+    });
+    assert.deepEqual(estado.fixos, { '1000_0_1': { a: 390, b: 450, r: 'PR-VOB', insId: 7 } });
+    assert.equal(estado.aprovacao.por.length <= 80, true);
   });
 
   it('ordem do hangar: só os aviões da frota, sem repetir (o resto entra no fundo)', () => {

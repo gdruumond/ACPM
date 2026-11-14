@@ -531,6 +531,15 @@ dialog.dlg .dlg-acoes, .form-dados .dlg-acoes { display: flex; justify-content: 
 .campo-dado input[aria-invalid="true"] { border-color: var(--er); }
 .campo-dado .erro-campo:empty { display: none; }
 td.c-canac { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--mu); }
+/* Escala aprovada (fase 12) */
+.aprovacao { display: inline-flex; align-items: center; gap: 8px; }
+.aprovacao:empty { display: none; }
+.selo-aprovada { display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; padding: 2px 10px; border-radius: 14px; background: var(--ok-bg); color: var(--ok); font: 600 13px 'Barlow', sans-serif; vertical-align: middle; }
+.selo-aprovada[hidden] { display: none; }
+.ico.fixo { width: 14px; height: 14px; margin-left: 4px; vertical-align: -2px; color: var(--ok); }
+details.caixa.conflitos { background: var(--er-bg); border: 1px solid var(--er); }
+details.caixa.conflitos summary { color: var(--er); }
+.tabela-escala tr.em-conflito td:first-child { box-shadow: inset 3px 0 0 var(--er); }
 /* Limites da lei (fase 11) */
 td.mes { white-space: nowrap; font-variant-numeric: tabular-nums; }
 td.mes.perto { color: var(--wa); font-weight: 700; }

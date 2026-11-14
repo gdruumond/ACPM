@@ -29,6 +29,7 @@ import { pedirDetalheDoStatus, dialogoDeStatusAberto } from './views/dialogo-sta
 import { acaoDoPainel } from './views/painel-aeroporto.js';
 import { abrirPainelDeDados, fecharPainelDeDados, salvarPainelDeDados, carregarDadosPessoais } from './views/dados-pessoais.js';
 import { STATUS_COM_DETALHE, textoParaOHistorico } from './status.js';
+import { pinoDoVoo } from './fixos.js';
 import { singleDemandRowHTML, cnt, rDem, applyDemandFilters } from './views/demanda.js';
 import { rIns, rAlu, applyInstructorFilters, preencherFiltroDeHabilitacoes, mostrarVistaDosInstrutores, abrirPainelDoInstrutor, fecharPainelDoInstrutor, atualizarLinhaDoCadastro, atualizarLinhaDoAluno, rPainelDoInstrutor, rLimites, podeEditarLimites } from './views/cadastros.js';
 import { LIMITES_DA_LEI, normalizarLimites, comHorasExternas } from './limites.js';
@@ -822,6 +823,28 @@ document.addEventListener('click', e => {
   }
 });
 
+// Aprovar a escala (fase 12): todos os voos ficam fixos e o selo diz quando e quem aprovou. Reabrir solta os voos: a
+// escala volta a ser refeita inteira a cada alteração. Os dois pedem confirmação
+document.addEventListener('click', e => {
+  const aprovar = e.target.closest('#btn-aprovar'), reabrir = e.target.closest('#btn-reabrir');
+  if ((!aprovar && !reabrir) || isGestor() || !RES) return;
+  if (aprovar) {
+    if (!confirmado(aprovar, 'Confirmar aprovação')) return;
+    S.fixos = Object.fromEntries(RES.out.map(o => [o.fKey, pinoDoVoo(o)]));
+    S.aprovacao = { em: new Date().toISOString(), por: ApiClient.autorAtual || '' };
+    save();
+    logChange('mod', `Escala aprovada: ${RES.out.length} ${RES.out.length === 1 ? 'voo fixado' : 'voos fixados'}`);
+    showToast('Escala aprovada: os voos ficam fixos.', 'ok');
+  } else {
+    if (!confirmado(reabrir, 'Confirmar reabertura')) return;
+    S.fixos = {};
+    S.aprovacao = null;
+    save();
+    logChange('mod', 'Escala reaberta: volta a ser refeita a cada alteração');
+    showToast('Escala reaberta.', 'ok');
+  }
+});
+
 // Status do voo: Atrasado e Cancelado pedem o detalhe (a nova decolagem ou o motivo) antes de valer; desistir deixa o
 // status anterior. O histórico registra só a categoria do motivo
 const vooDaChave = fKey => (RES && Array.isArray(RES.out) ? RES.out.find(o => o.fKey === fKey) : null);
@@ -833,6 +856,8 @@ function aplicarStatus(fKey, status, detalhe) {
   else delete S.fObs[fKey];
   const voo = vooDaChave(fKey);
   if (voo) voo.status = status;
+  // Em Voo e Atrasado fixam o voo (fase 12): uma alteração na escala não o tira do lugar
+  if (voo && (status === 'Em Voo' || status === 'Atrasado')) S.fixos = { ...(S.fixos || {}), [fKey]: S.fixos && S.fixos[fKey] ? S.fixos[fKey] : pinoDoVoo(voo) };
   save();
   logChange('mod', `Status de ${voo ? `${voo.s} (${hm(voo.a)}–${hm(voo.b)})` : fKey}: ${textoParaOHistorico(status, detalhe)}`);
 }

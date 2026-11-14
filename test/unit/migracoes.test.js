@@ -114,6 +114,12 @@ describe('Migrações do formato dos dados', () => {
     assert.ok(ESQUEMA >= 15);
   });
 
+  it('versão 16: os dias guardam a escala aprovada (os voos fixos e quem aprovou)', () => {
+    const dia = { fixos: { '1000_0_1': { a: 390, b: 450, r: 'PR-VOB', insId: 1 } }, aprovacao: null, esquema: 15 };
+    assert.deepEqual(migrarDia(dia), { ...dia, esquema: ESQUEMA });
+    assert.ok(ESQUEMA >= 16);
+  });
+
   it('os nomes novos são os da frota cadastrada, na mesma ordem', () => {
     assert.deepEqual(EQ['Sim. Mono'], ['SIM-MONO-A', 'SIM-MONO-C']);
     assert.deepEqual(EQ['Sim. Multi'], ['SIM-MLTE-E', 'SIM-MLTE-D']);
