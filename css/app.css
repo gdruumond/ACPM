@@ -168,7 +168,7 @@ nav#nav button.on { color: #fff; border-bottom-color: var(--ye); }
 .aba-selo.erro { background: #E5484D; color: #fff; }
 
 /* A Secretaria trabalha na agenda: só a Agenda e a Escala (que ela consulta) */
-body[data-perfil="secretaria"] #nav button:not([data-t="age"]):not([data-t="esc"]),
+body[data-perfil="secretaria"] #nav button:not([data-t="age"]):not([data-t="esc"]):not([data-t="ins"]):not([data-t="alu"]),
 body[data-perfil="secretaria"] .aba-sep,
 body[data-perfil="secretaria"] #btn-open-log,
 body[data-perfil="secretaria"] #btn-share-link { display: none !important; }
@@ -200,6 +200,8 @@ h3 { font: 600 15px 'Barlow Semi Condensed', sans-serif; margin: 10px 0 6px; col
 
 /* Regras de Somente Visualização Estrita para o Perfil Gestor e Links Compartilhados */
 body[data-role="gestor"] .edit-only { display: none !important; }
+/* Dados pessoais: só operadores, administradores e a secretaria (que no resto entra como consulta) */
+body[data-role="gestor"]:not([data-perfil="secretaria"]) .so-dados { display: none !important; }
 body[data-role="gestor"] #s-rec .janela,
 body[data-role="gestor"] #s-ins .cel,
 body[data-role="gestor"] main label.alvo,
@@ -379,8 +381,12 @@ table.fids-tabela { width: 100%; min-width: 860px; border-collapse: collapse; fo
 .fids-Cancelado .f-obs { color: #FF7B7B; }
 .fids-EmVoo .f-obs { color: #74D7FF; }
 .fids-nada td { color: #DCE7FF; font-weight: 600; }
-.fids:fullscreen { --fids-fs: 2.6vh; --fids-linha: 5.4vh; overflow: hidden; border: 0; border-radius: 0; }
-.fids:fullscreen .fids-topo, .fids:fullscreen table.fids-tabela { min-width: 0; }
+.fids-relogio .fids-aviso { color: #FFC233; }
+.fids-relogio .fids-aviso:empty { display: none; }
+/* Na tela toda (tela cheia na Escala ou a TV da recepção, painel.html): letras e linhas crescem com a tela */
+.fids:fullscreen, .fids.inteiro { --fids-fs: 2.6vh; --fids-linha: 5.4vh; overflow: hidden; border: 0; border-radius: 0; }
+.fids:fullscreen .fids-topo, .fids:fullscreen table.fids-tabela, .fids.inteiro .fids-topo, .fids.inteiro table.fids-tabela { min-width: 0; }
+.fids.inteiro { position: fixed; inset: 0; box-shadow: none; }
 /* A hora da última atualização da escala: discreta, com um relógio, ao lado do título */
 .atualizada { display: inline-flex; align-items: center; gap: 4px; margin-left: 10px; vertical-align: middle; font: 400 13px 'Barlow', sans-serif; color: var(--mu); }
 .atualizada .ico { width: 14px; height: 14px; vertical-align: 0; }
@@ -517,7 +523,14 @@ dialog.dlg .motivos legend { padding: 0 4px; font-weight: 600; }
 dialog.dlg .campo { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; font-weight: 600; }
 dialog.dlg .campo[hidden] { display: none; }
 dialog.dlg .campo small { font-weight: 400; }
-dialog.dlg .dlg-acoes { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+dialog.dlg .dlg-acoes, .form-dados .dlg-acoes { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+/* Painel dos dados pessoais */
+.form-dados { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+.campo-dado { display: flex; flex-direction: column; gap: 4px; }
+.campo-dado label { font-weight: 600; }
+.campo-dado input[aria-invalid="true"] { border-color: var(--er); }
+.campo-dado .erro-campo:empty { display: none; }
+td.c-canac { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--mu); }
 
 .stu-cell {
   display: flex;
@@ -1127,3 +1140,16 @@ body[data-backend="supabase"] #btn-bi-clr { display: none !important; }
   .horarios-lista { flex-basis: 100%; }
 }
 
+
+/* ==========================================================================
+   TV DA RECEPÇÃO (painel.html): o painel na tela toda; antes do login, um cartão para entrar
+   ========================================================================== */
+body.tela-painel { min-height: 100vh; background: #07122B; overflow: hidden; }
+.login-painel {
+  width: min(380px, calc(100vw - 32px)); margin: 12vh auto 0; display: flex; flex-direction: column; gap: 10px;
+  padding: 22px 24px; background: var(--pn); color: var(--ink); border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,.4);
+}
+.login-painel[hidden] { display: none; }
+.login-painel h1 { margin: 0; font: 700 22px 'Barlow Semi Condensed', sans-serif; }
+.login-painel label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }
+.login-logo { height: 44px; width: auto; align-self: flex-start; }

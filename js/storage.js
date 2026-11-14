@@ -202,6 +202,16 @@ export const ApiClient = {
     return this.backend.cancelarSolicitacao(id, por);
   },
 
+  // Dados pessoais (fase 9): fora do estado e do cadastro. No modo compartilhado o servidor decide quem lê e grava
+  // (operadores, administradores e a secretaria, que entra no modo só leitura da escala)
+  listarDadosPessoais(tipo) {
+    return this.backend.listarDadosPessoais(tipo);
+  },
+
+  salvarDadosPessoais(tipo, id, dados) {
+    return this.backend.salvarDadosPessoais(tipo, id, dados, { autor: this.autorAtual || null });
+  },
+
   async biDoPeriodo(de, ate) {
     return biDosDias((await this.backend.listarDias(de, ate)).map(d => ({ ...d, conteudo: migrarDia(d.conteudo) })));
   },

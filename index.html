@@ -194,7 +194,7 @@
     </div>
     <div class="vista-cadastro">
       <div class="tw"><table class="cadastro">
-        <thead><tr><th>Nome</th><th>Peso (kg)</th><th>Habilitações</th><th></th></tr></thead>
+        <thead><tr><th>Nome</th><th class="so-dados">CANAC</th><th>Peso (kg)</th><th>Habilitações</th><th></th></tr></thead>
         <tbody id="inst"></tbody>
       </table></div>
     </div>
@@ -209,7 +209,7 @@
       <button class="btn edit-only" data-act="adds">+ Novo aluno</button>
     </div>
     <div class="tw"><table class="cadastro alunos">
-      <thead><tr><th>Nome</th><th>Peso (kg)</th><th>Não escalar com</th><th></th></tr></thead>
+      <thead><tr><th>Nome</th><th class="so-dados">CANAC</th><th>Peso (kg)</th><th>Não escalar com</th><th></th></tr></thead>
       <tbody id="alu"></tbody>
     </table></div>
   </section>
@@ -393,7 +393,8 @@
         <li><b>Operador:</b> altera tudo e opera a escala.</li>
         <li><b>Administrador:</b> faz tudo o que o Operador faz e também cria e exclui contas (em <i>Usuários</i>, no menu da conta).</li>
         <li><b>Gestor:</b> consulta tudo (escala, BI, histórico, PDF e CSV), sem alterar nada.</li>
-        <li><b>Secretaria:</b> registra os pedidos de voo na Agenda (o app abre para ela nessa aba) e consulta a Escala; as outras abas ela não vê.</li>
+        <li><b>Secretaria:</b> registra os pedidos de voo na Agenda (o app abre para ela nessa aba), consulta a Escala e, em Instrutores e Alunos, edita os dados pessoais (o resto ela só consulta); as outras abas ela não vê.</li>
+        <li><b>Painel (TV da recepção):</b> só vê o painel de partidas e chegadas de hoje (veja <a href="#manual-tv">TV da recepção</a>).</li>
       </ul>
       <p>Cada pessoa entra com a própria conta. No menu da conta (o seu nome, no canto direito do topo) ficam <i>Minha conta</i>, <i>Usuários</i> (só para o Administrador), o interruptor do tema claro ou escuro e <i>Sair</i>. Em <i>Minha conta</i> dá para trocar a senha (com pelo menos 12 caracteres) e o e-mail: o sistema manda um link para o e-mail atual e outro para o novo, e a troca vale depois que os dois forem abertos.</p>
       <p><i>Histórico</i> (no topo) mostra as alterações da data, com quem fez e a hora, numa gaveta ao lado, sem sair da aba; algumas podem ser revertidas por ali. <i>Compartilhar</i> (na barra da Escala) copia o link da escala da data; quem abre o link entra com a própria conta.</p>
@@ -437,12 +438,13 @@
       <p>Duas vistas, com a busca e o filtro por habilitação valendo nas duas:</p>
       <ul>
         <li><b>Disponibilidade do dia:</b> uma linha por instrutor, com o interruptor de quem vem e as janelas do dia: azul-claro quando o instrutor está disponível, azul quando ele já tem voo ou aula na escala e listrado quando não vem. Clique numa janela para mudar; <i>Aplicar turno</i> marca várias de uma vez.</li>
-        <li><b>Cadastro:</b> nome, peso (em destaque quando falta) e as habilitações. <i>Editar habilitações</i> abre um painel ao lado com as 16 habilitações em grupos: Ground e simulador, Voo, Aviões e Checador.</li>
+        <li><b>Cadastro:</b> nome, CANAC, peso (em destaque quando falta) e as habilitações. <i>Editar habilitações</i> abre um painel ao lado com as 16 habilitações em grupos: Ground e simulador, Voo, Aviões e Checador. <i>Dados pessoais</i> abre os dados do instrutor (veja Alunos).</li>
       </ul>
       <p>O instrutor só recebe uma missão se tiver as habilitações que ela exige (veja a tabela em <a href="#manual-regras">Como a escala é montada</a>) e se estiver disponível durante o voo inteiro.</p>
 
       <h4>Alunos</h4>
-      <p>Nome e peso de cada aluno; o peso entra no limite de peso de cada avião (sem o peso, a escala avisa que não conferiu). Em <i>Não escalar com</i>, escolha os instrutores que não devem voar com o aluno.</p>
+      <p>Nome, CANAC e peso de cada aluno; o peso entra no limite de peso de cada avião (sem o peso, a escala avisa que não conferiu). Em <i>Não escalar com</i>, escolha os instrutores que não devem voar com o aluno.</p>
+      <p><b>Dados pessoais</b> (o botão na linha do aluno ou do instrutor): CPF, CANAC (o código da ANAC, 6 dígitos), nascimento, celular (com DDD) e e-mail. O app confere o CPF pelos dígitos verificadores e não aceita o mesmo CPF ou CANAC em dois alunos; deixar tudo vazio apaga os dados da pessoa. Só operadores, administradores e a secretaria veem esses dados: eles ficam fora da escala e não vão para o CSV, o PDF nem o link compartilhado, e o Histórico registra só quais campos mudaram, nunca os valores.</p>
 
       <h4 id="manual-aba-rodizio">Rodízio</h4>
       <p>Filas para dividir com justiça, entre os instrutores habilitados, os voos que remuneram melhor:</p>
@@ -492,6 +494,17 @@
         <li><b>Histórico:</b> no topo, quem alterou o quê, e quando, em cada data.</li>
         <li><b>Rodízio:</b> a ordem das filas de cada categoria.</li>
       </ul>
+    </div>
+
+    <div class="pn" id="manual-tv">
+      <h3>TV da recepção</h3>
+      <p>A TV mostra o painel de partidas e chegadas de hoje, na tela toda, como nos aeroportos: o mesmo da visão <i>Painel</i> da Escala, com o aluno abreviado (o primeiro nome e a inicial do último) e, no cancelamento, só a categoria do motivo.</p>
+      <ol>
+        <li>Um Administrador cria a conta da TV em <i>Usuários</i>, com o perfil <i>Painel (TV da recepção)</i>. Essa conta não vê mais nada do app.</li>
+        <li>No navegador da TV, abra o endereço do app com <code>painel.html</code> no fim (o mesmo endereço, trocando o final) e entre uma vez com a conta da TV. Se a TV abrir o app comum, ela vai direto para o painel.</li>
+        <li>Deixe o navegador em tela cheia. O painel busca as mudanças a cada minuto, recarrega sozinho de madrugada e mantém a tela acesa. Sem conexão por mais de 3 minutos, mostra desde quando.</li>
+      </ol>
+      <p>O painel mostra a escala de hoje que já foi gravada (a escala é gravada a cada alteração do operador ou quando ele exporta o CSV ou o PDF).</p>
     </div>
 
     <div class="pn" id="manual-faq">
@@ -549,6 +562,8 @@
 
 <!-- HABILITAÇÕES DE UM INSTRUTOR: painel lateral aberto pelo cadastro -->
 <aside class="gaveta" id="painel-instrutor" aria-labelledby="painel-instrutor-titulo" hidden></aside>
+<!-- Dados pessoais de um aluno ou instrutor (js/views/dados-pessoais.js) -->
+<aside class="gaveta" id="painel-dados" aria-labelledby="painel-dados-titulo" hidden></aside>
 <!-- Detalhe do status do voo: o motivo do cancelamento ou a nova decolagem do atraso (js/views/dialogo-status.js) -->
 <dialog class="dlg" id="dlg-status" aria-labelledby="dlg-status-titulo">
   <form id="form-status" novalidate>
