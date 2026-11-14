@@ -21,7 +21,8 @@ test.describe('Site publicado (login real)', () => {
       await page.locator('#btn-entrar').click();
       await expect(page.locator('#usuario')).toContainText(`· ${conta.rotulo}`);
       await expect(page.locator('body')).toHaveAttribute('data-role', perfil);
-      await expect(page.locator('#inst .cd').first()).toBeAttached();
+      // No primeiro acesso de um operador depois de uma mudança de formato, o app regrava todos os dias antes de abrir
+      await expect(page.locator('#inst .cd').first()).toBeAttached({ timeout: 30000 });
       await abrirMenuDaConta(page);
       await page.locator('#btn-sair').click();
       // Sair recarrega a página: na rede real, os módulos podem levar mais que o tempo padrão para carregar

@@ -118,6 +118,20 @@ function combustivelDoVoo(stuKg, insKg, tipo, minutos, mis) {
   return reduzirGal ? { comb: { reduzirGal, abastecerGal, minimoGal, autonomiaMin } } : {};
 }
 
+// Comparação de chaves de ordenação: a primeira posição diferente decide
+const vemAntes = (a, b) => { const i = a.findIndex((v, k) => v !== b[k]); return i >= 0 && a[i] < b[i]; };
+
+// O tempo parado de um instrutor (minutos entre um compromisso e o seguinte), pelas unidades dele no dia
+function paradoDasUnidades(unidades) {
+  const intervalos = unidades.map(u => [u.a, u.b]).sort((p, q) => p[0] - q[0]);
+  let total = 0, fim = null;
+  for (const [a, b] of intervalos) {
+    if (fim !== null && a > fim) total += a - fim;
+    fim = fim === null ? b : Math.max(fim, b);
+  }
+  return total;
+}
+
 // Divisão igual das horas do dia (fase 7): depois de montada a escala, voos e aulas passam do instrutor com mais
 // horas para o com menos, enquanto todas as regras continuam valendo: a habilitação, a disponibilidade durante todo o
 // voo, o horário livre, o bloqueio do aluno, o peso e o aluno não repetir o instrutor no dia. Os voos do rodízio
@@ -154,13 +168,19 @@ function equalizarHoras(out, state) {
   for (let rodada = 0; rodada < 1000; rodada++) {
     const horas = new Map(ativos.map(x => [x.id, 0]));
     unidades.forEach(u => horas.set(instrutorDa(u), (horas.get(instrutorDa(u)) || 0) + u.h));
+    // Do instrutor com mais horas, entre as passagens válidas, a que deixa menos tempo parado no dia dos dois (fase 10);
+    // empatadas, para quem tem menos horas, menos habilitações e o menor id, e o voo mais cedo
     let troca = null;
     for (const doador of [...horas.keys()].sort((p, q) => horas.get(q) - horas.get(p) || p - q)) {
-      for (const u of daQuem(doador).filter(o => !categoriaDoRodizio(o.mis, o.eqType)).sort((p, q) => p.a - q.a)) {
-        const receptor = ativos
-          .filter(x => horas.get(x.id) + u.h < horas.get(doador) - 1e-9 && podeReceber(x, u))
-          .sort((p, q) => horas.get(p.id) - horas.get(q.id) || qtdHabilitacoes(p) - qtdHabilitacoes(q) || p.id - q.id)[0];
-        if (receptor) { troca = { u, x: receptor }; break; }
+      const meus = daQuem(doador);
+      for (const u of meus.filter(o => !categoriaDoRodizio(o.mis, o.eqType))) {
+        const semEle = paradoDasUnidades(meus.filter(o => o !== u)) - paradoDasUnidades(meus);
+        for (const x of ativos) {
+          if (!(horas.get(x.id) + u.h < horas.get(doador) - 1e-9) || !podeReceber(x, u)) continue;
+          const deles = daQuem(x.id);
+          const chave = [semEle + paradoDasUnidades([...deles, u]) - paradoDasUnidades(deles), horas.get(x.id), qtdHabilitacoes(x), x.id, u.a];
+          if (!troca || vemAntes(chave, troca.chave)) troca = { u, x, chave };
+        }
       }
       if (troca) break;
     }
